@@ -32,9 +32,10 @@ final class ProcessorConfiguration {
 		Map<String,Object> nets = Json.getMap(data, "irc-networks");
 		Map<String,IrcNetwork> networks = new HashMap<>();
 		for (String name : nets.keySet()) {
-			Object net = nets.get(name);
+			Map<String,Object> net = Json.getMap(nets, name);
 			String username = Json.getString(net, "username");
 			String realname = Json.getString(net, "realname");
+			String nickservPassword = net.containsKey("nickserv-password") ? Json.getString(net, "nickserv-password") : null;
 			
 			List<String> nicknames = new ArrayList<>();
 			for (Object o : Json.getList(net, "nicknames"))
@@ -56,29 +57,31 @@ final class ProcessorConfiguration {
 			if (servers.size() == 0)
 				throw new IllegalArgumentException("Empty list of servers");
 			
-			networks.put(name, new IrcNetwork(name, servers, nicknames, username, realname, channels));
+			networks.put(name, new IrcNetwork(name, servers, nicknames, username, realname, nickservPassword, channels));
 		}
 		ircNetworks = Collections.unmodifiableMap(networks);
 	}
 	
 	
 	
-	/* ---- Nested classes ----*/
+	/* ---- Immutable data structure classes ----*/
 	
 	public static final class IrcNetwork {
-		public final String name;
-		public final List<Server> servers;
-		public final List<String> nicknames;
-		public final String username;
-		public final String realname;
-		public final Set<String> channels;
+		public final String name;              // Not null
+		public final List<Server> servers;     // Length at least 1
+		public final List<String> nicknames;   // Length at least 1
+		public final String username;          // Not null
+		public final String realname;          // Not null
+		public final String nickservPassword;  // Can be null
+		public final Set<String> channels;     // Length at least 0
 		
-		public IrcNetwork(String name, List<Server> servers, List<String> nicknames, String username, String realname, Set<String> channels) {
+		public IrcNetwork(String name, List<Server> servers, List<String> nicknames, String username, String realname, String nickservPassword, Set<String> channels) {
 			this.name = name;
 			this.servers = Collections.unmodifiableList(servers);
 			this.nicknames = Collections.unmodifiableList(nicknames);
 			this.username = username;
 			this.realname = realname;
+			this.nickservPassword = nickservPassword;
 			this.channels = Collections.unmodifiableSet(channels);
 		}
 		
