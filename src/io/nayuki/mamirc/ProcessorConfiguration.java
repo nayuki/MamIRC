@@ -1,10 +1,7 @@
 package io.nayuki.mamirc;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,23 +23,8 @@ final class ProcessorConfiguration {
 	/*---- Constructor ----*/
 	
 	public ProcessorConfiguration(File file) throws IOException {
-		// Read entire file contents
-		ByteArrayOutputStream bout = new ByteArrayOutputStream();
-		InputStream in = new FileInputStream(file);
-		try {
-			byte[] buf = new byte[1024];
-			while (true) {
-				int n = in.read(buf);
-				if (n == -1)
-					break;
-				bout.write(buf, 0, n);
-			}
-		} finally {
-			in.close();
-		}
-		
 		// Parse and do basic check
-		Object data = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-processor-config"))
 			throw new IllegalArgumentException("Invalid configuration file");
 		
@@ -68,7 +50,7 @@ final class ProcessorConfiguration {
 			for (Object serv : Json.getList(net, "servers")) {
 				String hostname = Json.getString(serv, "hostname");
 				int port = Json.getInt(serv, "port");
-				boolean useSsl = (Boolean)Json.getObject(serv, "ssl");
+				boolean useSsl = Json.getBoolean(serv, "ssl");
 				servers.add(new IrcNetwork.Server(hostname, port, useSsl));
 			}
 			if (servers.size() == 0)

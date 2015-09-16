@@ -1,10 +1,7 @@
 package io.nayuki.mamirc;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import io.nayuki.json.Json;
 
 
@@ -19,23 +16,8 @@ final class ConnectorConfiguration {
 	/*---- Constructor ----*/
 	
 	public ConnectorConfiguration(File file) throws IOException {
-		// Read entire file contents
-		ByteArrayOutputStream bout = new ByteArrayOutputStream();
-		InputStream in = new FileInputStream(file);
-		try {
-			byte[] buf = new byte[1024];
-			while (true) {
-				int n = in.read(buf);
-				if (n == -1)
-					break;
-				bout.write(buf, 0, n);
-			}
-		} finally {
-			in.close();
-		}
-		
 		// Parse and do basic check
-		data = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-connector-config"))
 			throw new IllegalArgumentException("Invalid configuration file");
 	}
