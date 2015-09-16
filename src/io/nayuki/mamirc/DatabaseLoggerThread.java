@@ -3,7 +3,6 @@ package io.nayuki.mamirc;
 import java.io.File;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
@@ -21,6 +20,8 @@ final class DatabaseLoggerThread extends Thread {
 	private SQLiteStatement commitTransaction;
 	private SQLiteStatement insertEvent;
 	
+	private boolean isTerminating;
+	
 	
 	/*---- Constructor ----*/
 	
@@ -30,6 +31,7 @@ final class DatabaseLoggerThread extends Thread {
 		this.master = master;
 		queue = new ArrayBlockingQueue<>(1000);
 		database = new SQLiteConnection(file);
+		isTerminating = false;
 	}
 	
 	
@@ -71,30 +73,44 @@ final class DatabaseLoggerThread extends Thread {
 	}
 	
 	
-	private static final int GATHER_DATA_DELAY     = 2000;  // In milliseconds
+	private static final int GATHER_DATA_DELAY     =  2000;  // In milliseconds
 	private static final int DATABASE_COMMIT_DELAY = 10000;  // In milliseconds
 	
 	private boolean processBatchOfEvents() throws InterruptedException, SQLiteException {
 		Event ev = queue.take();
-		if (ev == TERMINATOR)
+		if (ev == TERMINATOR) {
 			return false;
-		Thread.sleep(GATHER_DATA_DELAY);
-		database.exec("BEGIN TRANSACTION");
+		}
+		synchronized(this) {
+			if (!isTerminating)
+				wait(GATHER_DATA_DELAY);
+		}
+		beginTransaction.step();
+		beginTransaction.reset();
 		insertEventIntoDb(ev);
 		long maxMainSeq = ev.mainSeq;
 		
+		boolean terminate = false;
 		while (true) {
-			ev = queue.poll(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
+			ev = queue.poll();
 			if (ev == null)
 				break;
-			if (ev == TERMINATOR)
-				return false;
+			if (ev == TERMINATOR) {
+				terminate = true;
+				break;
+			}
 			insertEventIntoDb(ev);
 			maxMainSeq = ev.mainSeq;
 		}
 		
-		database.exec("COMMIT");
-		Thread.sleep(10000);
+		commitTransaction.step();
+		commitTransaction.reset();
+		if (terminate)
+			return false;
+		synchronized(this) {
+			if (!isTerminating)
+				wait(DATABASE_COMMIT_DELAY);
+		}
 		master.committedEvents(maxMainSeq);
 		return true;
 	}
@@ -123,6 +139,10 @@ final class DatabaseLoggerThread extends Thread {
 	// Should only be called from the main thread.
 	public void terminate() {
 		queue.add(TERMINATOR);
+		synchronized(this) {
+			isTerminating = true;
+			notify();
+		}
 	}
 	
 	
