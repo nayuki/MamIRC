@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -152,6 +153,7 @@ public final class MamircProcessor {
 	private synchronized void processEvent(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Possibly null
+		IrcNetwork profile = state != null ? state.profile : null;
 		
 		if (ev.type == Event.Type.CONNECTION) {
 			String line = new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET);
@@ -162,12 +164,9 @@ public final class MamircProcessor {
 				ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
 				
 			} else if (line.equals("opened")) {
-				state.registrationState = ConnectionState.RegState.CONNECTED;
-				if (realtime) {
-					IrcNetwork profile = state.profile;
+				state.registrationState = ConnectionState.RegState.OPENED;
+				if (realtime)
 					send(conId, "NICK " + profile.nicknames.get(0));
-					send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
-				}
 			} else if (line.equals("disconnect") || line.equals("closed"))
 				ircConnections.remove(conId);
 			
@@ -188,6 +187,35 @@ public final class MamircProcessor {
 			} else if (msg.command.equals("PART")) {
 				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
 					state.currentChannels.remove(msg.parameters.get(0));
+			} else if (msg.command.matches("\\d{3}")) {
+				int code = Integer.parseInt(msg.command);
+				if (code == 433) {  // ERR_NICKNAMEINUSE
+					if (state.registrationState != ConnectionState.RegState.REGISTERED) {
+						state.rejectedNicknames.add(state.currentNickname);
+						if (realtime) {
+							boolean found = false;
+							for (String nickname : profile.nicknames) {
+								if (!state.rejectedNicknames.contains(nickname)) {
+									send(conId, "NICK " + nickname);
+									found = true;
+									break;
+								}
+							}
+							if (!found)
+								writer.postWrite("disconnect " + conId);
+						} else
+							state.currentNickname = null;
+					}
+				} else if (code >= 1 && code <= 5) {  // RPL_WELCOME and various welcome messages
+					if (state.registrationState != ConnectionState.RegState.REGISTERED) {
+						state.registrationState = ConnectionState.RegState.REGISTERED;
+						state.rejectedNicknames = null;
+						if (realtime) {
+							for (String chan : profile.channels)
+								send(conId, "JOIN " + chan);
+						}
+					}
+				}
 			}
 			
 		} else if (ev.type == Event.Type.SEND) {
@@ -198,10 +226,13 @@ public final class MamircProcessor {
 					state.queuedPongs.remove();
 				}
 			} else if (msg.command.equals("NICK")) {
-				if (state.registrationState == ConnectionState.RegState.CONNECTED) {
+				if (state.registrationState == ConnectionState.RegState.OPENED) {
 					state.registrationState = ConnectionState.RegState.NICK_SENT;
-					state.currentNickname = msg.parameters.get(0);
+					if (realtime)
+						send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
 				}
+				if (state.registrationState != ConnectionState.RegState.REGISTERED)
+					state.currentNickname = msg.parameters.get(0);
 			} else if (msg.command.equals("USER")) {
 				if (state.registrationState == ConnectionState.RegState.NICK_SENT)
 					state.registrationState = ConnectionState.RegState.USER_SENT;
@@ -215,13 +246,48 @@ public final class MamircProcessor {
 	private synchronized void finishCatchup() {
 		for (int conId : ircConnections.keySet()) {
 			ConnectionState state = ircConnections.get(conId);
-			if (state.registrationState == ConnectionState.RegState.CONNECTED) {
-				IrcNetwork profile = state.profile;
-				send(conId, "NICK " + profile.nicknames.get(0));
-				send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
-			}
 			while (!state.queuedPongs.isEmpty())
 				send(conId, "PONG :" + state.queuedPongs.remove());
+			
+			IrcNetwork profile = state.profile;
+			switch (state.registrationState) {
+				case CONNECTING:
+					break;
+				
+				case OPENED:
+					send(conId, "NICK " + profile.nicknames.get(0));
+					break;
+					
+				case NICK_SENT:
+					if (state.currentNickname != null)
+						send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
+					else {
+						boolean found = false;
+						for (String nickname : profile.nicknames) {
+							if (!state.rejectedNicknames.contains(nickname)) {
+								send(conId, "NICK " + nickname);
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+							writer.postWrite("disconnect " + conId);
+					}
+					break;
+					
+				case USER_SENT:
+					break;
+					
+				case REGISTERED:
+					for (String chan : profile.channels) {
+						if (!state.currentChannels.contains(chan))
+							send(conId, "JOIN " + chan);
+					}
+					break;
+				
+				default:
+					throw new AssertionError();
+			}
 		}
 	}
 	
@@ -252,6 +318,7 @@ public final class MamircProcessor {
 		
 		public ProcessorConfiguration.IrcNetwork profile;
 		public RegState registrationState;
+		public Set<String> rejectedNicknames;
 		public String currentNickname;
 		public Set<String> currentChannels;
 		public Queue<String> queuedPongs;  // Only used for catching up; is empty afterwards
@@ -260,6 +327,7 @@ public final class MamircProcessor {
 		public ConnectionState(ProcessorConfiguration.IrcNetwork profile) {
 			this.profile = profile;
 			registrationState = RegState.CONNECTING;
+			rejectedNicknames = new HashSet<>();
 			currentNickname = null;
 			currentChannels = new TreeSet<>();
 			queuedPongs = new ArrayDeque<>();
@@ -267,7 +335,7 @@ public final class MamircProcessor {
 		
 		
 		public enum RegState {
-			CONNECTING, CONNECTED, NICK_SENT, USER_SENT, REGISTERED;
+			CONNECTING, OPENED, NICK_SENT, USER_SENT, REGISTERED;
 		}
 		
 	}
