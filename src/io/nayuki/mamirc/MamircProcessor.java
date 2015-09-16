@@ -2,7 +2,6 @@ package io.nayuki.mamirc;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -54,9 +53,9 @@ public final class MamircProcessor {
 		myConfiguration = procConfig;
 		
 		connectorSocket = new Socket("localhost", conConfig.getServerPort());
-		OutputStream out = connectorSocket.getOutputStream();
-		out.write(conConfig.getConnectorPassword());
-		out.write('\n');
+		writer = new OutputWriterThread(connectorSocket.getOutputStream(), new byte[]{'\n'});
+		writer.start();
+		writer.postWrite(conConfig.getConnectorPassword());
 		
 		LineReader reader = new LineReader(connectorSocket.getInputStream());
 		String line = readStringLine(reader);
@@ -125,8 +124,6 @@ public final class MamircProcessor {
 		ircConnections = new HashMap<>();
 		for (Event ev : archivedEvents)
 			processEvent(ev, false);
-		writer = new OutputWriterThread(out, new byte[]{'\n'});
-		writer.start();
 		finishCatchup();
 		
 		while (true) {
@@ -166,7 +163,7 @@ public final class MamircProcessor {
 			} else if (line.equals("opened")) {
 				state.registrationState = ConnectionState.RegState.OPENED;
 				if (realtime)
-					send(conId, "NICK " + profile.nicknames.get(0));
+					send(conId, "NICK", profile.nicknames.get(0));
 			} else if (line.equals("disconnect") || line.equals("closed"))
 				ircConnections.remove(conId);
 			
@@ -175,7 +172,7 @@ public final class MamircProcessor {
 			if (msg.command.equals("PING")) {
 				String text = msg.parameters.get(0);
 				if (realtime)
-					send(conId, "PONG :" + text);
+					send(conId, "PONG", text);
 				else
 					state.queuedPongs.add(text);
 			} else if (msg.command.equals("NICK")) {
@@ -196,7 +193,7 @@ public final class MamircProcessor {
 							boolean found = false;
 							for (String nickname : profile.nicknames) {
 								if (!state.rejectedNicknames.contains(nickname)) {
-									send(conId, "NICK " + nickname);
+									send(conId, "NICK", nickname);
 									found = true;
 									break;
 								}
@@ -212,7 +209,7 @@ public final class MamircProcessor {
 						state.rejectedNicknames = null;
 						if (realtime) {
 							for (String chan : profile.channels)
-								send(conId, "JOIN " + chan);
+								send(conId, "JOIN", chan);
 						}
 					}
 				}
@@ -229,7 +226,7 @@ public final class MamircProcessor {
 				if (state.registrationState == ConnectionState.RegState.OPENED) {
 					state.registrationState = ConnectionState.RegState.NICK_SENT;
 					if (realtime)
-						send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
+						send(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
 				if (state.registrationState != ConnectionState.RegState.REGISTERED)
 					state.currentNickname = msg.parameters.get(0);
@@ -247,7 +244,7 @@ public final class MamircProcessor {
 		for (int conId : ircConnections.keySet()) {
 			ConnectionState state = ircConnections.get(conId);
 			while (!state.queuedPongs.isEmpty())
-				send(conId, "PONG :" + state.queuedPongs.remove());
+				send(conId, "PONG", state.queuedPongs.remove());
 			
 			IrcNetwork profile = state.profile;
 			switch (state.registrationState) {
@@ -255,17 +252,17 @@ public final class MamircProcessor {
 					break;
 				
 				case OPENED:
-					send(conId, "NICK " + profile.nicknames.get(0));
+					send(conId, "NICK", profile.nicknames.get(0));
 					break;
 					
 				case NICK_SENT:
 					if (state.currentNickname != null)
-						send(conId, "USER " + profile.username + " 0 * :" + profile.realname);
+						send(conId, "USER", profile.username, "0", "*", profile.realname);
 					else {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
 							if (!state.rejectedNicknames.contains(nickname)) {
-								send(conId, "NICK " + nickname);
+								send(conId, "NICK", nickname);
 								found = true;
 								break;
 							}
@@ -281,7 +278,7 @@ public final class MamircProcessor {
 				case REGISTERED:
 					for (String chan : profile.channels) {
 						if (!state.currentChannels.contains(chan))
-							send(conId, "JOIN " + chan);
+							send(conId, "JOIN", chan);
 					}
 					break;
 				
@@ -293,8 +290,15 @@ public final class MamircProcessor {
 	
 	
 	// Must be called from one of the synchronized methods above.
-	private void send(int conId, String line) {
-		writer.postWrite("send " + conId + " " + line);
+	private void send(int conId, String cmd, String... params) {
+		StringBuilder sb = new StringBuilder("send ").append(conId).append(' ').append(cmd);
+		for (int i = 0; i < params.length; i++) {
+			sb.append(' ');
+			if (i == params.length - 1)
+				sb.append(':');
+			sb.append(params[i]);
+		}
+		writer.postWrite(sb.toString());
 	}
 	
 	
