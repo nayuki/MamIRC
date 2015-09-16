@@ -192,12 +192,18 @@ public final class MamircConnector {
 			return;
 		try {
 			System.out.println("Connector terminating");
+			for (int conId : serverConnections.keySet()) {
+				ConnectionInfo info = serverConnections.get(conId);
+				info.writer.terminate();
+				info.socket.close();
+			}
+			if (processorReader != null) {
+				processorWriter.terminate();
+				processorReader.socket.close();
+			}
 			processorListener.serverSocket.close();
 			databaseLogger.terminate();
-			processorListener.join();
-			databaseLogger.join();
 		} catch (IOException e) {}
-		catch (InterruptedException e) {}
 	}
 	
 	
