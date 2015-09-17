@@ -2,25 +2,17 @@ package io.nayuki.mamirc.processor;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.almworks.sqlite4java.SQLiteConnection;
-import com.almworks.sqlite4java.SQLiteException;
-import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
-import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
@@ -29,7 +21,7 @@ public final class MamircProcessor {
 	
 	/*---- Stub main program ----*/
 	
-	public static void main(String[] args) throws IOException, SQLiteException {
+	public static void main(String[] args) throws IOException {
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
 		new MamircProcessor(
 			new ConnectorConfiguration(new File(args[0])),
@@ -42,7 +34,6 @@ public final class MamircProcessor {
 	
 	private final ProcessorConfiguration myConfiguration;
 	
-	private Socket connectorSocket;
 	private OutputWriterThread writer;
 	
 	private final Map<Integer,ConnectionState> ircConnections;
@@ -51,107 +42,19 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(ConnectorConfiguration conConfig, ProcessorConfiguration procConfig) throws IOException, SQLiteException {
+	public MamircProcessor(ConnectorConfiguration conConfig, ProcessorConfiguration procConfig) {
 		if (conConfig == null || procConfig == null)
 			throw new NullPointerException();
 		myConfiguration = procConfig;
-		
-		connectorSocket = new Socket("localhost", conConfig.serverPort);
-		writer = new OutputWriterThread(connectorSocket.getOutputStream(), new byte[]{'\n'});
-		writer.start();
-		writer.postWrite(conConfig.getConnectorPassword());
-		
-		LineReader reader = new LineReader(connectorSocket.getInputStream());
-		String line = readStringLine(reader);
-		if (line == null)
-			throw new RuntimeException("Authentication failure");
-		
-		// Get set of current connections
-		if (!line.equals("active-connections"))
-			throw new RuntimeException("Invalid data received");
-		Map<Integer,Integer> connectionSequences = new HashMap<>();
-		while (true) {
-			line = readStringLine(reader);
-			if (line.equals("recent-events"))
-				break;
-			String[] parts = line.split(" ", 3);
-			connectionSequences.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-		}
-		
-		// Get recent (potentially uncommitted) events
-		List<Event> recentEvents = new ArrayList<>();
-		while (true) {
-			line = readStringLine(reader);
-			if (line.equals("live-events"))
-				break;
-			String[] parts = line.split(" ", 5);
-			int conId = Integer.parseInt(parts[0]);
-			if (connectionSequences.containsKey(conId)) {
-				recentEvents.add(new Event(
-					conId,
-					Integer.parseInt(parts[1]),
-					Long.parseLong(parts[2]),
-					Event.Type.fromOrdinal(Integer.parseInt(parts[3])),
-					parts[4].getBytes(OutputWriterThread.UTF8_CHARSET)));
-			}
-		}
-		
-		Map<Integer,Integer> archiveSequences = new HashMap<>();
-		List<Event> archivedEvents = new ArrayList<>();
-		SQLiteConnection database = new SQLiteConnection(conConfig.databaseFile);
-		database.open(false);
-		SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
-		for (int conId : connectionSequences.keySet()) {
-			int nextSeq = connectionSequences.get(conId);
-			query.bind(1, conId);
-			query.bind(2, nextSeq);
-			int maxSeq = -1;
-			while (query.step()) {
-				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), query.columnBlob(3));
-				archivedEvents.add(ev);
-				maxSeq = ev.sequence;
-			}
-			query.reset();
-			archiveSequences.put(conId, maxSeq);
-		}
-		query.dispose();
-		database.dispose();
-		
-		for (Iterator<Event> iter = recentEvents.iterator(); iter.hasNext(); ) {
-			Event ev = iter.next();
-			if (ev.sequence <= archiveSequences.get(ev.connectionId))
-				iter.remove();
-		}
-		archivedEvents.addAll(recentEvents);
-		recentEvents.clear();
-		
+		writer = null;
 		ircConnections = new HashMap<>();
-		for (Event ev : archivedEvents)
-			processEvent(ev, false);
-		finishCatchup();
-		
-		while (true) {
-			line = readStringLine(reader);
-			if (line == null) {
-				writer.terminate();
-				connectorSocket.close();
-				break;
-			}
-			String[] parts = line.split(" ", 5);
-			Event ev = new Event(
-				Integer.parseInt(parts[0]),
-				Integer.parseInt(parts[1]),
-				Long.parseLong(parts[2]),
-				Event.Type.fromOrdinal(Integer.parseInt(parts[3])),
-				parts[4].getBytes(OutputWriterThread.UTF8_CHARSET));
-			processEvent(ev, true);
-		}
+		new ConnectorReaderThread(this, conConfig).start();
 	}
 	
 	
 	/*---- Methods for manipulating global state ----*/
 	
-	private synchronized void processEvent(Event ev, boolean realtime) {
+	public synchronized void processEvent(Event ev, boolean realtime) {
 		switch (ev.type) {
 			case CONNECTION:
 				processConnection(ev, realtime);
@@ -312,7 +215,7 @@ public final class MamircProcessor {
 	}
 	
 	
-	private synchronized void finishCatchup() {
+	public synchronized void finishCatchup() {
 		for (int conId : ircConnections.keySet()) {
 			ConnectionState state = ircConnections.get(conId);
 			while (!state.queuedPongs.isEmpty())
@@ -380,15 +283,10 @@ public final class MamircProcessor {
 	}
 	
 	
-	
-	/*---- Miscellaneous methods ----*/
-	
-	private static String readStringLine(LineReader reader) throws IOException {
-		byte[] line = reader.readLine();
-		if (line == null)
-			return null;
-		else
-			return new String(line, OutputWriterThread.UTF8_CHARSET);
+	public synchronized void attachConnectorWriter(OutputWriterThread writer) {
+		if (this.writer != null)
+			throw new IllegalStateException();
+		this.writer = writer;
 	}
 	
 	
