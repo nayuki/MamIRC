@@ -1,7 +1,9 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.connector;
 
 import java.io.IOException;
 import java.net.Socket;
+import io.nayuki.mamirc.common.LineReader;
+import io.nayuki.mamirc.common.OutputWriterThread;
 
 
 final class ProcessorReaderThread extends Thread {

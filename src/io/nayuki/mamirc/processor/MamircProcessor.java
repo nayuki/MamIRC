@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.processor;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +18,11 @@ import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
-import io.nayuki.mamirc.ProcessorConfiguration.IrcNetwork;
+import io.nayuki.mamirc.common.ConnectorConfiguration;
+import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.LineReader;
+import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
 
 public final class MamircProcessor {
@@ -394,7 +398,7 @@ public final class MamircProcessor {
 	
 	private static final class ConnectionState {
 		
-		public ProcessorConfiguration.IrcNetwork profile;
+		public IrcNetwork profile;
 		public RegState registrationState;
 		public Set<String> rejectedNicknames;
 		public String currentNickname;

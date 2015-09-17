@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.connector;
 
 import java.io.File;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -6,6 +6,7 @@ import java.util.concurrent.BlockingQueue;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.Event;
 
 
 final class DatabaseLoggerThread extends Thread {

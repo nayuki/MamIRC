@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.connector;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

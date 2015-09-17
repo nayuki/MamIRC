@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.connector;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -10,6 +10,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import io.nayuki.mamirc.common.LineReader;
+import io.nayuki.mamirc.common.OutputWriterThread;
 
 
 final class ServerReaderThread extends Thread {

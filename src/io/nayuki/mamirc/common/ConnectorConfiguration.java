@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.common;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,7 +6,7 @@ import io.nayuki.json.Json;
 
 
 // Immutable structure. Data is loaded from a JSON file.
-final class ConnectorConfiguration {
+public final class ConnectorConfiguration {
 	
 	/*---- Fields ----*/
 	

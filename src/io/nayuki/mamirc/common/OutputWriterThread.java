@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.common;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,7 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 
-final class OutputWriterThread extends Thread {
+public final class OutputWriterThread extends Thread {
 	
 	/*---- Fields ----*/
 	
@@ -81,6 +81,6 @@ final class OutputWriterThread extends Thread {
 	
 	private static final byte[] TERMINATOR = new byte[0];
 	
-	static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	
 }

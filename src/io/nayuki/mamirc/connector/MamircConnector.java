@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.connector;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import io.nayuki.mamirc.common.ConnectorConfiguration;
+import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.OutputWriterThread;
 
 
 public final class MamircConnector {

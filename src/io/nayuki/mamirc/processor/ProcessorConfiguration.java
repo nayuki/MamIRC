@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.processor;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.processor;
 
 import java.util.ArrayList;
 import java.util.Collections;

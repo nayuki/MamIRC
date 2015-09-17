@@ -1,11 +1,11 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.common;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
 
-final class LineReader {
+public final class LineReader {
 	
 	/*---- Fields ----*/
 	

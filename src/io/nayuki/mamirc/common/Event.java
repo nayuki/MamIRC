@@ -1,9 +1,9 @@
-package io.nayuki.mamirc;
+package io.nayuki.mamirc.common;
 
 
 // Immutable data structure that reflects all state changes in the connector.
 // This information is conveyed from the connector to the processor through the network connection or through the archival database.
-final class Event {
+public final class Event {
 	
 	/*---- Fields ----*/
 	
