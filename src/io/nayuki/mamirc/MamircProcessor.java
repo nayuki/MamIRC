@@ -148,81 +148,138 @@ public final class MamircProcessor {
 	/*---- Methods for manipulating global state ----*/
 	
 	private synchronized void processEvent(Event ev, boolean realtime) {
+		switch (ev.type) {
+			case CONNECTION:
+				processConnection(ev, realtime);
+				break;
+			case RECEIVE:
+				processReceive(ev, realtime);
+				break;
+			case SEND:
+				processSend(ev, realtime);
+				break;
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	
+	// Must only be called by processEvent().
+	private void processConnection(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Possibly null
-		IrcNetwork profile = state != null ? state.profile : null;
+		String line = new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET);
 		
-		if (ev.type == Event.Type.CONNECTION) {
-			String line = new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET);
-			if (line.startsWith("connect ")) {
-				String metadata = line.substring(8);
-				if (!myConfiguration.ircNetworks.containsKey(metadata))
-					throw new IllegalStateException("No profile: " + metadata);
-				ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
-				
-			} else if (line.equals("opened")) {
-				state.registrationState = ConnectionState.RegState.OPENED;
-				if (realtime)
-					send(conId, "NICK", profile.nicknames.get(0));
-			} else if (line.equals("disconnect") || line.equals("closed"))
-				ircConnections.remove(conId);
+		if (line.startsWith("connect ")) {
+			String metadata = line.substring(8);
+			if (!myConfiguration.ircNetworks.containsKey(metadata))
+				throw new IllegalStateException("No profile: " + metadata);
+			ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
 			
-		} else if (ev.type == Event.Type.RECEIVE) {
-			IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
-			if (msg.command.equals("PING")) {
+		} else if (line.equals("opened")) {
+			state.registrationState = ConnectionState.RegState.OPENED;
+			if (realtime)
+				send(conId, "NICK", state.profile.nicknames.get(0));
+			
+		} else if (line.equals("disconnect") || line.equals("closed"))
+			ircConnections.remove(conId);
+	}
+	
+	
+	// Must only be called by processEvent().
+	private void processReceive(Event ev, boolean realtime) {
+		int conId = ev.connectionId;
+		ConnectionState state = ircConnections.get(conId);  // Not null
+		IrcNetwork profile = state.profile;
+		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		switch (msg.command) {
+			
+			case "PING": {
 				String text = msg.parameters.get(0);
 				if (realtime)
 					send(conId, "PONG", text);
 				else
 					state.queuedPongs.add(text);
-			} else if (msg.command.equals("NICK")) {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
-					state.currentNickname = msg.parameters.get(0);
-			} else if (msg.command.equals("JOIN")) {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
-					state.currentChannels.add(msg.parameters.get(0));
-			} else if (msg.command.equals("PART")) {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
-					state.currentChannels.remove(msg.parameters.get(0));
-			} else if (msg.command.matches("\\d{3}")) {
-				int code = Integer.parseInt(msg.command);
-				if (code == 433) {  // ERR_NICKNAMEINUSE
-					if (state.registrationState != ConnectionState.RegState.REGISTERED) {
-						state.rejectedNicknames.add(state.currentNickname);
-						if (realtime) {
-							boolean found = false;
-							for (String nickname : profile.nicknames) {
-								if (!state.rejectedNicknames.contains(nickname)) {
-									send(conId, "NICK", nickname);
-									found = true;
-									break;
-								}
-							}
-							if (!found)
-								writer.postWrite("disconnect " + conId);
-						} else
-							state.currentNickname = null;
-					}
-				} else if (code >= 1 && code <= 5) {  // RPL_WELCOME and various welcome messages
-					if (state.registrationState != ConnectionState.RegState.REGISTERED) {
-						state.registrationState = ConnectionState.RegState.REGISTERED;
-						state.rejectedNicknames = null;
-						if (realtime) {
-							for (String chan : profile.channels)
-								send(conId, "JOIN", chan);
-						}
-					}
-				}
+				break;
 			}
 			
-		} else if (ev.type == Event.Type.SEND) {
-			IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
-			if (msg.command.equals("PONG")) {
+			case "NICK": {
+				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
+					state.currentNickname = msg.parameters.get(0);
+				break;
+			}
+			
+			case "JOIN": {
+				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
+					state.currentChannels.add(msg.parameters.get(0));
+				break;
+			}
+			
+			case "PART": {
+				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
+					state.currentChannels.remove(msg.parameters.get(0));
+				break;
+			}
+			
+			case "433": {  // ERR_NICKNAMEINUSE
+				if (state.registrationState != ConnectionState.RegState.REGISTERED) {
+					state.rejectedNicknames.add(state.currentNickname);
+					if (realtime) {
+						boolean found = false;
+						for (String nickname : profile.nicknames) {
+							if (!state.rejectedNicknames.contains(nickname)) {
+								send(conId, "NICK", nickname);
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+							writer.postWrite("disconnect " + conId);
+					} else
+						state.currentNickname = null;
+				}
+				break;
+			}
+			
+			case "001":  // RPL_WELCOME and various welcome messages
+			case "002":
+			case "003":
+			case "004":
+			case "005": {
+				if (state.registrationState != ConnectionState.RegState.REGISTERED) {
+					state.registrationState = ConnectionState.RegState.REGISTERED;
+					state.rejectedNicknames = null;
+					if (realtime) {
+						for (String chan : profile.channels)
+							send(conId, "JOIN", chan);
+					}
+				}
+				break;
+			}
+			
+			default:
+				break;  // Ignore event
+		}
+	}
+	
+	
+	// Must only be called by processEvent().
+	private void processSend(Event ev, boolean realtime) {
+		int conId = ev.connectionId;
+		ConnectionState state = ircConnections.get(conId);  // Not null
+		IrcNetwork profile = state.profile;
+		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		switch (msg.command) {
+			
+			case "PONG": {
 				String text = msg.parameters.get(0);
 				if (!state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text)) {
 					state.queuedPongs.remove();
 				}
-			} else if (msg.command.equals("NICK")) {
+				break;
+			}
+			
+			case "NICK": {
 				if (state.registrationState == ConnectionState.RegState.OPENED) {
 					state.registrationState = ConnectionState.RegState.NICK_SENT;
 					if (realtime)
@@ -230,13 +287,18 @@ public final class MamircProcessor {
 				}
 				if (state.registrationState != ConnectionState.RegState.REGISTERED)
 					state.currentNickname = msg.parameters.get(0);
-			} else if (msg.command.equals("USER")) {
-				if (state.registrationState == ConnectionState.RegState.NICK_SENT)
-					state.registrationState = ConnectionState.RegState.USER_SENT;
+				break;
 			}
 			
-		} else
-			throw new AssertionError();
+			case "USER": {
+				if (state.registrationState == ConnectionState.RegState.NICK_SENT)
+					state.registrationState = ConnectionState.RegState.USER_SENT;
+				break;
+			}
+			
+			default:
+				break;  // Ignore event
+		}
 	}
 	
 	
@@ -251,11 +313,12 @@ public final class MamircProcessor {
 				case CONNECTING:
 					break;
 				
-				case OPENED:
+				case OPENED: {
 					send(conId, "NICK", profile.nicknames.get(0));
 					break;
+				}
 					
-				case NICK_SENT:
+				case NICK_SENT: {
 					if (state.currentNickname != null)
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 					else {
@@ -271,16 +334,18 @@ public final class MamircProcessor {
 							writer.postWrite("disconnect " + conId);
 					}
 					break;
+				}
 					
 				case USER_SENT:
 					break;
 					
-				case REGISTERED:
+				case REGISTERED: {
 					for (String chan : profile.channels) {
 						if (!state.currentChannels.contains(chan))
 							send(conId, "JOIN", chan);
 					}
 					break;
+				}
 				
 				default:
 					throw new AssertionError();
