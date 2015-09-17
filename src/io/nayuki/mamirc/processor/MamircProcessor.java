@@ -207,6 +207,7 @@ public final class MamircProcessor {
 			case "PRIVMSG": {
 				if (msg.parameters.size() == 3 && msg.parameters.get(0).equals("NickServ") && msg.parameters.get(1).equals("IDENTIFY"))
 					state.sentNickservPassword = true;
+				break;
 			}
 			
 			default:

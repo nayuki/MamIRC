@@ -79,9 +79,8 @@ final class DatabaseLoggerThread extends Thread {
 	
 	private boolean processBatchOfEvents() throws InterruptedException, SQLiteException {
 		Event ev = queue.take();
-		if (ev == TERMINATOR) {
+		if (ev == TERMINATOR)
 			return false;
-		}
 		synchronized(this) {
 			if (!isTerminating)
 				wait(GATHER_DATA_DELAY);
