@@ -70,6 +70,7 @@ final class ConnectorReaderThread extends Thread {
 					socket.close();
 				} catch (IOException e) {}
 			}
+			master.terminate();
 		}
 	}
 	

@@ -17,6 +17,7 @@ final class ProcessorConfiguration {
 	
 	/*---- Fields ----*/
 	
+	public final File databaseFile;
 	public final Map<String,IrcNetwork> ircNetworks;
 	
 	
@@ -29,6 +30,7 @@ final class ProcessorConfiguration {
 			throw new IllegalArgumentException("Invalid configuration file");
 		
 		// Convert to internal data format
+		databaseFile = new File(Json.getString(data, "database-file"));
 		Map<String,Object> nets = Json.getMap(data, "irc-networks");
 		Map<String,IrcNetwork> networks = new HashMap<>();
 		for (String name : nets.keySet()) {

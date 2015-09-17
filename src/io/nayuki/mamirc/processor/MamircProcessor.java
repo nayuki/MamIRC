@@ -34,6 +34,8 @@ public final class MamircProcessor {
 	
 	private final ProcessorConfiguration myConfiguration;
 	
+	private DatabaseLoggerThread databaseLogger;
+	
 	private OutputWriterThread writer;
 	
 	private final Map<Integer,ConnectionState> ircConnections;
@@ -46,8 +48,19 @@ public final class MamircProcessor {
 		if (conConfig == null || procConfig == null)
 			throw new NullPointerException();
 		myConfiguration = procConfig;
+		databaseLogger = null;
 		writer = null;
 		ircConnections = new HashMap<>();
+		
+		// Wait for database logger to be ready before connecting
+		new DatabaseLoggerThread(this, myConfiguration.databaseFile).start();
+		synchronized(this) {
+			while (databaseLogger == null) {
+				try {
+					this.wait();
+				} catch (InterruptedException e) {}
+			}
+		}
 		new ConnectorReaderThread(this, conConfig).start();
 	}
 	
@@ -117,14 +130,31 @@ public final class MamircProcessor {
 			}
 			
 			case "JOIN": {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
+				IrcLine.Prefix prefix = new IrcLine.Prefix(msg.prefix);
+				if (prefix.name.equals(state.currentNickname))
 					state.currentChannels.add(msg.parameters.get(0));
+				String line = msg.command + " " + prefix.name;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.parameters.get(0), line);
 				break;
 			}
 			
 			case "PART": {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
+				IrcLine.Prefix prefix = new IrcLine.Prefix(msg.prefix);
+				if (prefix.name.equals(state.currentNickname))
 					state.currentChannels.remove(msg.parameters.get(0));
+				String line = msg.command + " " + prefix.name;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.parameters.get(0), line);
+				break;
+			}
+			
+			case "PRIVMSG": {
+				String src = new IrcLine.Prefix(msg.prefix).name;
+				String party = msg.parameters.get(0);
+				if (party.charAt(0) != '#' && party.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
+					party = src;
+				String text = msg.parameters.get(1);
+				String line = msg.command + " " + src + " " + text;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
 				break;
 			}
 			
@@ -207,6 +237,11 @@ public final class MamircProcessor {
 			case "PRIVMSG": {
 				if (msg.parameters.size() == 3 && msg.parameters.get(0).equals("NickServ") && msg.parameters.get(1).equals("IDENTIFY"))
 					state.sentNickservPassword = true;
+				String src = state.currentNickname;
+				String party = msg.parameters.get(0);
+				String text = msg.parameters.get(1);
+				String line = msg.command + " " + src + " " + text;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
 				break;
 			}
 			
@@ -284,10 +319,23 @@ public final class MamircProcessor {
 	}
 	
 	
+	public synchronized void databaseLoggerReady(DatabaseLoggerThread logger) {
+		if (databaseLogger != null)
+			throw new IllegalStateException();
+		databaseLogger = logger;
+		this.notify();
+	}
+	
+	
 	public synchronized void attachConnectorWriter(OutputWriterThread writer) {
 		if (this.writer != null)
 			throw new IllegalStateException();
 		this.writer = writer;
+	}
+	
+	
+	public synchronized void terminate() {
+		databaseLogger.terminate();
 	}
 	
 	
