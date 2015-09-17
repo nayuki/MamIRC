@@ -55,7 +55,7 @@ public final class MamircConnector {
 		
 		// Wait for database logger to start and get next connection ID
 		nextConnectionId = -1;
-		databaseLogger = new DatabaseLoggerThread(this, config.getDatabaseFile());
+		databaseLogger = new DatabaseLoggerThread(this, config.databaseFile);
 		databaseLogger.start();
 		synchronized(this) {
 			while (nextConnectionId == -1) {
@@ -69,7 +69,7 @@ public final class MamircConnector {
 		processorReader = null;
 		processorWriter = null;
 		try {
-			processorListener = new ProcessorListenerThread(this, config.getServerPort());
+			processorListener = new ProcessorListenerThread(this, config.serverPort);
 		} catch (IOException e) {
 			databaseLogger.terminate();
 			throw e;

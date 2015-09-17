@@ -10,36 +10,32 @@ final class ConnectorConfiguration {
 	
 	/*---- Fields ----*/
 	
-	private final Object data;
+	public final File databaseFile;
+	private final byte[] connectorPassword;
+	public final int serverPort;
 	
 	
 	/*---- Constructor ----*/
 	
 	public ConnectorConfiguration(File file) throws IOException {
 		// Parse and do basic check
-		data = Json.parseFromFile(file);
+		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-connector-config"))
 			throw new IllegalArgumentException("Invalid configuration file");
+		
+		// Retrieve each field
+		databaseFile = new File(Json.getString(data, "database-file"));
+		connectorPassword = Json.getString(data, "processor-password").getBytes(OutputWriterThread.UTF8_CHARSET);
+		serverPort = Json.getInt(data, "server-port");
+		if ((serverPort & 0xFFFF) != serverPort)
+			throw new IllegalStateException("Invalid configuration file");
 	}
 	
 	
 	/*---- Getter methods ----*/
 	
-	public File getDatabaseFile() {
-		return new File(Json.getString(data, "database-file"));
-	}
-	
-	
 	public byte[] getConnectorPassword() {
-		return Json.getString(data, "processor-password").getBytes(OutputWriterThread.UTF8_CHARSET);
-	}
-	
-	
-	public int getServerPort() {
-		int result = Json.getInt(data, "server-port");
-		if ((result & 0xFFFF) != result)
-			throw new IllegalStateException("Invalid configuration file");
-		return result;
+		return connectorPassword.clone();
 	}
 	
 }

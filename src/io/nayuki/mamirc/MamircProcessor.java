@@ -52,7 +52,7 @@ public final class MamircProcessor {
 			throw new NullPointerException();
 		myConfiguration = procConfig;
 		
-		connectorSocket = new Socket("localhost", conConfig.getServerPort());
+		connectorSocket = new Socket("localhost", conConfig.serverPort);
 		writer = new OutputWriterThread(connectorSocket.getOutputStream(), new byte[]{'\n'});
 		writer.start();
 		writer.postWrite(conConfig.getConnectorPassword());
@@ -94,7 +94,7 @@ public final class MamircProcessor {
 		
 		Map<Integer,Integer> archiveSequences = new HashMap<>();
 		List<Event> archivedEvents = new ArrayList<>();
-		SQLiteConnection database = new SQLiteConnection(conConfig.getDatabaseFile());
+		SQLiteConnection database = new SQLiteConnection(conConfig.databaseFile);
 		database.open(false);
 		SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
 		for (int conId : connectionSequences.keySet()) {
