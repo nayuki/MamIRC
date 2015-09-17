@@ -56,17 +56,18 @@ final class ProcessorReaderThread extends Thread {
 				if (line == null)
 					break;
 				
-				String[] parts = new String(line, "UTF-8").split(" ", 3);
+				String[] parts = new String(line, "UTF-8").split(" ", 5);
 				String cmd = parts[0];
 				if (cmd.equals("terminate") && parts.length == 1)
 					master.terminateConnector(this);
-				else if (cmd.equals("connect") && parts.length == 3) {
-					parts = new String(line, "UTF-8").split(" ", 4);
-					master.connectServer(parts[1], Integer.parseInt(parts[2]), parts[3], this);
-				} else if (cmd.equals("disconnect") && parts.length == 2)
+				else if (cmd.equals("connect") && parts.length == 5)
+					master.connectServer(parts[1], Integer.parseInt(parts[2]), Boolean.parseBoolean(parts[3]), parts[4], this);
+				else if (cmd.equals("disconnect") && parts.length == 2)
 					master.disconnectServer(Integer.parseInt(parts[1]), this);
-				else if (cmd.equals("send") && parts.length == 3)
+				else if (cmd.equals("send")) {
+					parts = new String(line, "UTF-8").split(" ", 3);
 					master.sendMessage(Integer.parseInt(parts[1]), parts[2].getBytes(OutputWriterThread.UTF8_CHARSET), this);
+				}
 			}
 			
 		// Clean up

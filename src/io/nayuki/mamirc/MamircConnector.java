@@ -124,14 +124,14 @@ public final class MamircConnector {
 	}
 	
 	
-	public synchronized void connectServer(String hostname, int port, String metadata, ProcessorReaderThread reader) {
+	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
 		int conId = nextConnectionId;
 		ConnectionInfo info = new ConnectionInfo();
 		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, ("connect " + metadata).getBytes(OutputWriterThread.UTF8_CHARSET));
 		serverConnections.put(conId, info);
-		new ServerReaderThread(this, conId, hostname, port).start();
+		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
 		nextConnectionId++;
 	}
 	
