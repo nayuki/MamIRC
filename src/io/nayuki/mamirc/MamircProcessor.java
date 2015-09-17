@@ -250,6 +250,8 @@ public final class MamircProcessor {
 					state.registrationState = ConnectionState.RegState.REGISTERED;
 					state.rejectedNicknames = null;
 					if (realtime) {
+						if (profile.nickservPassword != null && !state.sentNickservPassword)
+							send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
 						for (String chan : profile.channels)
 							send(conId, "JOIN", chan);
 					}
@@ -296,6 +298,11 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "PRIVMSG": {
+				if (msg.parameters.size() == 3 && msg.parameters.get(0).equals("NickServ") && msg.parameters.get(1).equals("IDENTIFY"))
+					state.sentNickservPassword = true;
+			}
+			
 			default:
 				break;  // Ignore event
 		}
@@ -340,6 +347,8 @@ public final class MamircProcessor {
 					break;
 					
 				case REGISTERED: {
+					if (profile.nickservPassword != null && !state.sentNickservPassword)
+						send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
 					for (String chan : profile.channels) {
 						if (!state.currentChannels.contains(chan))
 							send(conId, "JOIN", chan);
@@ -391,6 +400,7 @@ public final class MamircProcessor {
 		public String currentNickname;
 		public Set<String> currentChannels;
 		public Queue<String> queuedPongs;  // Only used for catching up; is empty afterwards
+		public boolean sentNickservPassword;
 		
 		
 		public ConnectionState(ProcessorConfiguration.IrcNetwork profile) {
@@ -400,6 +410,7 @@ public final class MamircProcessor {
 			currentNickname = null;
 			currentChannels = new TreeSet<>();
 			queuedPongs = new ArrayDeque<>();
+			sentNickservPassword = false;
 		}
 		
 		
