@@ -7,6 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 
+// Writes lines supplied by other threads to an output stream until terminated.
 public final class OutputWriterThread extends Thread {
 	
 	/*---- Fields ----*/

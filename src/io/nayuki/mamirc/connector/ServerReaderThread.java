@@ -47,15 +47,18 @@ final class ServerReaderThread extends Thread {
 	public void run() {
 		OutputWriterThread writer = null;
 		try {
+			// Create socket
 			if (useSsl)
 				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
 			else
 				socket = new Socket(hostname, port);
 			
+			// Initialize stuff
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
 			writer.start();
 			master.connectionOpened(connectionId, socket, writer);
 			
+			// Read and forward lines
 			LineReader reader = new LineReader(socket.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();
@@ -85,11 +88,11 @@ final class ServerReaderThread extends Thread {
 			try {
 				// From "How to bypass SSL security check": https://code.google.com/p/misc-utils/wiki/JavaHttpsUrl
 				TrustManager[] trustAllCerts = {
-						new X509TrustManager() {  // A trust manager that does not validate certificate chains
-							public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-							public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-							public X509Certificate[] getAcceptedIssuers() { return null; }
-						}
+					new X509TrustManager() {  // A trust manager that does not validate certificate chains
+						public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+						public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+						public X509Certificate[] getAcceptedIssuers() { return null; }
+					}
 				};
 				SSLContext sslContext = SSLContext.getInstance("SSL");
 				sslContext.init(null, trustAllCerts, new SecureRandom());  // Install the all-trusting trust manager

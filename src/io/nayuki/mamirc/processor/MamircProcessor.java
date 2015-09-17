@@ -279,9 +279,8 @@ public final class MamircProcessor {
 			
 			case "PONG": {
 				String text = msg.parameters.get(0);
-				if (!state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text)) {
+				if (!state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text))
 					state.queuedPongs.remove();
-				}
 				break;
 			}
 			
@@ -318,6 +317,7 @@ public final class MamircProcessor {
 			ConnectionState state = ircConnections.get(conId);
 			while (!state.queuedPongs.isEmpty())
 				send(conId, "PONG", state.queuedPongs.remove());
+			state.queuedPongs = null;
 			
 			IrcNetwork profile = state.profile;
 			switch (state.registrationState) {
@@ -381,7 +381,6 @@ public final class MamircProcessor {
 	
 	
 	
-	
 	/*---- Miscellaneous methods ----*/
 	
 	private static String readStringLine(LineReader reader) throws IOException {
@@ -403,11 +402,14 @@ public final class MamircProcessor {
 		public Set<String> rejectedNicknames;
 		public String currentNickname;
 		public Set<String> currentChannels;
-		public Queue<String> queuedPongs;  // Only used for catching up; is empty afterwards
+		
+		// The fields below are only used when processing archived events
+		// and during catch-up; they are unused during real-time processing.
+		public Queue<String> queuedPongs;
 		public boolean sentNickservPassword;
 		
 		
-		public ConnectionState(ProcessorConfiguration.IrcNetwork profile) {
+		public ConnectionState(IrcNetwork profile) {
 			this.profile = profile;
 			registrationState = RegState.CONNECTING;
 			rejectedNicknames = new HashSet<>();

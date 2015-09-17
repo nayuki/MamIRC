@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 
+// Returns a byte array for each line parsed from the input stream.
 public final class LineReader {
 	
 	/*---- Fields ----*/
