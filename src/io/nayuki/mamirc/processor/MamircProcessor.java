@@ -182,7 +182,7 @@ public final class MamircProcessor {
 			
 			case "PONG": {
 				String text = msg.parameters.get(0);
-				if (!state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text))
+				if (state.queuedPongs != null && !state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text))
 					state.queuedPongs.remove();
 				break;
 			}
