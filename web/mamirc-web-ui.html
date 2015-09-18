@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<title>MamIRC</title>
+		<meta http-equiv="Content-Style-Type" content="text/css"/>
+		<meta http-equiv="Content-Script-Type" content="application/javascript"/>
+		<link rel="Stylesheet" href="mamirc.css" type="text/css" media="all"/>
+	</head>
+	
+	<body>
+		<h1>MamIRC</h1>
+		
+		<h2>Windows</h2>
+		<ul id="window-list">
+			<li>(None)</li>
+		</ul>
+		
+		<h2>Messages</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>Time</th>
+					<th>Nickname</th>
+					<th>Message</th>
+				</tr>
+			</thead>
+			<tbody id="message-list">
+				<tr>
+					<td colspan="3">(None)</td>
+				</tr>
+			</tbody>
+			<tfoot>
+				<tr>
+					<td></td>
+					<td></td>
+					<td>
+						<form action="#" method="get">
+							<input type="text" id="text-box"/>
+						</form>
+					</td>
+				</tr>
+			</tfoot>
+		</table>
+		
+		<script type="application/javascript" src="mamirc.js"></script>
+	</body>
+</html>

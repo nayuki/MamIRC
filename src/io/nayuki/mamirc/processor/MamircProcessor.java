@@ -3,8 +3,10 @@ package io.nayuki.mamirc.processor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -61,7 +63,14 @@ public final class MamircProcessor {
 				} catch (InterruptedException e) {}
 			}
 		}
+		
 		new ConnectorReaderThread(this, conConfig).start();
+		try {
+			new MessageHttpServer(this);
+		} catch (IOException e) {
+			e.printStackTrace();
+			terminate();
+		}
 	}
 	
 	
@@ -316,6 +325,16 @@ public final class MamircProcessor {
 			sb.append(params[i]);
 		}
 		writer.postWrite(sb.toString());
+	}
+	
+	
+	public synchronized Map<Object[],List<String>> getActiveChannels() {
+		Map<Object[],List<String>> result = new HashMap<>();
+		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
+			Object[] key = {entry.getKey(), entry.getValue().profile.name};
+			result.put(key, new ArrayList<>(entry.getValue().currentChannels));
+		}
+		return result;
 	}
 	
 	

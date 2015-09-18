@@ -1,0 +1,48 @@
+html {
+	margin: 0.5em auto;
+	max-width: 80em;
+	font-family: sans-serif;
+}
+
+thead {
+	display: none;
+}
+
+#window-list li.selected {
+	font-weight: bold;
+}
+
+input[type="text"] {
+	width: 100%;
+	font-size: inherit;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+tr:hover {
+	background-color: #F0F0F0;
+}
+
+td {
+	padding: 0.1em 0.3em;
+	vertical-align: top;
+}
+
+td:nth-child(1) {
+	width: 1%;
+	text-align: right;
+	color: #A0A0A0;
+}
+
+
+td:nth-child(2) {
+	width: 1%;
+	text-align: right;
+}
+
+td:nth-child(3) {
+	width: 98%;
+	text-align: left;
+}
