@@ -2,9 +2,7 @@ package io.nayuki.mamirc.processor;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
@@ -94,12 +92,11 @@ final class ConnectorReaderThread extends Thread {
 			line = readStringLine(reader);
 			if (line.equals("live-events"))
 				break;
-			String[] parts = line.split(" ", 3);
+			String[] parts = line.split(" ", 2);  // Connection ID, next (unused) sequence number
 			connectionSequences.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
 		}
 		
-		// Read archived events from database
-		List<Event> archivedEvents = new ArrayList<>();
+		// Read archived events from database and process
 		SQLiteConnection database = new SQLiteConnection(configuration.databaseFile);
 		database.open(false);
 		SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
@@ -109,16 +106,13 @@ final class ConnectorReaderThread extends Thread {
 			query.bind(2, nextSeq);
 			while (query.step()) {
 				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), query.columnBlob(3));
-				archivedEvents.add(ev);
+				master.processEvent(ev, false);  // Non-real-time
 			}
 			query.reset();
 		}
 		query.dispose();
 		database.dispose();
 		
-		// Process all archived (non-real-time) events
-		for (Event ev : archivedEvents)
-			master.processEvent(ev, false);
 		master.finishCatchup();  // Fire off queued actions just before starting real-time processing
 		return reader;
 	}
