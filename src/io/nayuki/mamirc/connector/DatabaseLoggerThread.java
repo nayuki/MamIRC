@@ -88,7 +88,6 @@ final class DatabaseLoggerThread extends Thread {
 		beginTransaction.step();
 		beginTransaction.reset();
 		insertEventIntoDb(ev);
-		long maxMainSeq = ev.mainSeq;
 		
 		boolean terminate = false;
 		while (true) {
@@ -100,7 +99,6 @@ final class DatabaseLoggerThread extends Thread {
 				break;
 			}
 			insertEventIntoDb(ev);
-			maxMainSeq = ev.mainSeq;
 		}
 		
 		commitTransaction.step();
@@ -111,7 +109,6 @@ final class DatabaseLoggerThread extends Thread {
 			if (!isTerminating)
 				wait(DATABASE_COMMIT_DELAY);
 		}
-		master.committedEvents(maxMainSeq);
 		return true;
 	}
 	
@@ -146,6 +143,6 @@ final class DatabaseLoggerThread extends Thread {
 	}
 	
 	
-	private static final Event TERMINATOR = new Event(-1, -1, Event.Type.CONNECTION, new byte[0], -1);
+	private static final Event TERMINATOR = new Event(-1, -1, -1, Event.Type.CONNECTION, new byte[0]);
 	
 }

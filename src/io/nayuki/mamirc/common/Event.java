@@ -12,22 +12,16 @@ public final class Event {
 	public final long timestamp;  // Based on Unix epoch, in milliseconds
 	public final Type type;
 	private final byte[] line;
-	public final long mainSeq;  // Only used between the master thread and database logger thread. Not stored in the database or sent to the processor.
 	
 	
 	/*---- Constructors ----*/
 	
-	public Event(int conId, int seq, Type type, byte[] line, long mainSeq) {
-		this(conId, seq, System.currentTimeMillis(), type, line, mainSeq);
+	public Event(int conId, int seq, Type type, byte[] line) {
+		this(conId, seq, System.currentTimeMillis(), type, line);
 	}
 	
 	
 	public Event(int conId, int seq, long time, Type type, byte[] line) {
-		this(conId, seq, time, type, line, -1);
-	}
-	
-	
-	public Event(int conId, int seq, long time, Type type, byte[] line, long mainSeq) {
 		if (type == null || line == null)
 			throw new NullPointerException();
 		for (byte b : line) {
@@ -39,7 +33,6 @@ public final class Event {
 		timestamp = time;
 		this.type = type;
 		this.line = line.clone();  // Defensive copy
-		this.mainSeq = mainSeq;
 	}
 	
 	
@@ -51,8 +44,8 @@ public final class Event {
 	
 	
 	public String toString() {
-		return String.format("Event(conId=%d, seq=%d, time=%d, type=%s, line=%s, mainSeq=%d)",
-			connectionId, sequence, timestamp, type.toString(), new String(line, OutputWriterThread.UTF8_CHARSET), mainSeq);
+		return String.format("Event(conId=%d, seq=%d, time=%d, type=%s, line=%s)",
+			connectionId, sequence, timestamp, type.toString(), new String(line, OutputWriterThread.UTF8_CHARSET));
 	}
 	
 	

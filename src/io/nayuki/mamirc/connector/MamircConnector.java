@@ -4,10 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
@@ -34,9 +32,6 @@ public final class MamircConnector {
 	private int nextConnectionId;
 	private final Map<Integer,ConnectionInfo> serverConnections;
 	
-	private final Queue<Event> uncommittedEvents;
-	private long nextEventMainSequence;
-	
 	// Ephemeral threads
 	private ProcessorReaderThread processorReader;
 	private OutputWriterThread processorWriter;
@@ -53,8 +48,6 @@ public final class MamircConnector {
 		// Initialize some fields
 		configuration = config;
 		serverConnections = new HashMap<>();
-		uncommittedEvents = new ArrayDeque<>();
-		nextEventMainSequence = 0;
 		
 		// Wait for database logger to start and get next connection ID
 		nextConnectionId = -1;
@@ -112,8 +105,6 @@ public final class MamircConnector {
 			processorWriter.postWrite(entry.getKey() + " " + info.nextSequence);
 		}
 		processorWriter.postWrite("recent-events");
-		for (Event ev : uncommittedEvents)
-			processorWriter.postWrite(serializeEventForProcessor(ev));
 		processorWriter.postWrite("live-events");
 	}
 	
@@ -184,12 +175,6 @@ public final class MamircConnector {
 	}
 	
 	
-	public synchronized void committedEvents(long seq) {
-		while (!uncommittedEvents.isEmpty() && uncommittedEvents.element().mainSeq <= seq)
-			uncommittedEvents.remove();
-	}
-	
-	
 	public synchronized void terminateConnector(ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -212,12 +197,10 @@ public final class MamircConnector {
 	
 	// Must be called from one of the synchronized methods above.
 	private void postEvent(int conId, int seq, Event.Type type, byte[] line) {
-		Event ev = new Event(conId, seq, type, line, nextEventMainSequence);
-		nextEventMainSequence++;
+		Event ev = new Event(conId, seq, type, line);
 		if (processorWriter != null)
 			processorWriter.postWrite(serializeEventForProcessor(ev));
 		databaseLogger.postEvent(ev);
-		uncommittedEvents.add(ev);
 	}
 	
 	
