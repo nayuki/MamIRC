@@ -105,7 +105,6 @@ public final class MamircConnector {
 			ConnectionInfo info = entry.getValue();
 			processorWriter.postWrite(entry.getKey() + " " + info.nextSequence);
 		}
-		processorWriter.postWrite("recent-events");
 		processorWriter.postWrite("live-events");
 	}
 	

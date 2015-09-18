@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import com.almworks.sqlite4java.SQLiteConnection;
@@ -93,32 +92,13 @@ final class ConnectorReaderThread extends Thread {
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		while (true) {
 			line = readStringLine(reader);
-			if (line.equals("recent-events"))
+			if (line.equals("live-events"))
 				break;
 			String[] parts = line.split(" ", 3);
 			connectionSequences.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
 		}
 		
-		// Get recent (potentially uncommitted) events
-		List<Event> recentEvents = new ArrayList<>();
-		while (true) {
-			line = readStringLine(reader);
-			if (line.equals("live-events"))
-				break;
-			String[] parts = line.split(" ", 5);
-			int conId = Integer.parseInt(parts[0]);
-			if (connectionSequences.containsKey(conId)) {
-				recentEvents.add(new Event(
-					conId,
-					Integer.parseInt(parts[1]),
-					Long.parseLong(parts[2]),
-					Event.Type.fromOrdinal(Integer.parseInt(parts[3])),
-					parts[4].getBytes(OutputWriterThread.UTF8_CHARSET)));
-			}
-		}
-		
 		// Read archived events from database
-		Map<Integer,Integer> archiveSequences = new HashMap<>();
 		List<Event> archivedEvents = new ArrayList<>();
 		SQLiteConnection database = new SQLiteConnection(configuration.databaseFile);
 		database.open(false);
@@ -127,28 +107,16 @@ final class ConnectorReaderThread extends Thread {
 			int nextSeq = connectionSequences.get(conId);
 			query.bind(1, conId);
 			query.bind(2, nextSeq);
-			int maxSeq = -1;
 			while (query.step()) {
 				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), query.columnBlob(3));
 				archivedEvents.add(ev);
-				maxSeq = ev.sequence;
 			}
 			query.reset();
-			archiveSequences.put(conId, maxSeq);
 		}
 		query.dispose();
 		database.dispose();
 		
-		// Prune recent events already covered by archive
-		for (Iterator<Event> iter = recentEvents.iterator(); iter.hasNext(); ) {
-			Event ev = iter.next();
-			if (ev.sequence <= archiveSequences.get(ev.connectionId))
-				iter.remove();
-		}
-		archivedEvents.addAll(recentEvents);
-		recentEvents.clear();
-		
-		// Process all archived and recent (non-real-time) events
+		// Process all archived (non-real-time) events
 		for (Event ev : archivedEvents)
 			master.processEvent(ev, false);
 		master.finishCatchup();  // Fire off queued actions just before starting real-time processing
