@@ -99,6 +99,7 @@ public final class MamircConnector {
 		processorWriter = writer;
 		
 		// Dump this current state to processor
+		databaseLogger.flushQueue();
 		processorWriter.postWrite("active-connections");
 		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet()) {
 			ConnectionInfo info = entry.getValue();
