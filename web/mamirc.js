@@ -82,7 +82,25 @@ function setActiveWindow(name) {
 		td.appendChild(document.createTextNode(data[i][1]));
 		tr.appendChild(td);
 		td = document.createElement("td");
-		td.appendChild(document.createTextNode(data[i][2]));
+		var s = data[i][2];
+		while (s != "") {
+			var match = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
+			if (match == null)
+				match = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
+			if (match == null) {
+				td.appendChild(document.createTextNode(s));
+				break;
+			} else {
+				if (match[1].length > 0)
+					td.appendChild(document.createTextNode(match[1]));
+				var a = document.createElement("a");
+				a.href = match[2];
+				a.target = "_blank";
+				a.appendChild(document.createTextNode(match[2]));
+				td.appendChild(a);
+				s = match[3];
+			}
+		}
 		tr.appendChild(td);
 		messageListElem.appendChild(tr);
 	}
