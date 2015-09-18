@@ -30,19 +30,21 @@ td {
 	vertical-align: top;
 }
 
-td:nth-child(1) {
+tbody td:nth-child(1) {
 	width: 1%;
 	text-align: right;
+	font-kerning: none;
 	color: #A0A0A0;
 }
 
 
-td:nth-child(2) {
+tbody td:nth-child(2) {
 	width: 1%;
 	text-align: right;
 }
 
-td:nth-child(3) {
+tbody td:nth-child(3) {
 	width: 98%;
 	text-align: left;
+	white-space: pre-wrap;
 }
