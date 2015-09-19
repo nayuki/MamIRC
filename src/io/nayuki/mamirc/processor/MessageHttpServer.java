@@ -1,5 +1,6 @@
 package io.nayuki.mamirc.processor;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -76,6 +77,12 @@ final class MessageHttpServer {
 			}
 		});
 		
+		server.createContext("/send-message.json", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				handleSendMessage(he);
+			}
+		});
+		
 		server.start();
 	}
 	
@@ -118,6 +125,31 @@ final class MessageHttpServer {
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
 		byte[] b = Json.serialize(outdata).getBytes(OutputWriterThread.UTF8_CHARSET);
+		he.sendResponseHeaders(200, b.length);
+		he.getResponseBody().write(b);
+		he.close();
+	}
+	
+	
+	private void handleSendMessage(HttpExchange he) throws IOException {
+		ByteArrayOutputStream bout = new ByteArrayOutputStream();
+		InputStream in = he.getRequestBody();
+		byte[] buf = new byte[1024];
+		while (true) {
+			int n = in.read(buf);
+			if (n == -1)
+				break;
+			bout.write(buf, 0, n);
+		}
+		Object data = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		String[] target = Json.getString(data, 0).split(":", 2);
+		String line = Json.getString(data, 1);
+		boolean status = master.sendMessage(target[1], target[0], line);
+		
+		Headers head = he.getResponseHeaders();
+		head.set("Content-Type", "application/json; charset=UTF-8");
+		head.set("Cache-Control", "no-cache");
+		byte[] b = Boolean.toString(status).getBytes(OutputWriterThread.UTF8_CHARSET);
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();

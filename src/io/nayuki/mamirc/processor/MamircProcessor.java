@@ -338,6 +338,17 @@ public final class MamircProcessor {
 	}
 	
 	
+	public synchronized boolean sendMessage(String profile, String party, String line) {
+		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
+			if (entry.getValue().profile.name.equals(profile)) {
+				send(entry.getKey(), "PRIVMSG", party, line);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
 	public synchronized void databaseLoggerReady(DatabaseLoggerThread logger) {
 		if (databaseLogger != null)
 			throw new IllegalStateException();

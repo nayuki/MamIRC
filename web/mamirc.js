@@ -13,7 +13,7 @@ var messageData = new Object();
 function init() {
 	removeChildren(windowListElem);
 	removeChildren(messageListElem);
-	document.getElementsByTagName("form")[0].onsubmit = function() { return false; };
+	document.getElementsByTagName("form")[0].onsubmit = sendMessage;
 	
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
@@ -104,6 +104,26 @@ function setActiveWindow(name) {
 		tr.appendChild(td);
 		messageListElem.appendChild(tr);
 	}
+}
+
+
+function sendMessage() {
+	inputBoxElem.disabled = true;
+	
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		inputBoxElem.value = "";
+		inputBoxElem.disabled = false;
+	};
+	xhr.ontimeout = xhr.onerror = function() {
+		inputBoxElem.disabled = false;
+	};
+	xhr.open("POST", "send-message.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify([activeWindow, inputBoxElem.value]));
+	
+	return false;  // To prevent the form submitting
 }
 
 
