@@ -21,12 +21,14 @@ final class DatabaseLoggerThread extends Thread {
 	
 	// Synchronization
 	private final Lock lock;
-	private final Condition condAll;
-	private final Condition condUrgent;
+	private final Condition condAll;      // await() by logger, signal() upon {queue non-empty OR flush request's rising edge OR terminate request's rising edge}
+	private final Condition condUrgent;   // await() by logger, signal() upon {flush request's rising edge OR terminate request's rising edge}
+	// await() by caller of flushQueue(), signal() by database logger when all queue items at time of flushQueue() call are written and committed to database;
+	// no new items can be added while flushQueue() blocks because the MamircConnector global state is blocked
 	private final Condition condFlushed;
 	
 	// Monitor state
-	private final Queue<Event> queue;
+	private Queue<Event> queue;
 	private boolean flushRequested;
 	private boolean terminateRequested;
 	
@@ -82,6 +84,7 @@ final class DatabaseLoggerThread extends Thread {
 			try {
 				while (processBatchOfEvents());
 			} finally {
+				queue = null;
 				lock.unlock();
 			}
 			
@@ -102,54 +105,56 @@ final class DatabaseLoggerThread extends Thread {
 	
 	private static final int GATHER_DATA_DELAY     =  2000;  // In milliseconds
 	private static final int DATABASE_COMMIT_DELAY = 10000;  // In milliseconds
-	
+
+	// Must hold 'lock' before and after the method call.
 	private boolean processBatchOfEvents() throws InterruptedException, SQLiteException {
 		// Wait for something to do
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
 		
 		if (queue.isEmpty()) {
+			if (flushRequested)
+				throw new IllegalStateException();
+			return !terminateRequested;
+			
+		} else {
 			if (flushRequested) {
-				flushRequested = false;
-				condFlushed.signal();
-			}
-			
-		} else {  // Drain the queue. Release the lock during database operations to allow other threads to add to the queue.
-			if (!flushRequested)
-				condUrgent.await(GATHER_DATA_DELAY, TimeUnit.MILLISECONDS);
-			
-			lock.unlock();
-			step(beginTransaction, false);
-			beginTransaction.reset();
-			lock.lock();
-			
-			while (!queue.isEmpty()) {
-				Event ev = queue.remove();
-				lock.unlock();
-				insertEventIntoDb(ev);
-				lock.lock();
-			}
-			
-			if (flushRequested) {
-				// Synchronous commit
+				// Drain the queue straightforwardly
+				step(beginTransaction, false);
+				beginTransaction.reset();
+				while (!queue.isEmpty())
+					insertEventIntoDb(queue.remove());
 				step(commitTransaction, false);
+				commitTransaction.reset();
 				flushRequested = false;
 				condFlushed.signal();
-				commitTransaction.reset();
+				
 			} else {
-				// Asynchronous commit
+				// Wait to gather quick request-response events
+				condUrgent.await(GATHER_DATA_DELAY, TimeUnit.MILLISECONDS);
+				
+				// Drain the queue without blocking on I/O
+				Event[] events = new Event[queue.size()];
+				for (int i = 0; i < events.length; i++)
+					events[i] = queue.remove();
+				if (!queue.isEmpty())
+					throw new AssertionError();
+				
+				// Do all database I/O while allowing other threads to post events
 				lock.unlock();
+				step(beginTransaction, false);
+				beginTransaction.reset();
+				for (Event ev : events)
+					insertEventIntoDb(ev);
 				step(commitTransaction, false);
 				commitTransaction.reset();
 				lock.lock();
+				// At this point, the queue may be non-empty and the flags may have changed
+				
+				if (!flushRequested)
+					condUrgent.await(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
 			}
-		}
-		
-		if (terminateRequested)
-			return false;
-		else {
-			condUrgent.await(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
-			return true;
+			return true;  // Re-evaluate the full situation even if termination is requested
 		}
 	}
 	
