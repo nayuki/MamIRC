@@ -122,10 +122,11 @@ public final class MamircProcessor {
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
 		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		List<String> params = msg.parameters;
 		switch (msg.command) {
 			
 			case "PING": {
-				String text = msg.parameters.get(0);
+				String text = params.get(0);
 				if (realtime)
 					send(conId, "PONG", text);
 				else
@@ -134,37 +135,38 @@ public final class MamircProcessor {
 			}
 			
 			case "NICK": {
-				if (new IrcLine.Prefix(msg.prefix).name.equals(state.currentNickname))
-					state.currentNickname = msg.parameters.get(0);
+				String fromname = new IrcLine.Prefix(msg.prefix).name;
+				if (fromname.equals(state.currentNickname))
+					state.currentNickname = params.get(0);
 				break;
 			}
 			
 			case "JOIN": {
-				IrcLine.Prefix prefix = new IrcLine.Prefix(msg.prefix);
-				if (prefix.name.equals(state.currentNickname))
-					state.currentChannels.put(msg.parameters.get(0), new ConnectionState.ChannelState());
-				String line = msg.command + " " + prefix.name;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.parameters.get(0), line);
+				String who = new IrcLine.Prefix(msg.prefix).name;
+				if (who.equals(state.currentNickname))
+					state.currentChannels.put(params.get(0), new ConnectionState.ChannelState());
+				String line = msg.command + " " + who;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
 				break;
 			}
 			
 			case "PART": {
-				IrcLine.Prefix prefix = new IrcLine.Prefix(msg.prefix);
-				if (prefix.name.equals(state.currentNickname))
-					state.currentChannels.remove(msg.parameters.get(0));
-				String line = msg.command + " " + prefix.name;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.parameters.get(0), line);
+				String who = new IrcLine.Prefix(msg.prefix).name;
+				if (who.equals(state.currentNickname))
+					state.currentChannels.remove(params.get(0));
+				String line = msg.command + " " + who;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
 				break;
 			}
 			
 			case "PRIVMSG": {
-				String src = new IrcLine.Prefix(msg.prefix).name;
-				String party = msg.parameters.get(0);
-				if (party.charAt(0) != '#' && party.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
-					party = src;
-				String text = msg.parameters.get(1);
-				String line = msg.command + " " + src + " " + text;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
+				String who = new IrcLine.Prefix(msg.prefix).name;
+				String target = params.get(0);
+				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
+					target = who;
+				String text = params.get(1);
+				String line = msg.command + " " + who + " " + text;
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
 				break;
 			}
 			
