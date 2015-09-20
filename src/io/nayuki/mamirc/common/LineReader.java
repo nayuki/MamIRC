@@ -11,21 +11,23 @@ public final class LineReader {
 	
 	/*---- Fields ----*/
 	
-	private InputStream input;
+	private final InputStream input;
 	
 	// Current accumulating line
 	private byte[] lineBuffer;
 	private int lineLength;
-	private boolean prevWasCr;
 	
 	private byte[] readBuffer;
 	private int readLength;
 	private int readOffset;
+	private boolean prevWasCr;
 	
 	
 	/*---- Constructor ----*/
 	
 	public LineReader(InputStream in) {
+		if (in == null)
+			throw new NullPointerException();
 		input = in;
 		lineBuffer = new byte[1024];
 		lineLength = 0;
@@ -43,7 +45,7 @@ public final class LineReader {
 	// Newlines are treated as separators rather than terminators, which means at least 1 line
 	// is always returned for any stream, and the stream need not end with a newline sequence.
 	public byte[] readLine() throws IOException {
-		if (lineBuffer == null)  // End of stream already reached previously
+		if (readBuffer == null)  // End of stream already reached previously
 			return null;
 		
 		// Loop until we find a line or reach the end of stream
@@ -51,12 +53,13 @@ public final class LineReader {
 			// Gather more input data if needed
 			while (readOffset >= readLength) {  // Use loop in case read() returns 0
 				readLength = input.read(readBuffer);
-				if (readLength == -1) {  // End of stream reached just now
-					lineBuffer = null;
-					readBuffer = null;
-					return null;  // End of stream
-				}
 				readOffset = 0;
+				if (readLength == -1) {  // End of stream reached just now
+					byte[] result = takeCurrentLine();
+					readBuffer = null;
+					lineBuffer = null;
+					return result;
+				}
 			}
 			
 			while (readOffset < readLength) {
@@ -65,21 +68,16 @@ public final class LineReader {
 				switch (b) {
 					case '\r':
 					{
-						byte[] result = Arrays.copyOf(lineBuffer, lineLength);
-						lineLength = 0;
 						prevWasCr = true;
-						return result;
+						return takeCurrentLine();
 					}
 					
 					case '\n':
 						if (prevWasCr) {
 							prevWasCr = false;
 							break;
-						} else {
-							byte[] result = Arrays.copyOf(lineBuffer, lineLength);
-							lineLength = 0;
-							return result;
-						}
+						} else
+							return takeCurrentLine();
 						
 					default:
 						if (lineLength == lineBuffer.length)
@@ -91,6 +89,13 @@ public final class LineReader {
 				}
 			}
 		}
+	}
+	
+	
+	private byte[] takeCurrentLine() {
+		byte[] result = Arrays.copyOf(lineBuffer, lineLength);
+		lineLength = 0;
+		return result;
 	}
 	
 }

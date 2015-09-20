@@ -13,8 +13,8 @@ public final class OutputWriterThread extends Thread {
 	/*---- Fields ----*/
 	
 	private final OutputStream output;
-	private final BlockingQueue<byte[]> queue;
 	private final byte[] newline;
+	private BlockingQueue<byte[]> queue;
 	
 	
 	/*---- Constructor ----*/
@@ -52,6 +52,7 @@ public final class OutputWriterThread extends Thread {
 		} catch (IOException e) {}
 		 catch (InterruptedException e) {}
 		finally {
+			queue = null;  // Not thread-safe, but is a best-effort attempt to detect invalid usage
 			try {
 				output.close();
 			} catch (IOException e) {}
@@ -70,6 +71,8 @@ public final class OutputWriterThread extends Thread {
 	
 	// Can be called safely from any thread. Must not be called after terminate().
 	public void postWrite(String line) {
+		if (line == null)
+			throw new NullPointerException();
 		postWrite(line.getBytes(UTF8_CHARSET));
 	}
 	

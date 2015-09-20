@@ -32,37 +32,47 @@ final class ProcessorConfiguration {
 		
 		// Convert to internal data format
 		databaseFile = new File(Json.getString(data, "database-file"));
-		Map<String,Object> nets = Json.getMap(data, "irc-networks");
-		Map<String,IrcNetwork> networks = new HashMap<>();
-		for (String name : nets.keySet()) {
-			Map<String,Object> net = Json.getMap(nets, name);
-			String username = Json.getString(net, "username");
-			String realname = Json.getString(net, "realname");
-			String nickservPassword = net.containsKey("nickserv-password") ? Json.getString(net, "nickserv-password") : null;
-			
-			List<String> nicknames = new ArrayList<>();
-			for (Object o : Json.getList(net, "nicknames"))
-				nicknames.add((String)o);
-			if (nicknames.size() == 0)
-				throw new IllegalArgumentException("Empty list of nicknames");
-			
-			Set<String> channels = new TreeSet<>();
-			for (Object o : Json.getList(net, "channels"))
-				channels.add((String)o);
-			
-			List<IrcNetwork.Server> servers = new ArrayList<>();
-			for (Object serv : Json.getList(net, "servers")) {
-				String hostname = Json.getString(serv, "hostname");
-				int port = Json.getInt(serv, "port");
-				boolean useSsl = Json.getBoolean(serv, "ssl");
-				servers.add(new IrcNetwork.Server(hostname, port, useSsl));
-			}
-			if (servers.size() == 0)
-				throw new IllegalArgumentException("Empty list of servers");
-			
-			networks.put(name, new IrcNetwork(name, servers, nicknames, username, realname, nickservPassword, channels));
-		}
-		ircNetworks = Collections.unmodifiableMap(networks);
+		
+		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format 
+		Map<String,Object> netsIn = Json.getMap(data, "irc-networks");
+		Map<String,IrcNetwork> netsOut = new HashMap<>();
+		for (String name : netsIn.keySet())
+			convertNetwork(name, Json.getMap(netsIn, name), netsOut);
+		ircNetworks = Collections.unmodifiableMap(netsOut);
+	}
+	
+	
+	/*---- Helper methods ----*/
+	
+	private void convertNetwork(String name, Map<String,Object> netIn, Map<String,IrcNetwork> netsOut) {
+		String username = Json.getString(netIn, "username");
+		String realname = Json.getString(netIn, "realname");
+		String nspass = netIn.containsKey("nickserv-password") ? Json.getString(netIn, "nickserv-password") : null;
+		
+		List<Object> nicknamesIn = Json.getList(netIn, "nicknames");
+		List<String> nicknamesOut = new ArrayList<>();
+		for (Object o : nicknamesIn)
+			nicknamesOut.add((String)o);
+		
+		List<Object> channelsIn = Json.getList(netIn, "channels");
+		Set<String> channelsOut = new TreeSet<>();
+		for (Object o : channelsIn)
+			channelsOut.add((String)o);
+		
+		List<Object> serversIn = Json.getList(netIn, "servers");
+		List<IrcNetwork.Server> serversOut = new ArrayList<>();
+		for (Object servIn : serversIn)
+			serversOut.add(convertServer(servIn));
+		
+		netsOut.put(name, new IrcNetwork(name, serversOut, nicknamesOut, username, realname, nspass, channelsOut));
+	}
+	
+	
+	private IrcNetwork.Server convertServer(Object servIn) {
+		String hostname = Json.getString(servIn, "hostname");
+		int port = Json.getInt(servIn, "port");
+		boolean ssl = Json.getBoolean(servIn, "ssl");
+		return new IrcNetwork.Server(hostname, port, ssl);
 	}
 	
 	
@@ -86,7 +96,15 @@ final class ProcessorConfiguration {
 		public final Set<String> channels;
 		
 		
-		public IrcNetwork(String name, List<Server> servers, List<String> nicknames, String username, String realname, String nickservPassword, Set<String> channels) {
+		public IrcNetwork(String name, List<Server> servers, List<String> nicknames,
+				String username, String realname, String nickservPassword, Set<String> channels) {
+			if (name == null || servers == null || nicknames == null || username == null
+					|| realname == null || nickservPassword == null || channels == null)
+				throw new NullPointerException();
+			if (servers.isEmpty())
+				throw new IllegalArgumentException("Empty list of servers");
+			if (nicknames.isEmpty())
+				throw new IllegalArgumentException("Empty list of nicknames");
 			this.name = name;
 			this.servers = Collections.unmodifiableList(servers);
 			this.nicknames = Collections.unmodifiableList(nicknames);
@@ -106,7 +124,7 @@ final class ProcessorConfiguration {
 				if (hostname == null)
 					throw new NullPointerException();
 				if ((port & 0xFFFF) != port)
-					throw new IllegalArgumentException();
+					throw new IllegalArgumentException("Invalid port number");
 				this.hostname = hostname;
 				this.port = port;
 				this.useSsl = useSsl;
