@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -141,7 +142,7 @@ public final class MamircProcessor {
 			case "JOIN": {
 				IrcLine.Prefix prefix = new IrcLine.Prefix(msg.prefix);
 				if (prefix.name.equals(state.currentNickname))
-					state.currentChannels.add(msg.parameters.get(0));
+					state.currentChannels.put(msg.parameters.get(0), new ConnectionState.ChannelState());
 				String line = msg.command + " " + prefix.name;
 				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.parameters.get(0), line);
 				break;
@@ -302,7 +303,7 @@ public final class MamircProcessor {
 					if (profile.nickservPassword != null && !state.sentNickservPassword)
 						send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
 					for (String chan : profile.channels) {
-						if (!state.currentChannels.contains(chan))
+						if (!state.currentChannels.containsKey(chan))
 							send(conId, "JOIN", chan);
 					}
 					break;
@@ -332,7 +333,7 @@ public final class MamircProcessor {
 		Map<Object[],List<String>> result = new HashMap<>();
 		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
 			Object[] key = {entry.getKey(), entry.getValue().profile.name};
-			result.put(key, new ArrayList<>(entry.getValue().currentChannels));
+			result.put(key, new ArrayList<>(entry.getValue().currentChannels.keySet()));
 		}
 		return result;
 	}
@@ -373,12 +374,11 @@ public final class MamircProcessor {
 	/*---- Nested classes ----*/
 	
 	private static final class ConnectionState {
-		
 		public IrcNetwork profile;
 		public RegState registrationState;
 		public Set<String> rejectedNicknames;
 		public String currentNickname;
-		public Set<String> currentChannels;
+		public Map<String,ChannelState> currentChannels;
 		
 		// The fields below are only used when processing archived events
 		// and during catch-up; they are unused during real-time processing.
@@ -391,9 +391,20 @@ public final class MamircProcessor {
 			registrationState = RegState.CONNECTING;
 			rejectedNicknames = new HashSet<>();
 			currentNickname = null;
-			currentChannels = new TreeSet<>();
+			currentChannels = new TreeMap<>();
 			queuedPongs = new ArrayDeque<>();
 			sentNickservPassword = false;
+		}
+		
+		
+		public static final class ChannelState {
+			public final Set<String> members;
+			public boolean processingNamesReply;
+			
+			public ChannelState() {
+				members = new TreeSet<>();
+				processingNamesReply = false;
+			}
 		}
 		
 		
