@@ -18,7 +18,9 @@ final class IrcLine {
 	
 	/*---- Fields ----*/
 	
-	public final String prefix;   // Can be null
+	public final String prefixName;      // Can be null
+	public final String prefixHostname;  // Can be null, but would require prefixName to be null
+	public final String prefixUsername;  // Can be null, but would require prefixHostname to be null
 	public final String command;  // Not null
 	public final List<String> parameters;  // Not null; immutable, length at least 0, elements not null.
 	
@@ -31,10 +33,29 @@ final class IrcLine {
 		Matcher m = PREFIX_COMMAND_REGEX.matcher(line);
 		if (!m.matches())
 			throw new IllegalArgumentException("Syntax error in prefix or command");
-		if (m.start(1) != -1)
-			prefix = line.substring(m.start(1) + 1, m.end(1) - 1);
-		else
-			prefix = null;
+		if (m.start(1) != -1) {
+			String prefix = line.substring(m.start(1) + 1, m.end(1) - 1);
+			int i = prefix.indexOf('@');
+			if (i == -1) {
+				prefixName = prefix;
+				prefixUsername = null;
+				prefixHostname = null;
+			} else {
+				int j = prefix.lastIndexOf('!', i);
+				if (j == -1) {
+					prefixName = prefix.substring(0, i);
+					prefixUsername = null;
+				} else {
+					prefixName = prefix.substring(0, j);
+					prefixUsername = prefix.substring(j + 1, i);
+				}
+				prefixHostname = prefix.substring(i + 1);
+			}
+		} else {
+			prefixName = null;
+			prefixHostname = null;
+			prefixUsername = null;
+		}
 		command = m.group(2);
 		
 		// Parse any number of parameters
@@ -63,37 +84,5 @@ final class IrcLine {
 	/*---- Constants ----*/
 	
 	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ )?([^ ]+)(.*)");
-	
-	
-	
-	/*---- Nested classes ----*/
-	
-	public static final class Prefix {
-		
-		public final String name;  // Not null. This is a user nickname or server name.
-		public final String username;  // Can be null
-		public final String hostname;  // Can be null, unless username is null
-		
-		
-		public Prefix(String s) {
-			int i = s.indexOf('@');
-			if (i == -1) {
-				name = s;
-				username = null;
-				hostname = null;
-			} else {
-				int j = s.lastIndexOf('!', i);
-				if (j == -1) {
-					name = s.substring(0, i);
-					username = null;
-				} else {
-					name = s.substring(0, j);
-					username = s.substring(j + 1, i);
-				}
-				hostname = s.substring(i + 1);
-			}
-		}
-		
-	}
 	
 }

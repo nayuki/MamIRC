@@ -136,7 +136,7 @@ public final class MamircProcessor {
 			}
 			
 			case "NICK": {
-				String fromname = new IrcLine.Prefix(msg.prefix).name;
+				String fromname = msg.prefixName;
 				String toname = params.get(0);
 				if (fromname.equals(state.currentNickname))
 					state.currentNickname = toname;
@@ -152,7 +152,7 @@ public final class MamircProcessor {
 			}
 			
 			case "JOIN": {
-				String who = new IrcLine.Prefix(msg.prefix).name;
+				String who = msg.prefixName;
 				String chan = params.get(0);
 				if (who.equals(state.currentNickname) && !curchans.containsKey(chan))
 					curchans.put(chan, new ConnectionState.ChannelState());
@@ -164,7 +164,7 @@ public final class MamircProcessor {
 			}
 			
 			case "PART": {
-				String who = new IrcLine.Prefix(msg.prefix).name;
+				String who = msg.prefixName;
 				String chan = params.get(0);
 				if (curchans.containsKey(chan))
 					curchans.get(chan).members.remove(who);
@@ -176,7 +176,7 @@ public final class MamircProcessor {
 			}
 			
 			case "PRIVMSG": {
-				String who = new IrcLine.Prefix(msg.prefix).name;
+				String who = msg.prefixName;
 				String target = params.get(0);
 				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
 					target = who;
@@ -187,7 +187,7 @@ public final class MamircProcessor {
 			}
 			
 			case "QUIT": {
-				String who = new IrcLine.Prefix(msg.prefix).name;
+				String who = msg.prefixName;
 				if (!who.equals(state.currentNickname)) {
 					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
