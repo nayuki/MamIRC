@@ -35,12 +35,14 @@ public final class MamircProcessor {
 	
 	/*---- Fields (global state) ----*/
 	
+	// Immutable
 	private final ProcessorConfiguration myConfiguration;
 	
+	// Current worker threads
 	private DatabaseLoggerThread databaseLogger;
-	
 	private OutputWriterThread writer;
 	
+	// Mutable current state
 	private final Map<Integer,ConnectionState> ircConnections;
 	
 	
@@ -58,6 +60,7 @@ public final class MamircProcessor {
 		// Wait for database logger to be ready before connecting
 		new DatabaseLoggerThread(this, myConfiguration.databaseFile).start();
 		synchronized(this) {
+			// That thread will call this.databaseLoggerReady()
 			while (databaseLogger == null) {
 				try {
 					this.wait();
@@ -289,6 +292,7 @@ public final class MamircProcessor {
 				}
 				if (state.registrationState != ConnectionState.RegState.REGISTERED)
 					state.currentNickname = msg.parameters.get(0);
+				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
 			
@@ -428,11 +432,11 @@ public final class MamircProcessor {
 	/*---- Nested classes ----*/
 	
 	private static final class ConnectionState {
-		public IrcNetwork profile;
-		public RegState registrationState;
-		public Set<String> rejectedNicknames;
-		public String currentNickname;
-		public Map<String,ChannelState> currentChannels;
+		public IrcNetwork profile;             // Not null
+		public RegState registrationState;     // Not null
+		public Set<String> rejectedNicknames;  // Not null before successful registration, null thereafter
+		public String currentNickname;         // Can be null
+		public Map<String,ChannelState> currentChannels;  // Not null, size at least 0
 		
 		// The fields below are only used when processing archived events
 		// and during catch-up; they are unused during real-time processing.
@@ -452,7 +456,7 @@ public final class MamircProcessor {
 		
 		
 		public static final class ChannelState {
-			public final Set<String> members;
+			public final Set<String> members;  // Not null, size at least 0
 			public boolean processingNamesReply;
 			
 			public ChannelState() {
