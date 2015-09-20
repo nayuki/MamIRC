@@ -91,16 +91,18 @@ final class MessageHttpServer {
 		SQLiteConnection database = new SQLiteConnection(databaseFile);
 		database.open(false);
 		SQLiteStatement windowQuery = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
-		SQLiteStatement messageQuery = database.prepare("SELECT timestamp, line FROM messages WHERE connectionId=? AND windowId=? ORDER BY sequence ASC");
+		SQLiteStatement messageQuery = database.prepare("SELECT sequence, timestamp, line FROM messages WHERE connectionId=? AND windowId=? ORDER BY sequence ASC");
 		Map<Object[],List<String>> active = master.getActiveChannels();
 		
-		Map<String,Map<String,List<List<Object>>>> outdata = new HashMap<>();
+		// For each network profile
+		Map<String,Map<String,Object>> outData = new HashMap<>();
 		for (Map.Entry<Object[],List<String>> entry : active.entrySet()) {
 			int conId = (Integer)entry.getKey()[0];
 			String profile = (String)entry.getKey()[1];
-			Map<String,List<List<Object>>> outprofile = new HashMap<>();
-			outdata.put(profile, outprofile);
+			Map<String,Object> outProfile = new HashMap<>();
 			
+			Map<String,List<List<Object>>> outWindows = new HashMap<>();
+			int maxSeq = -1;
 			for (String party : entry.getValue()) {
 				windowQuery.bind(1, profile);
 				windowQuery.bind(2, party);
@@ -108,21 +110,28 @@ final class MessageHttpServer {
 				int window = windowQuery.columnInt(0);
 				windowQuery.reset();
 				
-				List<List<Object>> outmsgs = new ArrayList<>();
-				outprofile.put(party, outmsgs);
+				List<List<Object>> outMsgs = new ArrayList<>();
 				messageQuery.bind(1, conId);
 				messageQuery.bind(2, window);
-				while (messageQuery.step())
-					outmsgs.add(Arrays.asList(messageQuery.columnLong(0), messageQuery.columnString(1)));
+				while (messageQuery.step()) {
+					outMsgs.add(Arrays.asList(messageQuery.columnLong(1), messageQuery.columnString(2)));
+					maxSeq = Math.max(messageQuery.columnInt(0), maxSeq);
+				}
 				messageQuery.reset();
+				outWindows.put(party, outMsgs);
 			}
+			outProfile.put("windows", outWindows);
+			
+			outProfile.put("connection-id", conId);
+			outProfile.put("max-sequence", maxSeq);
+			outData.put(profile, outProfile);
 		}
 		database.dispose();
 		
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
-		byte[] b = Json.serialize(outdata).getBytes(OutputWriterThread.UTF8_CHARSET);
+		byte[] b = Json.serialize(outData).getBytes(OutputWriterThread.UTF8_CHARSET);
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();

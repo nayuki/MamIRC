@@ -33,10 +33,10 @@ function init() {
 
 function processInitialMessages(data) {
 	for (var profile in data) {
-		for (var party in data[profile]) {
+		for (var party in data[profile].windows) {
 			var windowName = party + ":" + profile;
 			var messages = [];
-			var msgs = data[profile][party];
+			var msgs = data[profile].windows[party];
 			for (var i = 0; i < msgs.length; i++) {
 				var s = msgs[i][1];
 				var match = /^PRIVMSG ([^ ]+) (.*)$/.exec(s);
