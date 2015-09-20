@@ -123,6 +123,7 @@ public final class MamircProcessor {
 		IrcNetwork profile = state.profile;
 		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
 		List<String> params = msg.parameters;
+		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
 		switch (msg.command) {
 			
 			case "PING": {
@@ -136,15 +137,27 @@ public final class MamircProcessor {
 			
 			case "NICK": {
 				String fromname = new IrcLine.Prefix(msg.prefix).name;
+				String toname = params.get(0);
 				if (fromname.equals(state.currentNickname))
-					state.currentNickname = params.get(0);
+					state.currentNickname = toname;
+				for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
+					Set<String> members = entry.getValue().members;
+					if (members.remove(fromname)) {
+						members.add(toname);
+						String line = msg.command + " " + fromname + " " + toname;
+						databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+					}
+				}
 				break;
 			}
 			
 			case "JOIN": {
 				String who = new IrcLine.Prefix(msg.prefix).name;
-				if (who.equals(state.currentNickname))
-					state.currentChannels.put(params.get(0), new ConnectionState.ChannelState());
+				String chan = params.get(0);
+				if (who.equals(state.currentNickname) && !curchans.containsKey(chan))
+					curchans.put(chan, new ConnectionState.ChannelState());
+				if (curchans.containsKey(chan))
+					curchans.get(chan).members.add(who);
 				String line = msg.command + " " + who;
 				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
 				break;
@@ -152,10 +165,13 @@ public final class MamircProcessor {
 			
 			case "PART": {
 				String who = new IrcLine.Prefix(msg.prefix).name;
+				String chan = params.get(0);
+				if (curchans.containsKey(chan))
+					curchans.get(chan).members.remove(who);
 				if (who.equals(state.currentNickname))
-					state.currentChannels.remove(params.get(0));
+					curchans.remove(chan);
 				String line = msg.command + " " + who;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
+				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
 				break;
 			}
 			
@@ -167,6 +183,19 @@ public final class MamircProcessor {
 				String text = params.get(1);
 				String line = msg.command + " " + who + " " + text;
 				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
+				break;
+			}
+			
+			case "QUIT": {
+				String who = new IrcLine.Prefix(msg.prefix).name;
+				if (!who.equals(state.currentNickname)) {
+					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
+						if (entry.getValue().members.remove(who)) {
+							String line = msg.command + " " + who + " " + params.get(0);
+							databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+						}
+					}
+				}
 				break;
 			}
 			
@@ -205,6 +234,29 @@ public final class MamircProcessor {
 							send(conId, "JOIN", chan);
 					}
 				}
+				break;
+			}
+			
+			case "353": {  // RPL_NAMREPLY
+				String chan = params.get(2);
+				if (curchans.containsKey(chan)) {
+					ConnectionState.ChannelState chanstate = curchans.get(chan);
+					if (!chanstate.processingNamesReply) {
+						chanstate.members.clear();
+						chanstate.processingNamesReply = true;
+					}
+					for (String name : params.get(3).split(" ")) {
+						if (name.startsWith("@") || name.startsWith("+"))
+							name = name.substring(1);
+						chanstate.members.add(name);
+					}
+				}
+				break;
+			}
+			
+			case "366": {  // RPL_ENDOFNAMES
+				for (ConnectionState.ChannelState chanstate : curchans.values())
+					chanstate.processingNamesReply = false;
 				break;
 			}
 			
