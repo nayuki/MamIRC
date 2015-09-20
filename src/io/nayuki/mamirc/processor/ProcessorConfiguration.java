@@ -99,7 +99,7 @@ final class ProcessorConfiguration {
 		public IrcNetwork(String name, List<Server> servers, List<String> nicknames,
 				String username, String realname, String nickservPassword, Set<String> channels) {
 			if (name == null || servers == null || nicknames == null || username == null
-					|| realname == null || nickservPassword == null || channels == null)
+					|| realname == null || channels == null)
 				throw new NullPointerException();
 			if (servers.isEmpty())
 				throw new IllegalArgumentException("Empty list of servers");
