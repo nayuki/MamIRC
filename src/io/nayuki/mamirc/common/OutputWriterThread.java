@@ -7,7 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 
-// Writes lines supplied by other threads to an output stream until terminated.
+// Receives lines from other threads and writes them to an output stream until terminated.
 public final class OutputWriterThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -19,6 +19,7 @@ public final class OutputWriterThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
+	// Can customize the newline sequence as "\n", "\r\n", etc.
 	public OutputWriterThread(OutputStream out, byte[] newline) {
 		if (out == null || newline == null)
 			throw new NullPointerException();
@@ -58,7 +59,8 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread.
+	// Can be called safely from any thread. Must not be called after terminate().
+	// Caller must never change the values inside the array after it is passed into this method.
 	public void postWrite(byte[] line) {
 		if (line == null)
 			throw new NullPointerException();
@@ -66,7 +68,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread.
+	// Can be called safely from any thread. Must not be called after terminate().
 	public void postWrite(String line) {
 		postWrite(line.getBytes(UTF8_CHARSET));
 	}

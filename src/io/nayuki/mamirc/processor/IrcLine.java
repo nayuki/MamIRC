@@ -5,18 +5,25 @@ import java.util.Collections;
 import java.util.List;
 
 
-// Immutable data structure.
+// Represents a line received from IRC server or sent from IRC client. Immutable data structure.
+// A raw IRC line can look like these examples (with no leading spaces):
+//   :server.example.com 001 UserNickname :Welcome to IRC!
+//   JOIN #channel
+//   :Oldname NICK Newname
+//   :nickname!username@hostname PRIVMSG #channel :Hello!
+//   :optionalPrefix COMMAND noSpaceParam anotherparam :Trailing parameter with spaces allowed
 final class IrcLine {
 	
 	/*---- Fields ----*/
 	
-	public final String prefix;            // Can be null
-	public final String command;           // Not null
-	public final List<String> parameters;  // Not null, and has length 0 or more
+	public final String prefix;   // Can be null
+	public final String command;  // Not null
+	public final List<String> parameters;  // Not null; immutable, length at least 0, elements not null.
 	
 	
-	/*---- Methods ----*/
+	/*---- Constructor ----*/
 	
+	// Parses the given raw string line into parts. Throws an exception on syntax error.
 	public IrcLine(String line) {
 		// Parse prefix
 		if (line.startsWith(":")) {

@@ -12,17 +12,18 @@ import java.util.TreeSet;
 import io.nayuki.json.Json;
 
 
-// Immutable structure. Data is loaded from a JSON file.
+// Represents the processor configuration data. Immutable structure.
 final class ProcessorConfiguration {
 	
 	/*---- Fields ----*/
 	
-	public final File databaseFile;
-	public final Map<String,IrcNetwork> ircNetworks;
+	public final File databaseFile;  // Not null. File existence not checked.
+	public final Map<String,IrcNetwork> ircNetworks;  // Not null, keys/values not null, immutable
 	
 	
 	/*---- Constructor ----*/
 	
+	// Reads the given JSON file and initializes this data structure.
 	public ProcessorConfiguration(File file) throws IOException {
 		// Parse and do basic check
 		Object data = Json.parseFromFile(file);
@@ -69,13 +70,21 @@ final class ProcessorConfiguration {
 	/* ---- Immutable data structure classes ----*/
 	
 	public static final class IrcNetwork {
-		public final String name;              // Not null
-		public final List<Server> servers;     // Length at least 1
-		public final List<String> nicknames;   // Length at least 1
-		public final String username;          // Not null
-		public final String realname;          // Not null
-		public final String nickservPassword;  // Can be null
-		public final Set<String> channels;     // Length at least 0
+		// Name of this IRC network profile. Not null.
+		public final String name;
+		// List of servers to try to connect to, in priority sequence. Not null; immutable, length at least 1, elements not null.
+		public final List<Server> servers;
+		// List of nicknames to try to use, in priority sequence. Not null; immutable, length at least 1, elements not null.
+		public final List<String> nicknames;
+		// Username at USER registration. Not null.
+		public final String username;
+		// Real name at USER registration. Not null.
+		public final String realname;
+		// Password for "/msg NickServ IDENTIFY <password>" immediately after USER registration. Can be null.
+		public final String nickservPassword;
+		// Initial set of channels to join. Not null; immutable, size at least 0, elements not null.
+		public final Set<String> channels;
+		
 		
 		public IrcNetwork(String name, List<Server> servers, List<String> nicknames, String username, String realname, String nickservPassword, Set<String> channels) {
 			this.name = name;
@@ -89,8 +98,8 @@ final class ProcessorConfiguration {
 		
 		
 		public static final class Server {
-			public final String hostname;
-			public final int port;
+			public final String hostname;  // Not null
+			public final int port;  // In the range [0, 65535]
 			public final boolean useSsl;
 			
 			public Server(String hostname, int port, boolean useSsl) {

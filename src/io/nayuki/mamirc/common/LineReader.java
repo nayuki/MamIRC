@@ -5,13 +5,15 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 
-// Returns a byte array for each line parsed from the input stream.
+// Returns a byte array for each line parsed from an input stream.
+// Not thread-safe. Parent is responsible for closing the stream.
 public final class LineReader {
 	
 	/*---- Fields ----*/
 	
 	private InputStream input;
 	
+	// Current accumulating line
 	private byte[] lineBuffer;
 	private int lineLength;
 	private boolean prevWasCr;
@@ -36,16 +38,20 @@ public final class LineReader {
 	
 	/*---- Methods ----*/
 	
-	// Has universal newline detection. The returned array is a unique instance, and contains no '\r' or '\n' characters.
+	// Has universal newline detection. Each returned array is a unique instance,
+	// and contains no '\r' or '\n' characters. Lines have 0 or more characters.
+	// Newlines are treated as separators rather than terminators, which means at least 1 line
+	// is always returned for any stream, and the stream need not end with a newline sequence.
 	public byte[] readLine() throws IOException {
 		if (lineBuffer == null)  // End of stream already reached previously
 			return null;
 		
+		// Loop until we find a line or reach the end of stream
 		while (true) {
 			// Gather more input data if needed
-			while (readOffset >= readLength) {
+			while (readOffset >= readLength) {  // Use loop in case read() returns 0
 				readLength = input.read(readBuffer);
-				if (readLength == -1) {
+				if (readLength == -1) {  // End of stream reached just now
 					lineBuffer = null;
 					readBuffer = null;
 					return null;  // End of stream
