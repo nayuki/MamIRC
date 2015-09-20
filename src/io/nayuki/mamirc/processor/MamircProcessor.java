@@ -40,7 +40,10 @@ public final class MamircProcessor {
 	
 	// Current worker threads
 	private DatabaseLoggerThread databaseLogger;
+	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
+	
+	private MessageHttpServer server;
 	
 	// Mutable current state
 	private final Map<Integer,ConnectionState> ircConnections;
@@ -68,9 +71,11 @@ public final class MamircProcessor {
 			}
 		}
 		
-		new ConnectorReaderThread(this, conConfig).start();
+		reader = new ConnectorReaderThread(this, conConfig);
+		reader.start();
 		try {
-			new MessageHttpServer(this);
+			server = new MessageHttpServer(this);
+			server.server.start();
 		} catch (IOException e) {
 			e.printStackTrace();
 			terminate();
@@ -81,6 +86,8 @@ public final class MamircProcessor {
 	/*---- Methods for manipulating global state ----*/
 	
 	public synchronized void processEvent(Event ev, boolean realtime) {
+		if (ev == null)
+			throw new NullPointerException();
 		switch (ev.type) {
 			case CONNECTION:
 				processConnection(ev, realtime);
@@ -159,22 +166,22 @@ public final class MamircProcessor {
 				String chan = params.get(0);
 				if (who.equals(state.currentNickname) && !curchans.containsKey(chan))
 					curchans.put(chan, new ConnectionState.ChannelState());
-				if (curchans.containsKey(chan))
-					curchans.get(chan).members.add(who);
-				String line = msg.command + " " + who;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
+				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
+					String line = msg.command + " " + who;
+					databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
+				}
 				break;
 			}
 			
 			case "PART": {
 				String who = msg.prefixName;
 				String chan = params.get(0);
-				if (curchans.containsKey(chan))
-					curchans.get(chan).members.remove(who);
+				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
+					String line = msg.command + " " + who;
+					databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
+				}
 				if (who.equals(state.currentNickname))
 					curchans.remove(chan);
-				String line = msg.command + " " + who;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
 				break;
 			}
 			
@@ -335,11 +342,10 @@ public final class MamircProcessor {
 					send(conId, "NICK", profile.nicknames.get(0));
 					break;
 				}
-					
-				case NICK_SENT: {
-					if (state.currentNickname != null)
-						send(conId, "USER", profile.username, "0", "*", profile.realname);
-					else {
+				
+				case NICK_SENT:
+				case USER_SENT: {
+					if (state.currentNickname == null) {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
 							if (!state.rejectedNicknames.contains(nickname)) {
@@ -350,13 +356,11 @@ public final class MamircProcessor {
 						}
 						if (!found)
 							writer.postWrite("disconnect " + conId);
-					}
+					} else if (state.registrationState == ConnectionState.RegState.NICK_SENT)
+						send(conId, "USER", profile.username, "0", "*", profile.realname);
 					break;
 				}
-					
-				case USER_SENT:
-					break;
-					
+				
 				case REGISTERED: {
 					if (profile.nickservPassword != null && !state.sentNickservPassword)
 						send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
@@ -424,7 +428,9 @@ public final class MamircProcessor {
 	
 	
 	public synchronized void terminate() {
+		writer.terminate();
 		databaseLogger.terminate();
+		server.server.stop(0);
 	}
 	
 	

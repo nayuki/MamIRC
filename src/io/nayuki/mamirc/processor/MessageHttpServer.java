@@ -82,8 +82,6 @@ final class MessageHttpServer {
 				handleSendMessage(he);
 			}
 		});
-		
-		server.start();
 	}
 	
 	
