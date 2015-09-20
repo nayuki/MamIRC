@@ -3,6 +3,8 @@ package io.nayuki.mamirc.processor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 // Represents a line received from IRC server or sent from IRC client. Immutable data structure.
@@ -25,52 +27,42 @@ final class IrcLine {
 	
 	// Parses the given raw string line into parts. Throws an exception on syntax error.
 	public IrcLine(String line) {
-		// Parse prefix
-		if (line.startsWith(":")) {
-			int i = line.indexOf(' ');
-			if (i == -1)
-				throw new IllegalArgumentException("Missing command");
-			prefix = line.substring(1, i);
-			line = line.substring(i + 1);
-		} else
+		// Parse prefix and command
+		Matcher m = PREFIX_COMMAND_REGEX.matcher(line);
+		if (!m.matches())
+			throw new IllegalArgumentException("Syntax error in prefix or command");
+		if (m.start(1) != -1)
+			prefix = line.substring(m.start(1) + 1, m.end(1) - 1);
+		else
 			prefix = null;
+		command = m.group(2);
 		
-		// Parse command
-		if (line.startsWith(" "))
-			throw new IllegalArgumentException("Extra spaces");
+		// Parse any number of parameters
+		String rest = m.group(3);
 		List<String> params = new ArrayList<>();
-		int i = line.indexOf(' ');
-		if (i == -1) {
-			command = line;
-			if (command.length() == 0)
-				throw new IllegalArgumentException("Empty command");
-		} else {
-			command = line.substring(0, i);
-			if (command.length() == 0)
-				throw new IllegalArgumentException("Empty command");
-			line = line.substring(i + 1);
-			
-			// Parse parameters
-			while (true) {
-				if (line.startsWith(" "))
-					throw new IllegalArgumentException("Invalid parameter");
-				else if (line.startsWith(":")) {
-					params.add(line.substring(1));
-					break;
-				} else {
-					i = line.indexOf(' ');
-					if (i == -1) {
-						params.add(line);
-						break;
-					} else {
-						params.add(line.substring(0, i));
-						line = line.substring(i + 1);
-					}
-				}
+		while (rest.length() > 0) {
+			if (rest.charAt(0) != ' ')
+				throw new AssertionError();
+			else if (rest.startsWith(" :")) {
+				params.add(rest.substring(2));
+				rest = "";
+			} else {
+				int i = rest.indexOf(' ', 1);
+				if (i == -1)
+					i = rest.length();
+				if (i == 1)
+					throw new IllegalArgumentException("Multiple spaces between parameters");
+				params.add(rest.substring(1, i));
+				rest = rest.substring(i);
 			}
 		}
 		parameters = Collections.unmodifiableList(params);
 	}
+	
+	
+	/*---- Constants ----*/
+	
+	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ )?([^ ]+)(.*)");
 	
 	
 	
