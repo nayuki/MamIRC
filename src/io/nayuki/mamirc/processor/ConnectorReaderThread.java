@@ -57,9 +57,11 @@ final class ConnectorReaderThread extends Thread {
 				master.processEvent(ev, true);
 			}
 			
-		} catch (IOException e) {}
-		catch (SQLiteException e) {}
-		finally {
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (SQLiteException e) {
+			e.printStackTrace();
+		} finally {
 			if (writer != null)
 				writer.terminate();
 			if (socket != null) {
@@ -125,6 +127,5 @@ final class ConnectorReaderThread extends Thread {
 		else
 			return new String(line, OutputWriterThread.UTF8_CHARSET);
 	}
-	
 	
 }

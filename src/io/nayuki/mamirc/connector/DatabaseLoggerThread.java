@@ -83,6 +83,8 @@ final class DatabaseLoggerThread extends Thread {
 			lock.lock();
 			try {
 				while (processBatchOfEvents());
+			} catch (SQLiteException e) {
+				e.printStackTrace();
 			} finally {
 				queue = null;
 				lock.unlock();
@@ -107,7 +109,7 @@ final class DatabaseLoggerThread extends Thread {
 	private static final int DATABASE_COMMIT_DELAY = 10000;  // In milliseconds
 
 	// Must hold 'lock' before and after the method call.
-	private boolean processBatchOfEvents() throws InterruptedException, SQLiteException {
+	private boolean processBatchOfEvents() throws SQLiteException, InterruptedException {
 		// Wait for something to do
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
