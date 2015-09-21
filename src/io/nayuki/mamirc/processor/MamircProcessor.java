@@ -155,7 +155,7 @@ public final class MamircProcessor {
 					if (members.remove(fromname)) {
 						members.add(toname);
 						String line = msg.command + " " + fromname + " " + toname;
-						databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+						postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
 					}
 				}
 				break;
@@ -168,7 +168,7 @@ public final class MamircProcessor {
 					curchans.put(chan, new ConnectionState.ChannelState());
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
 					String line = msg.command + " " + who;
-					databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
+					postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
 				}
 				break;
 			}
@@ -178,7 +178,7 @@ public final class MamircProcessor {
 				String chan = params.get(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
 					String line = msg.command + " " + who;
-					databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
+					postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
 				}
 				if (who.equals(state.currentNickname))
 					curchans.remove(chan);
@@ -192,7 +192,7 @@ public final class MamircProcessor {
 					target = who;
 				String text = params.get(1);
 				String line = msg.command + " " + who + " " + text;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
+				postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
 				break;
 			}
 			
@@ -202,7 +202,7 @@ public final class MamircProcessor {
 					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
 							String line = msg.command + " " + who + " " + params.get(0);
-							databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+							postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
 						}
 					}
 				}
@@ -316,7 +316,7 @@ public final class MamircProcessor {
 				String party = msg.parameters.get(0);
 				String text = msg.parameters.get(1);
 				String line = msg.command + " " + src + " " + text;
-				databaseLogger.postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
+				postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
 				break;
 			}
 			
@@ -391,6 +391,17 @@ public final class MamircProcessor {
 	}
 	
 	
+	// Must be called from one of the synchronized methods above.
+	private void postMessage(int connectionId, int sequence, long timestamp, String profile, String party, String line) {
+		databaseLogger.postMessage(connectionId, sequence, timestamp, profile, party, line);
+		if (server != null) {
+			synchronized(server) {
+				server.notifyAll();
+			}
+		}
+	}
+	
+	
 	public synchronized Map<Object[],List<String>> getActiveChannels() {
 		Map<Object[],List<String>> result = new HashMap<>();
 		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
@@ -430,7 +441,8 @@ public final class MamircProcessor {
 	public synchronized void terminate() {
 		writer.terminate();
 		databaseLogger.terminate();
-		server.server.stop(0);
+		if (server != null)
+			server.server.stop(0);
 	}
 	
 	

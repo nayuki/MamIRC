@@ -8,6 +8,7 @@ var inputBoxElem = document.getElementById("input-box");
 var activeWindow = null;
 var windowNames = [];
 var messageData = new Object();
+var connectionSequences = new Object();
 
 
 function init() {
@@ -18,6 +19,7 @@ function init() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
 		processInitialMessages(JSON.parse(xhr.response));
+		pollNewMessages();
 	};
 	xhr.ontimeout = xhr.onerror = function() {
 		var li = document.createElement("li");
@@ -46,6 +48,7 @@ function processInitialMessages(data) {
 			windowNames.push(windowName);
 			messageData[windowName] = messages;
 		}
+		connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
 	}
 	
 	for (var i = 0; i < windowNames.length; i++) {
@@ -104,6 +107,43 @@ function setActiveWindow(name) {
 		tr.appendChild(td);
 		messageListElem.appendChild(tr);
 	}
+}
+
+
+function pollNewMessages() {
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		if (xhr.status != 200)
+			xhr.onerror();
+		else {
+			var data = JSON.parse(xhr.response);
+			for (var profile in data) {
+				for (var party in data[profile].windows) {
+					var windowName = party + ":" + profile;
+					if (windowName in messageData) {
+						var messages = messageData[windowName];
+						var msgs = data[profile].windows[party];
+						for (var i = 0; i < msgs.length; i++) {
+							var s = msgs[i][1];
+							var match = /^PRIVMSG ([^ ]+) (.*)$/.exec(s);
+							if (match != null)
+								messages.push([msgs[i][0], match[1], match[2]]);
+						}
+					}
+				}
+				connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
+			}
+			setActiveWindow(activeWindow);
+			pollNewMessages();
+		}
+	};
+	xhr.ontimeout = xhr.onerror = function() {
+		setTimeout(pollNewMessages, 60000);
+	};
+	xhr.open("POST", "get-new-messages.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 600000;
+	xhr.send(JSON.stringify(connectionSequences));
 }
 
 

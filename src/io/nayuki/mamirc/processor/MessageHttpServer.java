@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
@@ -77,11 +78,25 @@ final class MessageHttpServer {
 			}
 		});
 		
+		server.createContext("/get-new-messages.json", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				try {
+					handleGetNewMessages(he);
+				} catch (SQLiteException e) {
+					e.printStackTrace();
+					he.sendResponseHeaders(500, 0);
+					he.close();
+				} catch (Exception e) {}
+			}
+		});
+		
 		server.createContext("/send-message.json", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
 				handleSendMessage(he);
 			}
 		});
+		
+		server.setExecutor(Executors.newFixedThreadPool(4));
 	}
 	
 	
@@ -135,6 +150,104 @@ final class MessageHttpServer {
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();
+	}
+	
+	
+	private void handleGetNewMessages(HttpExchange he) throws IOException, SQLiteException {
+		ByteArrayOutputStream bout = new ByteArrayOutputStream();
+		InputStream in = he.getRequestBody();
+		byte[] buf = new byte[1024];
+		while (true) {
+			int n = in.read(buf);
+			if (n == -1)
+				break;
+			bout.write(buf, 0, n);
+		}
+		Object queryData = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		
+		List<Object[]> query = new ArrayList<>();
+		for (String profile : Json.getMap(queryData).keySet()) {
+			int conId   = Json.getInt(queryData, profile, 0);
+			int lastSeq = Json.getInt(queryData, profile, 1);
+			query.add(new Object[]{profile, conId, lastSeq});
+		}
+		
+		Object outData = getNewMessages(query);
+		long endTime = System.currentTimeMillis() + 60000;
+		while (outData == null) {
+			long remainTime = endTime - System.currentTimeMillis();
+			if (remainTime <= 0)
+				break;
+			try {
+				synchronized(this) {
+					this.wait(remainTime);
+				}
+				Thread.sleep(500);  // Wait for database to write and commit
+			} catch (InterruptedException e) {}
+			outData = getNewMessages(query);
+		}
+		if (outData == null)
+			outData = new HashMap<String,Object>();
+		
+		Headers head = he.getResponseHeaders();
+		head.set("Content-Type", "application/json; charset=UTF-8");
+		head.set("Cache-Control", "no-cache");
+		byte[] b = Json.serialize(outData).getBytes(OutputWriterThread.UTF8_CHARSET);
+		he.sendResponseHeaders(200, b.length);
+		he.getResponseBody().write(b);
+		he.close();
+	}
+	
+	
+	private Map<String,Map<String,Object>> getNewMessages(List<Object[]> inputQuery) throws SQLiteException {
+		SQLiteConnection database = new SQLiteConnection(databaseFile);
+		database.open(false);
+		SQLiteStatement messageQuery = database.prepare("SELECT sequence, windowId, timestamp, line FROM messages WHERE connectionId=? AND sequence>? ORDER BY windowId ASC, sequence ASC");
+		SQLiteStatement windowQuery = database.prepare("SELECT party FROM windows WHERE id=?");
+		
+		Map<String,Map<String,Object>> outData = new HashMap<>();
+		for (Object[] query : inputQuery) {
+			Integer conId = (Integer)query[1];
+			messageQuery.bind(1, conId);
+			messageQuery.bind(2, (Integer)query[2]);
+			
+			Map<String,List<List<Object>>> outWindows = new HashMap<>();
+			int maxSeq = -1;
+			int currentWindow = -1;
+			List<List<Object>> currentMessages = null;
+			while (messageQuery.step()) {
+				int winId = messageQuery.columnInt(1);
+				if (winId != currentWindow) {
+					windowQuery.bind(1, winId);
+					if (!windowQuery.step())
+						throw new RuntimeException();
+					String party = windowQuery.columnString(0);
+					currentWindow = winId;
+					windowQuery.reset();
+					
+					currentMessages = new ArrayList<>();
+					outWindows.put(party, currentMessages);
+				}
+				
+				currentMessages.add(Arrays.asList(messageQuery.columnLong(2), messageQuery.columnString(3)));
+				maxSeq = Math.max(messageQuery.columnInt(0), maxSeq);
+			}
+			messageQuery.reset();
+			
+			if (!outWindows.isEmpty()) {
+				Map<String,Object> outProfile = new HashMap<>();
+				outProfile.put("windows", outWindows);
+				outProfile.put("connection-id", conId);
+				outProfile.put("max-sequence", maxSeq);
+				outData.put((String)query[0], outProfile);
+			}
+		}
+		database.dispose();
+		
+		if (!outData.isEmpty())
+			return outData;
+		else
+			return null;
 	}
 	
 	
