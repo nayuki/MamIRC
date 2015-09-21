@@ -2,13 +2,11 @@ package io.nayuki.mamirc.processor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -135,15 +133,6 @@ public final class MamircProcessor {
 		List<String> params = msg.parameters;
 		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
 		switch (msg.command) {
-			
-			case "PING": {
-				String text = params.get(0);
-				if (realtime)
-					send(conId, "PONG", text);
-				else
-					state.queuedPongs.add(text);
-				break;
-			}
 			
 			case "NICK": {
 				String fromname = msg.prefixName;
@@ -284,13 +273,6 @@ public final class MamircProcessor {
 		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
 		switch (msg.command) {
 			
-			case "PONG": {
-				String text = msg.parameters.get(0);
-				if (state.queuedPongs != null && !state.queuedPongs.isEmpty() && state.queuedPongs.element().equals(text))
-					state.queuedPongs.remove();
-				break;
-			}
-			
 			case "NICK": {
 				if (state.registrationState == ConnectionState.RegState.OPENED) {
 					state.registrationState = ConnectionState.RegState.NICK_SENT;
@@ -329,10 +311,6 @@ public final class MamircProcessor {
 	public synchronized void finishCatchup() {
 		for (int conId : ircConnections.keySet()) {
 			ConnectionState state = ircConnections.get(conId);
-			while (!state.queuedPongs.isEmpty())
-				send(conId, "PONG", state.queuedPongs.remove());
-			state.queuedPongs = null;
-			
 			IrcNetwork profile = state.profile;
 			switch (state.registrationState) {
 				case CONNECTING:
@@ -458,7 +436,6 @@ public final class MamircProcessor {
 		
 		// The fields below are only used when processing archived events
 		// and during catch-up; they are unused during real-time processing.
-		public Queue<String> queuedPongs;
 		public boolean sentNickservPassword;
 		
 		
@@ -468,7 +445,6 @@ public final class MamircProcessor {
 			rejectedNicknames = new HashSet<>();
 			currentNickname = null;
 			currentChannels = new TreeMap<>();
-			queuedPongs = new ArrayDeque<>();
 			sentNickservPassword = false;
 		}
 		

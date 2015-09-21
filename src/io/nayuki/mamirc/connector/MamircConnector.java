@@ -161,6 +161,7 @@ public final class MamircConnector {
 	
 	public synchronized void receiveMessage(int conId, byte[] line) {
 		postEvent(conId, serverConnections.get(conId).nextSequence(), Event.Type.RECEIVE, line);
+		handlePotentialPing(conId, line);
 	}
 	
 	
@@ -201,6 +202,56 @@ public final class MamircConnector {
 		if (processorWriter != null)
 			processorWriter.postWrite(serializeEventForProcessor(ev));
 		databaseLogger.postEvent(ev);
+	}
+	
+	
+	// Must be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
+	private void handlePotentialPing(int conId, byte[] line) {
+		// Check if string contains "PING" in ASCII without allocating new objects
+		boolean foundCandidate = false;
+		for (int i = 0; i < line.length - 3; i++) {
+			if (line[i] == 'P' && line[i + 1] == 'I' && line[i + 2] == 'N' && line[i + 3] == 'G') {
+				foundCandidate = true;
+				break;
+			}
+		}
+		if (!foundCandidate)
+			return;
+		// Else do full parse
+		
+		// Convert to string for convenience
+		char[] temp = new char[line.length];
+		for (int i = 0; i < line.length; i++)
+			temp[i] = (char)(line[i] & 0xFF);  // Use identity character encoding to fully preserve data
+		String str = new String(temp);
+		
+		// Discard optional prefix
+		if (str.startsWith(":")) {
+			int i = str.indexOf(' ');
+			if (i == -1)
+				return;  // Ignore line due to syntax error
+			str = str.substring(i + 1);
+		}
+		
+		// Parse command
+		String cmd;
+		{
+			int i = str.indexOf(' ');
+			if (i == -1)
+				cmd = str;
+			else
+				cmd = str.substring(0, i);
+		}
+		
+		// Create PONG reply if command is PING
+		if (cmd.equals("PING")) {
+			temp = str.toCharArray();  // Copy the command and parameters verbatim
+			temp[1] = 'O';  // Change "PING" to "PONG"
+			byte[] response = new byte[temp.length];
+			for (int i = 0; i < response.length; i++)
+				response[i] = (byte)temp[i];
+			sendMessage(conId, response, processorReader);
+		}
 	}
 	
 	
