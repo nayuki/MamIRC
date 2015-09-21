@@ -116,7 +116,7 @@ final class DatabaseLoggerThread extends Thread {
 		
 		if (queue.isEmpty()) {
 			if (flushRequested)
-				throw new IllegalStateException();
+				condFlushed.signal();
 			return !terminateRequested;
 			
 		} else {
@@ -142,7 +142,10 @@ final class DatabaseLoggerThread extends Thread {
 				if (!queue.isEmpty())
 					throw new AssertionError();
 				
-				// Do all database I/O while allowing other threads to post events
+				// Do all database I/O while allowing other threads to post events.
+				// Note: Queue is empty and lock is dropped, but the data is not committed yet!
+				// Thus flushQueue() cannot simply check for an empty queue and
+				// return without explicit acknowledgement from the logger thread.
 				lock.unlock();
 				step(beginTransaction, false);
 				beginTransaction.reset();
@@ -189,15 +192,13 @@ final class DatabaseLoggerThread extends Thread {
 		lock.lock();
 		if (flushRequested)
 			throw new IllegalStateException();
-		if (!queue.isEmpty()) {
-			flushRequested = true;
-			condAll.signal();
-			condUrgent.signal();
-			do condFlushed.awaitUninterruptibly();
-			while (flushRequested);
-			if (!queue.isEmpty())
-				throw new IllegalStateException();
-		}
+		flushRequested = true;
+		condAll.signal();
+		condUrgent.signal();
+		do condFlushed.awaitUninterruptibly();
+		while (flushRequested);
+		if (!queue.isEmpty())
+			throw new IllegalStateException();
 		lock.unlock();
 	}
 	
