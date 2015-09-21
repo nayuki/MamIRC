@@ -115,8 +115,10 @@ final class DatabaseLoggerThread extends Thread {
 			condAll.await();
 		
 		if (queue.isEmpty()) {
-			if (flushRequested)
+			if (flushRequested) {
+				flushRequested = false;
 				condFlushed.signal();
+			}
 			return !terminateRequested;
 			
 		} else {
