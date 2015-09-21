@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -207,50 +208,32 @@ public final class MamircConnector {
 	
 	// Must be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
 	private void handlePotentialPing(int conId, byte[] line) {
-		// Check if string contains "PING" in ASCII without allocating new objects
-		boolean foundCandidate = false;
+		// Pseudocode:
+		//   if (line.contains("PING"))
+		//     sendMessage("PONG" + line.parameters);
+		//   /* Else do nothing */
+		
+		// Check if string contains "PING" in ASCII anywhere, without allocating new objects
 		for (int i = 0; i < line.length - 3; i++) {
 			if (line[i] == 'P' && line[i + 1] == 'I' && line[i + 2] == 'N' && line[i + 3] == 'G') {
-				foundCandidate = true;
-				break;
+				// Candidate line found; do precise parse to decide
+				int start = 0;
+				
+				// Discard optional prefix
+				if (line.length >= 1 && line[0] == ':') {
+					start++;
+					while (start < line.length && line[start] == ' ')
+						start++;
+				}
+				
+				// Check command
+				if (line.length - start >= 4 && line[start] == 'P' && line[start + 1] == 'I' && line[start + 2] == 'N' && line[start + 3] == 'G') {
+					byte[] reply = Arrays.copyOfRange(line, start, line.length);  // Copy the command and parameters verbatim
+					reply[1] = 'O';  // Change "PING" to "PONG"
+					sendMessage(conId, reply, processorReader);
+				}
+				return;  // Because parsing the full line is precise, we do not need to check any more candidates
 			}
-		}
-		if (!foundCandidate)
-			return;
-		// Else do full parse
-		
-		// Convert to string for convenience
-		char[] temp = new char[line.length];
-		for (int i = 0; i < line.length; i++)
-			temp[i] = (char)(line[i] & 0xFF);  // Use identity character encoding to fully preserve data
-		String str = new String(temp);
-		
-		// Discard optional prefix
-		if (str.startsWith(":")) {
-			int i = str.indexOf(' ');
-			if (i == -1)
-				return;  // Ignore line due to syntax error
-			str = str.substring(i + 1);
-		}
-		
-		// Parse command
-		String cmd;
-		{
-			int i = str.indexOf(' ');
-			if (i == -1)
-				cmd = str;
-			else
-				cmd = str.substring(0, i);
-		}
-		
-		// Create PONG reply if command is PING
-		if (cmd.equals("PING")) {
-			temp = str.toCharArray();  // Copy the command and parameters verbatim
-			temp[1] = 'O';  // Change "PING" to "PONG"
-			byte[] response = new byte[temp.length];
-			for (int i = 0; i < response.length; i++)
-				response[i] = (byte)temp[i];
-			sendMessage(conId, response, processorReader);
 		}
 	}
 	
