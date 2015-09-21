@@ -18,7 +18,8 @@ function init() {
 	
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
-		processInitialMessages(JSON.parse(xhr.response));
+		ingestMessages(JSON.parse(xhr.response));
+		setActiveWindow(windowNames[0]);
 		pollNewMessages();
 	};
 	xhr.ontimeout = xhr.onerror = function() {
@@ -30,41 +31,6 @@ function init() {
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send();
-}
-
-
-function processInitialMessages(data) {
-	for (var profile in data) {
-		for (var party in data[profile].windows) {
-			var windowName = party + ":" + profile;
-			var messages = [];
-			var msgs = data[profile].windows[party];
-			for (var i = 0; i < msgs.length; i++) {
-				var s = msgs[i][1];
-				var match = /^PRIVMSG ([^ ]+) (.*)$/.exec(s);
-				if (match != null)
-					messages.push([msgs[i][0], match[1], match[2]]);
-			}
-			windowNames.push(windowName);
-			messageData[windowName] = messages;
-		}
-		connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
-	}
-	
-	for (var i = 0; i < windowNames.length; i++) {
-		var li = document.createElement("li");
-		var a = document.createElement("a");
-		a.href = "#";
-		a.onclick = (function(name) {
-			return function() {
-				setActiveWindow(name);
-				return false;
-			}; })(windowNames[i]);
-		a.appendChild(document.createTextNode(windowNames[i]));
-		li.appendChild(a);
-		windowListElem.appendChild(li);
-	}
-	setActiveWindow(windowNames[0]);
 }
 
 
@@ -117,22 +83,7 @@ function pollNewMessages() {
 			xhr.onerror();
 		else {
 			var data = JSON.parse(xhr.response);
-			for (var profile in data) {
-				for (var party in data[profile].windows) {
-					var windowName = party + ":" + profile;
-					if (windowName in messageData) {
-						var messages = messageData[windowName];
-						var msgs = data[profile].windows[party];
-						for (var i = 0; i < msgs.length; i++) {
-							var s = msgs[i][1];
-							var match = /^PRIVMSG ([^ ]+) (.*)$/.exec(s);
-							if (match != null)
-								messages.push([msgs[i][0], match[1], match[2]]);
-						}
-					}
-				}
-				connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
-			}
+			ingestMessages(data);
 			setActiveWindow(activeWindow);
 			pollNewMessages();
 		}
@@ -144,6 +95,47 @@ function pollNewMessages() {
 	xhr.responseType = "text";
 	xhr.timeout = 600000;
 	xhr.send(JSON.stringify(connectionSequences));
+}
+
+
+function ingestMessages(data) {
+	var windowsChanged = false;
+	for (var profile in data) {
+		for (var party in data[profile].windows) {
+			var windowName = party + ":" + profile;
+			if (windowNames.indexOf(windowName) == -1) {
+				windowNames.push(windowName);
+				messageData[windowName] = [];
+				windowsChanged = true;
+			}
+			var messages = messageData[windowName];
+			var msgs = data[profile].windows[party];
+			for (var i = 0; i < msgs.length; i++) {
+				var s = msgs[i][1];
+				var match = /^PRIVMSG ([^ ]+) (.*)$/.exec(s);
+				if (match != null)
+					messages.push([msgs[i][0], match[1], match[2]]);
+			}
+		}
+		connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
+	}
+	
+	if (windowsChanged) {
+		removeChildren(windowListElem);
+		for (var i = 0; i < windowNames.length; i++) {
+			var li = document.createElement("li");
+			var a = document.createElement("a");
+			a.href = "#";
+			a.onclick = (function(name) {
+				return function() {
+					setActiveWindow(name);
+					return false;
+				}; })(windowNames[i]);
+			a.appendChild(document.createTextNode(windowNames[i]));
+			li.appendChild(a);
+			windowListElem.appendChild(li);
+		}
+	}
 }
 
 
