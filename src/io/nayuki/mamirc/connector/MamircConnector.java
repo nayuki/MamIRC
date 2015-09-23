@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.almworks.sqlite4java.SQLiteException;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
@@ -18,7 +19,7 @@ public final class MamircConnector {
 	
 	/*---- Stub main program ----*/
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, SQLiteException {
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
 		new MamircConnector(new ConnectorConfiguration(new File(args[0])));
 	}
@@ -43,21 +44,14 @@ public final class MamircConnector {
 	
 	/*---- Constructor ----*/
 	
-	public MamircConnector(ConnectorConfiguration config) throws IOException {
+	public MamircConnector(ConnectorConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
 		
-		// Wait for database logger to start and get next connection ID
-		nextConnectionId = -1;
-		databaseLogger = new DatabaseLoggerThread(this, config.databaseFile);
+		// Initialize database logger and get next connection ID
+		databaseLogger = new DatabaseLoggerThread(config.databaseFile);
+		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
 		databaseLogger.start();
-		synchronized(this) {
-			while (nextConnectionId == -1) {
-				try {
-					this.wait();
-				} catch (InterruptedException e) {}
-			}
-		}
 		
 		// Listen for an incoming processor
 		processorReader = null;
@@ -77,14 +71,6 @@ public final class MamircConnector {
 	/*---- Methods for accessing/updating global state ----*/
 	
 	// These synchronized methods can be called safely from any thread.
-	
-	public synchronized void databaseReady(int nextConId) {
-		if (nextConnectionId != -1)
-			throw new IllegalStateException("This is only called once at initialization");
-		nextConnectionId = nextConId;
-		this.notify();
-	}
-	
 	
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		if (processorReader != null) {

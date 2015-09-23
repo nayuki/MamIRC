@@ -17,8 +17,6 @@ final class DatabaseLoggerThread extends Thread {
 	
 	/*---- Fields ----*/
 	
-	private final MamircConnector master;
-	
 	// Synchronization
 	private final Lock lock;
 	private final Condition condAll;      // await() by logger, signal() upon {queue non-empty OR flush request's rising edge OR terminate request's rising edge}
@@ -33,7 +31,8 @@ final class DatabaseLoggerThread extends Thread {
 	private boolean terminateRequested;
 	
 	// Database access
-	private final SQLiteConnection database;
+	private final File databaseFile;
+	private SQLiteConnection database;
 	private SQLiteStatement beginTransaction;
 	private SQLiteStatement commitTransaction;
 	private SQLiteStatement insertEvent;
@@ -41,10 +40,10 @@ final class DatabaseLoggerThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
-	public DatabaseLoggerThread(MamircConnector master, File file) {
-		if (master == null || file == null)
+	public DatabaseLoggerThread(File file) {
+		if (file == null)
 			throw new NullPointerException();
-		this.master = master;
+		databaseFile = file;
 		
 		lock = new ReentrantLock();
 		condAll     = lock.newCondition();
@@ -54,30 +53,45 @@ final class DatabaseLoggerThread extends Thread {
 		queue = new ArrayDeque<>();
 		flushRequested = false;
 		terminateRequested = false;
-		
-		database = new SQLiteConnection(file);
 	}
 	
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	public int initAndGetNextConnectionId() throws SQLiteException {
+		if (database != null)
+			throw new IllegalStateException();
+		
+		// Initialize table
+		database = new SQLiteConnection(databaseFile);
 		try {
-			// Initialize table, prepare statements
 			database.open(true);
 			database.exec("CREATE TABLE IF NOT EXISTS events(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, type INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY(connectionId, sequence))");
-			beginTransaction  = database.prepare("BEGIN TRANSACTION");
-			commitTransaction = database.prepare("COMMIT TRANSACTION");
-			insertEvent       = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
 			
 			// Query for next connection ID
 			SQLiteStatement getMaxConId = database.prepare("SELECT max(connectionId) FROM events");
 			step(getMaxConId, true);
 			if (getMaxConId.columnNull(0))
-				master.databaseReady(0);
+				return 0;
 			else
-				master.databaseReady(getMaxConId.columnInt(0) + 1);
-			getMaxConId.dispose();
+				return getMaxConId.columnInt(0) + 1;
+		} finally {
+			database.dispose();
+		}
+	}
+	
+	
+	public void run() {
+		if (database == null)
+			throw new IllegalStateException();
+		database = new SQLiteConnection(databaseFile);
+		
+		try {
+			// Prepare statements
+			database.open(false);
+			beginTransaction  = database.prepare("BEGIN TRANSACTION");
+			commitTransaction = database.prepare("COMMIT TRANSACTION");
+			insertEvent       = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
 			
 			// Process events
 			lock.lock();
