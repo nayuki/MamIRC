@@ -12,16 +12,18 @@ final class ProcessorReaderThread extends Thread {
 	
 	private final MamircConnector master;
 	public final Socket socket;
+	private final byte[] password;
 	private boolean isAuthenticated;
 	
 	
 	/*---- Constructor ----*/
 	
-	public ProcessorReaderThread(MamircConnector master, Socket sock) {
-		if (master == null || sock == null)
+	public ProcessorReaderThread(MamircConnector master, Socket sock, byte[] password) {
+		if (master == null || sock == null || password == null)
 			throw new NullPointerException();
 		this.master = master;
 		socket = sock;
+		this.password = password.clone();  // Defensive copy
 	}
 	
 	
@@ -40,7 +42,7 @@ final class ProcessorReaderThread extends Thread {
 			LineReader reader = new LineReader(socket.getInputStream());
 			byte[] line = reader.readLine();
 			killer.interrupt();
-			if (line == null || !equalsTimingSafe(line, master.getPassword()))
+			if (line == null || !equalsTimingSafe(line, password))
 				return;  // Authentication failure
 			synchronized(this) {
 				isAuthenticated = true;

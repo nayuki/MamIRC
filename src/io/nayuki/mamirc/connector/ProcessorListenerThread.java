@@ -12,17 +12,19 @@ final class ProcessorListenerThread extends Thread {
 	
 	private final MamircConnector master;
 	public final ServerSocket serverSocket;
+	private final byte[] password;
 	
 	
 	/*---- Constructor ----*/
 	
-	public ProcessorListenerThread(MamircConnector master, int port) throws IOException {
-		if (master == null)
+	public ProcessorListenerThread(MamircConnector master, int port, byte[] password) throws IOException {
+		if (master == null || password == null)
 			throw new NullPointerException();
 		if ((port & 0xFFFF) != port)
 			throw new IllegalArgumentException();
 		
 		this.master = master;
+		this.password = password.clone();  // Defensive copy
 		serverSocket = new ServerSocket();
 		serverSocket.bind(new InetSocketAddress("localhost", port), 2);
 	}
@@ -34,7 +36,7 @@ final class ProcessorListenerThread extends Thread {
 		try {
 			while (true) {
 				Socket sock = serverSocket.accept();
-				new ProcessorReaderThread(master, sock).start();
+				new ProcessorReaderThread(master, sock, password).start();
 				Thread.sleep(1000);  // Safety delay
 			}
 			

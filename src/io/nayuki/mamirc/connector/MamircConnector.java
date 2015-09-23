@@ -27,8 +27,6 @@ public final class MamircConnector {
 	
 	/*---- Fields (global state) ----*/
 	
-	private final ConnectorConfiguration configuration;
-	
 	// Connections to remote IRC servers
 	private int nextConnectionId;
 	private final Map<Integer,ConnectionInfo> serverConnections;
@@ -47,7 +45,6 @@ public final class MamircConnector {
 	
 	public MamircConnector(ConnectorConfiguration config) throws IOException {
 		// Initialize some fields
-		configuration = config;
 		serverConnections = new HashMap<>();
 		
 		// Wait for database logger to start and get next connection ID
@@ -66,7 +63,7 @@ public final class MamircConnector {
 		processorReader = null;
 		processorWriter = null;
 		try {
-			processorListener = new ProcessorListenerThread(this, config.serverPort);
+			processorListener = new ProcessorListenerThread(this, config.serverPort, config.getConnectorPassword());
 		} catch (IOException e) {
 			databaseLogger.terminate();
 			throw e;
@@ -240,12 +237,6 @@ public final class MamircConnector {
 	
 	
 	/*---- Miscellaneous methods ----*/
-	
-	// No synchronization needed.
-	public byte[] getPassword() {
-		return configuration.getConnectorPassword();
-	}
-	
 	
 	private static byte[] serializeEventForProcessor(Event ev) {
 		try {
