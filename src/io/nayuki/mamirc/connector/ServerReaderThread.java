@@ -74,6 +74,8 @@ final class ServerReaderThread extends Thread {
 				try {
 					socket.close();
 				} catch (IOException e) {}
+				if (writer != null)
+					writer.terminate();  // This reader is exclusively responsible for terminating the writer
 			}
 			master.connectionClosed(connectionId);
 		}

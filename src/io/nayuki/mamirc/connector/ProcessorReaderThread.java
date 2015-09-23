@@ -31,7 +31,6 @@ final class ProcessorReaderThread extends Thread {
 	
 	public void run() {
 		OutputWriterThread writer = null;
-		boolean isAttached = false;
 		try {
 			// Set up the authentication timeout
 			isAuthenticated = false;
@@ -52,7 +51,6 @@ final class ProcessorReaderThread extends Thread {
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
 			writer.start();
 			master.attachProcessor(this, writer);
-			isAttached = true;
 			
 			// Process input lines
 			while (true) {
@@ -77,8 +75,10 @@ final class ProcessorReaderThread extends Thread {
 		// Clean up
 		} catch (IOException e) {}
 		finally {
-			if (isAttached)
+			if (writer != null) {
 				master.detachProcessor(this);
+				writer.terminate();  // This reader is exclusively responsible for terminating the writer
+			}
 			try {
 				socket.close();
 			} catch (IOException e) {}

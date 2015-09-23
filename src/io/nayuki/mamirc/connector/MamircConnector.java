@@ -74,7 +74,6 @@ public final class MamircConnector {
 	
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		if (processorReader != null) {
-			processorWriter.terminate();
 			try {
 				processorReader.socket.close();
 			} catch (IOException e) {}
@@ -95,7 +94,6 @@ public final class MamircConnector {
 	
 	public synchronized void detachProcessor(ProcessorReaderThread reader) {
 		if (processorReader == reader) {
-			processorWriter.terminate();
 			processorReader = null;
 			processorWriter = null;
 		}
@@ -118,7 +116,6 @@ public final class MamircConnector {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
-		info.writer.terminate();
 		try {
 			info.socket.close();
 		} catch (IOException e) {}
@@ -167,13 +164,10 @@ public final class MamircConnector {
 			System.out.println("Connector terminating");
 			for (int conId : serverConnections.keySet()) {
 				ConnectionInfo info = serverConnections.get(conId);
-				info.writer.terminate();
 				info.socket.close();
 			}
-			if (processorReader != null) {
-				processorWriter.terminate();
+			if (processorReader != null)
 				processorReader.socket.close();
-			}
 			processorListener.serverSocket.close();
 			databaseLogger.terminate();
 		} catch (IOException e) {}
