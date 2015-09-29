@@ -2,6 +2,7 @@ package io.nayuki.mamirc.processor;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -116,17 +117,11 @@ final class ProcessorConfiguration {
 		
 		
 		public static final class Server {
-			public final String hostname;  // Not null
-			public final int port;  // In the range [0, 65535]
+			public final InetSocketAddress hostnamePort;  // Not null
 			public final boolean useSsl;
 			
 			public Server(String hostname, int port, boolean useSsl) {
-				if (hostname == null)
-					throw new NullPointerException();
-				if ((port & 0xFFFF) != port)
-					throw new IllegalArgumentException("Invalid port number");
-				this.hostname = hostname;
-				this.port = port;
+				hostnamePort = InetSocketAddress.createUnresolved(hostname, port);
 				this.useSsl = useSsl;
 			}
 		}
