@@ -20,8 +20,12 @@ public final class MamircConnector {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws IOException, SQLiteException {
-		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
+		// Prevent sqlite4java module from polluting stderr with debug messages
+		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
+		
+		// Load config and start connector
 		new MamircConnector(new ConnectorConfiguration(new File(args[0])));
+		// The main thread returns, while other threads live on
 	}
 	
 	
@@ -44,6 +48,7 @@ public final class MamircConnector {
 	
 	/*---- Constructor ----*/
 	
+	// This launches a bunch of threads and returns immediately.
 	public MamircConnector(ConnectorConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
@@ -72,16 +77,18 @@ public final class MamircConnector {
 	
 	// These synchronized methods can be called safely from any thread.
 	
+	// Should only be called from ProcessorReaderThread.
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
+		// Kick out existing processor, and set fields
 		if (processorReader != null) {
 			try {
-				processorReader.socket.close();
+				processorReader.socket.close();  // Asynchronous termination
 			} catch (IOException e) {}
 		}
 		processorReader = reader;
 		processorWriter = writer;
 		
-		// Dump this current state to processor
+		// Dump current connection info to processor
 		databaseLogger.flushQueue();
 		processorWriter.postWrite("active-connections");
 		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet()) {
@@ -92,6 +99,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread. Caller is responsible for closing its socket.
 	public synchronized void detachProcessor(ProcessorReaderThread reader) {
 		if (processorReader == reader) {
 			processorReader = null;
@@ -100,6 +108,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread.
 	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -112,6 +121,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread and terminateConnector().
 	public synchronized void disconnectServer(int conId, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -122,6 +132,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ServerReaderThread.
 	public synchronized void connectionOpened(int conId, Socket sock, OutputWriterThread writer) {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
@@ -132,6 +143,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ServerReaderThread.
 	public synchronized void connectionClosed(int conId) {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
@@ -140,12 +152,14 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ServerReaderThread.
 	public synchronized void receiveMessage(int conId, byte[] line) {
 		postEvent(conId, serverConnections.get(conId).nextSequence(), Event.Type.RECEIVE, line);
 		handlePotentialPing(conId, line);
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread and handlePotentialPing().
 	public synchronized void sendMessage(int conId, byte[] line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -157,6 +171,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread.
 	public synchronized void terminateConnector(ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -174,7 +189,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
+	// Must only be called from one of the synchronized methods above.
 	private void postEvent(int conId, int seq, Event.Type type, byte[] line) {
 		Event ev = new Event(conId, seq, type, line);
 		if (processorWriter != null)
@@ -183,7 +198,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Must be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
+	// Must only be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
 	private void handlePotentialPing(int conId, byte[] line) {
 		// Pseudocode:
 		//   if (line.contains("PING"))
