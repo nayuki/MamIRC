@@ -59,18 +59,20 @@ public final class MamircConnector {
 		databaseLogger = new DatabaseLoggerThread(config.databaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
 		databaseLogger.start();
+		System.err.println("Database opened");
 		
 		// Listen for an incoming processor
 		processorReader = null;
 		processorWriter = null;
 		try {
 			processorListener = new ProcessorListenerThread(this, config.serverPort, config.getConnectorPassword());
+			System.err.println("Listening on port " + config.serverPort);
 		} catch (IOException e) {
 			databaseLogger.terminate();
 			throw e;
 		}
 		processorListener.start();
-		System.out.println("Connector ready");
+		System.err.println("Connector ready");
 	}
 	
 	
@@ -167,7 +169,7 @@ public final class MamircConnector {
 			postEvent(conId, serverConnections.get(conId).nextSequence(), Event.Type.SEND, line);
 			serverConnections.get(conId).write(line);
 		} else
-			System.out.println("Warning: Connection " + conId + " does not exist");
+			System.err.println("Warning: Connection " + conId + " does not exist");
 	}
 	
 	
@@ -176,7 +178,7 @@ public final class MamircConnector {
 		if (reader != processorReader)
 			return;
 		try {
-			System.out.println("Connector terminating");
+			System.err.println("Connector terminating");
 			for (int conId : serverConnections.keySet()) {
 				ConnectionInfo info = serverConnections.get(conId);
 				info.socket.close();
