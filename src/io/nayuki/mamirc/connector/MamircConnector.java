@@ -128,9 +128,14 @@ public final class MamircConnector {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
-		try {
-			info.socket.close();
-		} catch (IOException e) {}
+		if (info == null)
+			System.err.println("Warning: Connection " + conId + " does not exist");
+		else {
+			postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, "disconnect".getBytes(OutputWriterThread.UTF8_CHARSET));
+			try {
+				info.socket.close();  // Asynchronous termination
+			} catch (IOException e) {}
+		}
 	}
 	
 	
@@ -177,17 +182,21 @@ public final class MamircConnector {
 	public synchronized void terminateConnector(ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
-		try {
-			System.err.println("Connector terminating");
-			for (int conId : serverConnections.keySet()) {
-				ConnectionInfo info = serverConnections.get(conId);
-				info.socket.close();
-			}
-			if (processorReader != null)
+		System.err.println("Connector terminating");
+		
+		for (int conId : serverConnections.keySet())
+			disconnectServer(conId, processorReader);
+		
+		if (processorReader != null) {
+			try {
 				processorReader.socket.close();
+			} catch (IOException e) {}
+		}
+		
+		try {
 			processorListener.serverSocket.close();
-			databaseLogger.terminate();
 		} catch (IOException e) {}
+		databaseLogger.terminate();
 	}
 	
 	
