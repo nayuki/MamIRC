@@ -33,7 +33,7 @@ final class ProcessorConfiguration {
 		// Convert to internal data format
 		databaseFile = new File(Json.getString(data, "database-file"));
 		
-		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format 
+		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format
 		Map<String,Object> netsIn = Json.getMap(data, "irc-networks");
 		Map<String,IrcNetwork> netsOut = new HashMap<>();
 		for (String name : netsIn.keySet())

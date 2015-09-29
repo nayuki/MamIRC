@@ -50,7 +50,7 @@ public final class OutputWriterThread extends Thread {
 			
 		// Clean up
 		} catch (IOException e) {}
-		 catch (InterruptedException e) {}
+		catch (InterruptedException e) {}
 		finally {
 			queue = null;  // Not thread-safe, but is a best-effort attempt to detect invalid usage
 			try {
