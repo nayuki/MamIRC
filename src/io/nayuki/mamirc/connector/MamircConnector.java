@@ -24,7 +24,9 @@ public final class MamircConnector {
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		
 		// Load config and start connector
-		new MamircConnector(new ConnectorConfiguration(new File(args[0])));
+		File configFile = new File(args[0]);
+		ConnectorConfiguration config = new ConnectorConfiguration(configFile);
+		new MamircConnector(config);
 		// The main thread returns, while other threads live on
 	}
 	
@@ -91,17 +93,15 @@ public final class MamircConnector {
 		// Dump current connection info to processor
 		databaseLogger.flushQueue();
 		processorWriter.postWrite("active-connections");
-		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet()) {
-			ConnectionInfo info = entry.getValue();
-			processorWriter.postWrite(entry.getKey() + " " + info.nextSequence);
-		}
+		for (int conId : serverConnections.keySet())
+			processorWriter.postWrite(conId + " " + serverConnections.get(conId).nextSequence);
 		processorWriter.postWrite("live-events");
 	}
 	
 	
 	// Should only be called from ProcessorReaderThread. Caller is responsible for closing its socket.
 	public synchronized void detachProcessor(ProcessorReaderThread reader) {
-		if (processorReader == reader) {
+		if (reader == processorReader) {
 			processorReader = null;
 			processorWriter = null;
 		}
@@ -192,8 +192,16 @@ public final class MamircConnector {
 	// Must only be called from one of the synchronized methods above.
 	private void postEvent(int conId, int seq, Event.Type type, byte[] line) {
 		Event ev = new Event(conId, seq, type, line);
-		if (processorWriter != null)
-			processorWriter.postWrite(serializeEventForProcessor(ev));
+		if (processorWriter != null) {
+			try {
+				ByteArrayOutputStream bout = new ByteArrayOutputStream();
+				bout.write(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal()).getBytes(OutputWriterThread.UTF8_CHARSET));
+				bout.write(ev.getLine());
+				processorWriter.postWrite(bout.toByteArray());
+			} catch (IOException e) {
+				throw new AssertionError(e);
+			}
+		}
 		databaseLogger.postEvent(ev);
 	}
 	
@@ -226,21 +234,6 @@ public final class MamircConnector {
 				}
 				return;  // Because parsing the full line is precise, we do not need to check any more candidates
 			}
-		}
-	}
-	
-	
-	
-	/*---- Miscellaneous methods ----*/
-	
-	private static byte[] serializeEventForProcessor(Event ev) {
-		try {
-			ByteArrayOutputStream bout = new ByteArrayOutputStream();
-			bout.write(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal()).getBytes(OutputWriterThread.UTF8_CHARSET));
-			bout.write(ev.getLine());
-			return bout.toByteArray();
-		} catch (IOException e) {
-			throw new AssertionError(e);
 		}
 	}
 	
