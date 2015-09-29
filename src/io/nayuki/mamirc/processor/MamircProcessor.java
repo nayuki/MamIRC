@@ -72,7 +72,7 @@ public final class MamircProcessor {
 		reader = new ConnectorReaderThread(this, conConfig);
 		reader.start();
 		try {
-			server = new MessageHttpServer(this);
+			server = new MessageHttpServer(this, procConfig.webServerPort);
 			server.server.start();
 		} catch (IOException e) {
 			e.printStackTrace();

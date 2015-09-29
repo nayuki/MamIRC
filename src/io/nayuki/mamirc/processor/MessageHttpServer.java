@@ -35,9 +35,9 @@ final class MessageHttpServer {
 	
 	/*---- Constructor ----*/
 	
-	public MessageHttpServer(MamircProcessor master) throws IOException {
+	public MessageHttpServer(MamircProcessor master, int port) throws IOException {
 		this.master = master;
-		server = HttpServer.create(new InetSocketAddress("localhost", 11972), 0);
+		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		server.createContext("/", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
