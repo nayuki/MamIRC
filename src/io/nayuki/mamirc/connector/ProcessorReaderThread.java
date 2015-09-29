@@ -40,7 +40,7 @@ final class ProcessorReaderThread extends Thread {
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
 			byte[] line = reader.readLine();
-			killer.interrupt();
+			killer.interrupt();  // Killer is no longer needed, now that we have read the line
 			if (line == null || !equalsTimingSafe(line, password))
 				return;  // Authentication failure
 			synchronized(this) {
@@ -58,7 +58,8 @@ final class ProcessorReaderThread extends Thread {
 				if (line == null)
 					break;
 				
-				String[] parts = new String(line, "UTF-8").split(" ", 5);
+				String lineStr = new String(line, "UTF-8");
+				String[] parts = lineStr.split(" ", 5);
 				String cmd = parts[0];
 				if (cmd.equals("terminate") && parts.length == 1)
 					master.terminateConnector(this);
@@ -66,10 +67,10 @@ final class ProcessorReaderThread extends Thread {
 					master.connectServer(parts[1], Integer.parseInt(parts[2]), Boolean.parseBoolean(parts[3]), parts[4], this);
 				else if (cmd.equals("disconnect") && parts.length == 2)
 					master.disconnectServer(Integer.parseInt(parts[1]), this);
-				else if (cmd.equals("send")) {
-					parts = new String(line, "UTF-8").split(" ", 3);
-					master.sendMessage(Integer.parseInt(parts[1]), parts[2].getBytes(OutputWriterThread.UTF8_CHARSET), this);
-				}
+				else if (cmd.equals("send") && parts.length >= 3)
+					master.sendMessage(Integer.parseInt(parts[1]), lineStr.split(" ", 3)[2].getBytes(OutputWriterThread.UTF8_CHARSET), this);
+				else
+					System.err.println("Unknown line from processor: " + lineStr);
 			}
 			
 		// Clean up
