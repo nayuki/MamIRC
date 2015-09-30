@@ -66,6 +66,7 @@ final class DatabaseLoggerThread extends Thread {
 		database = new SQLiteConnection(databaseFile);
 		try {
 			database.open(true);
+			database.exec("PRAGMA journal_mode = PERSIST");
 			database.exec("CREATE TABLE IF NOT EXISTS events(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, type INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY(connectionId, sequence))");
 			
 			// Query for next connection ID

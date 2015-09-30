@@ -42,6 +42,7 @@ final class DatabaseLoggerThread extends Thread {
 		try {
 			// Initialize table
 			database.open(true);
+			database.exec("PRAGMA journal_mode = PERSIST");
 			database.exec("CREATE TABLE IF NOT EXISTS windows(id INTEGER PRIMARY KEY, profile TEXT, party TEXT)");
 			database.exec("CREATE TABLE IF NOT EXISTS messages(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, windowId INTEGER, line TEXT NOT NULL, PRIMARY KEY(connectionId, sequence, windowId))");
 			queryWindow = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
