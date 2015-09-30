@@ -89,6 +89,7 @@ final class DatabaseLoggerThread extends Thread {
 		try {
 			// Prepare statements
 			database.open(false);
+			database.setBusyTimeout(60000);
 			beginTransaction  = database.prepare("BEGIN TRANSACTION");
 			commitTransaction = database.prepare("COMMIT TRANSACTION");
 			insertEvent       = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");

@@ -48,6 +48,7 @@ final class DatabaseLoggerThread extends Thread {
 			queryWindowMax = database.prepare("SELECT max(id) FROM windows");
 			insertWindow = database.prepare("INSERT INTO windows VALUES(?,?,?)");
 			insertMessage = database.prepare("INSERT OR IGNORE INTO messages VALUES(?,?,?,?,?)");
+			database.setBusyTimeout(60000);
 			master.databaseLoggerReady(this);
 			
 			// Process events
