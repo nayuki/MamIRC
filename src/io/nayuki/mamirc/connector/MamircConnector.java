@@ -116,7 +116,8 @@ public final class MamircConnector {
 			return;
 		int conId = nextConnectionId;
 		ConnectionInfo info = new ConnectionInfo();
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, ("connect " + metadata).getBytes(OutputWriterThread.UTF8_CHARSET));
+		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION,
+			("connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata).getBytes(OutputWriterThread.UTF8_CHARSET));
 		serverConnections.put(conId, info);
 		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
 		nextConnectionId++;

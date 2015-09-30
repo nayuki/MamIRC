@@ -109,7 +109,7 @@ public final class MamircProcessor {
 		String line = new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET);
 		
 		if (line.startsWith("connect ")) {
-			String metadata = line.substring(8);
+			String metadata = line.split(" ", 5)[4];
 			if (!myConfiguration.ircNetworks.containsKey(metadata))
 				throw new IllegalStateException("No profile: " + metadata);
 			ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
