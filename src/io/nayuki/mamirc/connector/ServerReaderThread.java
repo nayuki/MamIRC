@@ -62,7 +62,7 @@ final class ServerReaderThread extends Thread {
 			LineReader reader = new LineReader(socket.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();
-				if (line == null)
+				if (line == LineReader.BLANK_EOF || line == null)
 					break;
 				master.receiveMessage(connectionId, line);
 			}

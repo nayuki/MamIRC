@@ -121,7 +121,7 @@ final class ConnectorReaderThread extends Thread {
 	
 	private static String readStringLine(LineReader reader) throws IOException {
 		byte[] line = reader.readLine();
-		if (line == null)
+		if (line == LineReader.BLANK_EOF || line == null)
 			return null;
 		else
 			return new String(line, OutputWriterThread.UTF8_CHARSET);

@@ -39,9 +39,9 @@ final class ProcessorReaderThread extends Thread {
 			
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
-			byte[] line = reader.readLine();
+			byte[] line = reader.readLine();  // First line, thus not null
 			killer.interrupt();  // Killer is no longer needed, now that we have read the line
-			if (line == null || !equalsTimingSafe(line, password))
+			if (!equalsTimingSafe(line, password))
 				return;  // Authentication failure
 			synchronized(this) {
 				isAuthenticated = true;
@@ -55,7 +55,7 @@ final class ProcessorReaderThread extends Thread {
 			// Process input lines
 			while (true) {
 				line = reader.readLine();
-				if (line == null)
+				if (line == LineReader.BLANK_EOF || line == null)
 					break;
 				
 				String lineStr = new String(line, "UTF-8");

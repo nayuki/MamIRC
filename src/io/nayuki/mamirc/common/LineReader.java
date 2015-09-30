@@ -58,7 +58,10 @@ public final class LineReader {
 					byte[] result = takeCurrentLine();
 					readBuffer = null;
 					lineBuffer = null;
-					return result;
+					if (result.length == 0)
+						return BLANK_EOF;  // Same content as just byte[0], but usefully indicates that the next call will return null
+					else
+						return result;
 				}
 			}
 			
@@ -97,5 +100,8 @@ public final class LineReader {
 		lineLength = 0;
 		return result;
 	}
+	
+	
+	public static final byte[] BLANK_EOF = new byte[0];
 	
 }
