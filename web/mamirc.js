@@ -136,9 +136,8 @@ function ingestMessages(data) {
 					who = "*";
 					line = parts[1] + " joined the channel";
 				} else if (parts[0] == "PART") {
-					var subparts = split2(parts[1]);
 					who = "*";
-					line = subparts[0] + " left the channel: " + subparts[1];
+					line = parts[1] + " joined the channel";
 				} else if (parts[0] == "QUIT") {
 					var subparts = split2(parts[1]);
 					who = "*";
