@@ -79,7 +79,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread.
+	// Can be called safely from any thread, but only called once.
 	public void terminate() {
 		try {
 			queue.put(TERMINATOR);

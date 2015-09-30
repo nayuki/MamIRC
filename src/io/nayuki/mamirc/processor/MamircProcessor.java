@@ -417,7 +417,6 @@ public final class MamircProcessor {
 	
 	
 	public synchronized void terminate() {
-		writer.terminate();
 		databaseLogger.terminate();
 		if (server != null)
 			server.server.stop(0);

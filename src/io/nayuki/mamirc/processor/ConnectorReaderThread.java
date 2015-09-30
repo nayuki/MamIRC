@@ -43,10 +43,8 @@ final class ConnectorReaderThread extends Thread {
 			// Process real-time events
 			while (true) {
 				String line = readStringLine(reader);
-				if (line == null) {
-					writer.terminate();
+				if (line == null)
 					break;
-				}
 				String[] parts = line.split(" ", 5);
 				Event ev = new Event(
 					Integer.parseInt(parts[0]),
@@ -56,7 +54,8 @@ final class ConnectorReaderThread extends Thread {
 					parts[4].getBytes(OutputWriterThread.UTF8_CHARSET));
 				master.processEvent(ev, true);
 			}
-			
+		
+		// Clean up
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (SQLiteException e) {
