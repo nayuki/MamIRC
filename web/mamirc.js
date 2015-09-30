@@ -100,8 +100,15 @@ function pollNewMessages() {
 			xhr.onerror();
 		else {
 			var data = JSON.parse(xhr.response);
-			ingestMessages(data);
-			setActiveWindow(activeWindow);
+			if (ingestMessages(data)) {
+				var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
+				var scrollPosition = document.documentElement.scrollTop;
+				setActiveWindow(activeWindow);
+				if (scrollToBottom)
+					window.scrollTo(0, document.documentElement.scrollHeight);
+				else
+					window.scrollTo(0, scrollPosition);
+			}
 			pollNewMessages();
 		}
 	};
@@ -117,6 +124,7 @@ function pollNewMessages() {
 
 function ingestMessages(data) {
 	var windowsChanged = false;
+	var activeWindowChanged = false;
 	for (var profile in data) {
 		for (var party in data[profile].windows) {
 			var windowName = party + ":" + profile;
@@ -125,6 +133,8 @@ function ingestMessages(data) {
 				messageData[windowName] = [];
 				windowsChanged = true;
 			}
+			if (activeWindow != null && windowName == activeWindow)
+				activeWindowChanged = true;
 			var messages = messageData[windowName];
 			var msgs = data[profile].windows[party];
 			for (var i = 0; i < msgs.length; i++) {
@@ -174,6 +184,7 @@ function ingestMessages(data) {
 			windowListElem.appendChild(li);
 		}
 	}
+	return activeWindowChanged;
 }
 
 
