@@ -234,6 +234,7 @@ final class DatabaseLoggerThread extends Thread {
 		lock.lock();
 		try {
 			terminateRequested = true;
+			flushRequested = true;
 			condAll.signal();
 			condUrgent.signal();
 		} finally {
