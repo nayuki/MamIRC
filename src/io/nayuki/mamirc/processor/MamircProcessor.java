@@ -308,10 +308,14 @@ public final class MamircProcessor {
 	}
 	
 	
+	// Must only be called from ConnectorReaderThread, and only called once.
 	public synchronized void finishCatchup() {
+		Set<IrcNetwork> activeProfiles = new HashSet<>();
 		for (int conId : ircConnections.keySet()) {
 			ConnectionState state = ircConnections.get(conId);
 			IrcNetwork profile = state.profile;
+			if (!activeProfiles.add(profile))
+				throw new IllegalStateException("Multiple active connections for profile: " + profile.name);
 			switch (state.registrationState) {
 				case CONNECTING:
 					break;
@@ -351,6 +355,15 @@ public final class MamircProcessor {
 				
 				default:
 					throw new AssertionError();
+			}
+		}
+		
+		// Connect to networks
+		for (IrcNetwork net : myConfiguration.ircNetworks.values()) {
+			if (!activeProfiles.contains(net)) {
+				IrcNetwork.Server serv = net.servers.get(0);
+				String str = "connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + net.name;
+				writer.postWrite(str.getBytes(OutputWriterThread.UTF8_CHARSET));
 			}
 		}
 	}
