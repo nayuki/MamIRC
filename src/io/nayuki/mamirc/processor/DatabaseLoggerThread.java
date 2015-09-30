@@ -137,13 +137,17 @@ final class DatabaseLoggerThread extends Thread {
 	
 	// Should only be called from the main thread.
 	public void postMessage(int connectionId, int sequence, long timestamp, String profile, String party, String line) {
-		queue.add(new Object[]{connectionId, sequence, timestamp, profile, party, line});
+		try {
+			queue.put(new Object[]{connectionId, sequence, timestamp, profile, party, line});
+		} catch (InterruptedException e) {}
 	}
 	
 	
 	// Should only be called from the main thread.
 	public void terminate() {
-		queue.add(TERMINATOR);
+		try {
+			queue.put(TERMINATOR);
+		} catch (InterruptedException e) {}
 	}
 	
 	

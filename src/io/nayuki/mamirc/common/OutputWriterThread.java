@@ -65,7 +65,9 @@ public final class OutputWriterThread extends Thread {
 	public void postWrite(byte[] line) {
 		if (line == null)
 			throw new NullPointerException();
-		queue.add(line);
+		try {
+			queue.put(line);
+		} catch (InterruptedException e) {}
 	}
 	
 	
@@ -79,7 +81,9 @@ public final class OutputWriterThread extends Thread {
 	
 	// Can be called safely from any thread.
 	public void terminate() {
-		queue.add(TERMINATOR);
+		try {
+			queue.put(TERMINATOR);
+		} catch (InterruptedException e) {}
 	}
 	
 	
