@@ -80,6 +80,14 @@ function setActiveWindow(name) {
 		tr.appendChild(td);
 		messageListElem.appendChild(tr);
 	}
+	if (data.length > 0) {
+		messageListElem.parentNode.style.tableLayout = "auto";
+		var a = messageListElem.firstChild.children[0].clientWidth;
+		var b = messageListElem.firstChild.children[1].clientWidth;
+		messageListElem.parentNode.style.tableLayout = "fixed";
+		messageListElem.firstChild.children[0].style.width = a + "px";
+		messageListElem.firstChild.children[1].style.width = b + "px";
+	}
 }
 
 var ME_REGEX = /^\u0001ACTION (.*)\u0001$/;

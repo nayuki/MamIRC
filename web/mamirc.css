@@ -76,4 +76,5 @@ tbody td:nth-child(3) {
 	width: 98%;
 	text-align: left;
 	white-space: pre-wrap;
+	word-wrap: break-word;
 }
