@@ -39,31 +39,25 @@ final class MessageHttpServer {
 		this.master = master;
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
+		// Static files
 		server.createContext("/", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
-				Headers head = he.getResponseHeaders();
-				OutputStream out = he.getResponseBody();
-				switch (he.getRequestURI().getPath()) {
-					case "/":
-						head.set("Content-Type", "application/xhtml+xml");
-						he.sendResponseHeaders(200, 0);
-						sendFile(new File("web", "mamirc-web-ui.html"), out);
-						break;
-					case "/mamirc.css":
-						head.set("Content-Type", "text/css");
-						he.sendResponseHeaders(200, 0);
-						sendFile(new File("web", "mamirc.css"), out);
-						break;
-					case "/mamirc.js":
-						head.set("Content-Type", "application/javascript");
-						he.sendResponseHeaders(200, 0);
-						sendFile(new File("web", "mamirc.js"), out);
-						break;
-					default:
-						he.sendResponseHeaders(404, 0);
-						break;
+				try {
+					Headers head = he.getResponseHeaders();
+					OutputStream out = he.getResponseBody();
+					String reqPath = he.getRequestURI().getPath();
+					for (String[] entry : STATIC_FILES) {
+						if (entry[0].equals(reqPath)) {
+							head.set("Content-Type", entry[2]);
+							he.sendResponseHeaders(200, 0);
+							sendFile(new File("web", entry[1]), out);
+							return;
+						}
+					}
+					he.sendResponseHeaders(404, 0);
+				} finally {
+					he.close();
 				}
-				he.close();
 			}
 		});
 		
@@ -98,6 +92,13 @@ final class MessageHttpServer {
 		
 		server.setExecutor(Executors.newFixedThreadPool(4));
 	}
+	
+	
+	private static final String[][] STATIC_FILES = {
+		{"/", "mamirc-web-ui.html", "application/xhtml+xml"},
+		{"/mamirc.css", "mamirc.css", "text/css"},
+		{"/mamirc.js", "mamirc.js", "application/javascript"},
+	};
 	
 	
 	/*---- Methods ----*/
