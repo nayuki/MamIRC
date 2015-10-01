@@ -202,6 +202,7 @@ final class MessageHttpServer {
 	private Map<String,Map<String,Object>> getNewMessages(List<Object[]> inputQuery) throws SQLiteException {
 		SQLiteConnection database = new SQLiteConnection(databaseFile);
 		database.open(false);
+		database.setBusyTimeout(5000);
 		SQLiteStatement messageQuery = database.prepare("SELECT sequence, windowId, timestamp, line FROM messages WHERE connectionId=? AND sequence>? ORDER BY windowId ASC, sequence ASC");
 		SQLiteStatement windowQuery = database.prepare("SELECT party FROM windows WHERE id=?");
 		
