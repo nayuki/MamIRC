@@ -52,7 +52,7 @@ function setActiveWindow(name) {
 		tr.appendChild(td);
 		td = document.createElement("td");
 		var s = data[i][2];
-		var match = ME_REGEX.exec(s);
+		var match = ME_INCOMING_REGEX.exec(s);
 		if (match != null) {
 			var em = document.createElement("em");
 			em.appendChild(document.createTextNode(match[1]));
@@ -90,7 +90,8 @@ function setActiveWindow(name) {
 	}
 }
 
-var ME_REGEX = /^\u0001ACTION (.*)\u0001$/;
+var ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
+var ME_OUTGOING_REGEX = /^\/me (.*)$/i;
 
 
 function pollNewMessages() {
@@ -202,7 +203,11 @@ function sendMessage() {
 	xhr.open("POST", "send-message.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify([activeWindow, inputBoxElem.value]));
+	var text = inputBoxElem.value;
+	var match = ME_OUTGOING_REGEX.exec(text);
+	if (match != null)
+		text = "\u0001ACTION " + match[1] + "\u0001";
+	xhr.send(JSON.stringify([activeWindow, text]));
 	
 	return false;  // To prevent the form submitting
 }
