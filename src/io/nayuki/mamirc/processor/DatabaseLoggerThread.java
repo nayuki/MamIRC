@@ -47,7 +47,7 @@ final class DatabaseLoggerThread extends Thread {
 			database.exec("CREATE TABLE IF NOT EXISTS windows(id INTEGER PRIMARY KEY, profile TEXT NOT NULL, party TEXT NOT NULL, partyLower TEXT NOT NULL)");
 			database.exec("CREATE TABLE IF NOT EXISTS messages(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, windowId INTEGER, line TEXT NOT NULL, "
 				+ "PRIMARY KEY(connectionId, sequence, windowId), FOREIGN KEY(windowId) REFERENCES windows(id))");
-			queryWindow = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
+			queryWindow = database.prepare("SELECT id FROM windows WHERE profile=? AND partyLower=?");
 			queryWindowMax = database.prepare("SELECT max(id) FROM windows");
 			insertWindow = database.prepare("INSERT INTO windows VALUES(?,?,?,?)");
 			insertMessage = database.prepare("INSERT OR IGNORE INTO messages VALUES(?,?,?,?,?)");
@@ -107,11 +107,11 @@ final class DatabaseLoggerThread extends Thread {
 	
 	
 	private int getWindowId(String profile, String party) throws SQLiteException {
-		String key = profile + "\n" + party;
+		String key = profile + "\n" + party.toLowerCase();
 		if (!windowIdCache.containsKey(key)) {
 			int id;
 			queryWindow.bind(1, profile);
-			queryWindow.bind(2, party);
+			queryWindow.bind(2, party.toLowerCase());
 			if (queryWindow.step())
 				id = queryWindow.columnInt(0);
 			

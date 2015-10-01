@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -456,7 +455,7 @@ public final class MamircProcessor {
 			registrationState = RegState.CONNECTING;
 			rejectedNicknames = new HashSet<>();
 			currentNickname = null;
-			currentChannels = new TreeMap<>();
+			currentChannels = new CaseInsensitiveTreeMap<>();
 			sentNickservPassword = false;
 		}
 		
