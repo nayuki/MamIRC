@@ -43,11 +43,13 @@ final class DatabaseLoggerThread extends Thread {
 			// Initialize table
 			database.open(true);
 			database.exec("PRAGMA journal_mode = PERSIST");
-			database.exec("CREATE TABLE IF NOT EXISTS windows(id INTEGER PRIMARY KEY, profile TEXT, party TEXT)");
-			database.exec("CREATE TABLE IF NOT EXISTS messages(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, windowId INTEGER, line TEXT NOT NULL, PRIMARY KEY(connectionId, sequence, windowId))");
+			database.exec("PRAGMA foreign_keys = ON");
+			database.exec("CREATE TABLE IF NOT EXISTS windows(id INTEGER PRIMARY KEY, profile TEXT NOT NULL, party TEXT NOT NULL, partyLower TEXT NOT NULL)");
+			database.exec("CREATE TABLE IF NOT EXISTS messages(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, windowId INTEGER, line TEXT NOT NULL, "
+				+ "PRIMARY KEY(connectionId, sequence, windowId), FOREIGN KEY(windowId) REFERENCES windows(id))");
 			queryWindow = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
 			queryWindowMax = database.prepare("SELECT max(id) FROM windows");
-			insertWindow = database.prepare("INSERT INTO windows VALUES(?,?,?)");
+			insertWindow = database.prepare("INSERT INTO windows VALUES(?,?,?,?)");
 			insertMessage = database.prepare("INSERT OR IGNORE INTO messages VALUES(?,?,?,?,?)");
 			database.setBusyTimeout(60000);
 			master.databaseLoggerReady(this);
@@ -125,6 +127,7 @@ final class DatabaseLoggerThread extends Thread {
 				insertWindow.bind(1, id);
 				insertWindow.bind(2, profile);
 				insertWindow.bind(3, party);
+				insertWindow.bind(4, party.toLowerCase());
 				if (insertWindow.step())
 					throw new AssertionError();
 				insertWindow.reset();
