@@ -1,18 +1,18 @@
 html {
-	margin: 0em auto;
-	padding: 0em;
 	max-width: 80em;
 	height: 100%;
+	margin: 0em auto;
+	padding: 0em;
 	font-family: sans-serif;
 }
 
 body {
-	box-sizing: border-box;
-	margin: 0em;
-	padding: 0em 0em 1.0em;
 	display: table;
 	width: 100%;
 	height: 100%;
+	margin: 0em;
+	padding: 0em 0em 1.0em;
+	box-sizing: border-box;
 	overflow-y: scroll;
 }
 
@@ -46,18 +46,18 @@ thead {
 #window-list a {
 	display: inline-block;
 	padding: 0.8em 0.4em;
-	border-radius: 0.8em;
 	border: 1px solid #909090;
+	border-radius: 0.8em;
 	color: inherit;
 	text-decoration: none;
 }
 
 #window-list li.selected a {
-	background: #E8E8E8;
+	background-color: #E8E8E8;
 }
 
 #window-list a:hover {
-	background: #F8F8F8;
+	background-color: #F8F8F8;
 }
 
 input[type="text"] {
@@ -79,7 +79,7 @@ td {
 	vertical-align: top;
 }
 
-tbody td:nth-child(1) {
+td:nth-child(1) {
 	width: 1%;
 	text-align: right;
 	font-kerning: none;
@@ -87,7 +87,7 @@ tbody td:nth-child(1) {
 }
 
 
-tbody td:nth-child(2) {
+td:nth-child(2) {
 	width: 1%;
 	text-align: right;
 }
