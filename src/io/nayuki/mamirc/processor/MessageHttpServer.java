@@ -36,13 +36,17 @@ final class MessageHttpServer {
 			public void handle(HttpExchange he) throws IOException {
 				try {
 					Headers head = he.getResponseHeaders();
-					OutputStream out = he.getResponseBody();
 					String reqPath = he.getRequestURI().getPath();
 					for (String[] entry : STATIC_FILES) {
 						if (entry[0].equals(reqPath)) {
 							head.set("Content-Type", entry[2]);
 							he.sendResponseHeaders(200, 0);
-							sendFile(new File("web", entry[1]), out);
+							InputStream in = new FileInputStream(new File("web", entry[1]));
+							try {
+								copyStream(in, he.getResponseBody());
+							} finally {
+								in.close();
+							}
 							return;
 						}
 					}
@@ -69,14 +73,7 @@ final class MessageHttpServer {
 			public void handle(HttpExchange he) throws IOException {
 				// Read request
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				InputStream in = he.getRequestBody();
-				byte[] buf = new byte[1024];
-				while (true) {
-					int n = in.read(buf);
-					if (n == -1)
-						break;
-					bout.write(buf, 0, n);
-				}
+				copyStream(he.getRequestBody(), bout);
 				int startId = Json.getInt(Json.parse(Utils.fromUtf8(bout.toByteArray())));
 				
 				// Get or wait for new data
@@ -147,18 +144,13 @@ final class MessageHttpServer {
 	}
 	
 	
-	private static void sendFile(File file, OutputStream out) throws IOException {
-		InputStream in = new FileInputStream(file);
-		try {
-			byte[] buf = new byte[1024];
-			while (true) {
-				int n = in.read(buf);
-				if (n == -1)
-					break;
-				out.write(buf, 0, n);
-			}
-		} finally {
-			in.close();
+	private static void copyStream(InputStream in, OutputStream out) throws IOException {
+		byte[] buf = new byte[1024];
+		while (true) {
+			int n = in.read(buf);
+			if (n == -1)
+				break;
+			out.write(buf, 0, n);
 		}
 	}
 	
