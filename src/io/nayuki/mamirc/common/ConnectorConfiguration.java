@@ -31,7 +31,7 @@ public final class ConnectorConfiguration {
 		
 		// Retrieve each field
 		databaseFile = new File(Json.getString(data, "database-file"));
-		connectorPassword = Json.getString(data, "processor-password").getBytes(OutputWriterThread.UTF8_CHARSET);
+		connectorPassword = Utils.toUtf8(Json.getString(data, "processor-password"));
 		serverPort = Json.getInt(data, "server-port");
 		if ((serverPort & 0xFFFF) != serverPort)
 			throw new IllegalStateException("Invalid configuration file");

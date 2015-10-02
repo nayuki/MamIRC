@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.Socket;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class ProcessorReaderThread extends Thread {
@@ -68,7 +69,7 @@ final class ProcessorReaderThread extends Thread {
 				else if (cmd.equals("disconnect") && parts.length == 2)
 					master.disconnectServer(Integer.parseInt(parts[1]), this);
 				else if (cmd.equals("send") && parts.length >= 3)
-					master.sendMessage(Integer.parseInt(parts[1]), lineStr.split(" ", 3)[2].getBytes(OutputWriterThread.UTF8_CHARSET), this);
+					master.sendMessage(Integer.parseInt(parts[1]), Utils.toUtf8(lineStr.split(" ", 3)[2]), this);
 				else
 					System.err.println("Unknown line from processor: " + lineStr);
 			}

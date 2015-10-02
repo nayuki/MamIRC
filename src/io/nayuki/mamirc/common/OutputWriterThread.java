@@ -2,7 +2,6 @@ package io.nayuki.mamirc.common;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -75,7 +74,7 @@ public final class OutputWriterThread extends Thread {
 	public void postWrite(String line) {
 		if (line == null)
 			throw new NullPointerException();
-		postWrite(line.getBytes(UTF8_CHARSET));
+		postWrite(Utils.toUtf8(line));
 	}
 	
 	
@@ -90,7 +89,5 @@ public final class OutputWriterThread extends Thread {
 	/*---- Helper definitions ----*/
 	
 	private static final byte[] TERMINATOR = new byte[0];
-	
-	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	
 }

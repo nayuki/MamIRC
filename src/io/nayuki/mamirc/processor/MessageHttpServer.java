@@ -21,7 +21,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.nayuki.json.Json;
-import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class MessageHttpServer {
@@ -147,7 +147,7 @@ final class MessageHttpServer {
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
-		byte[] b = Json.serialize(outData).getBytes(OutputWriterThread.UTF8_CHARSET);
+		byte[] b = Utils.toUtf8(Json.serialize(outData));
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();
@@ -164,7 +164,7 @@ final class MessageHttpServer {
 				break;
 			bout.write(buf, 0, n);
 		}
-		Object queryData = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		Object queryData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 		
 		List<Object[]> query = new ArrayList<>();
 		for (String profile : Json.getMap(queryData).keySet()) {
@@ -193,7 +193,7 @@ final class MessageHttpServer {
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
-		byte[] b = Json.serialize(outData).getBytes(OutputWriterThread.UTF8_CHARSET);
+		byte[] b = Utils.toUtf8(Json.serialize(outData));
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();
@@ -263,7 +263,7 @@ final class MessageHttpServer {
 				break;
 			bout.write(buf, 0, n);
 		}
-		Object data = Json.parse(new String(bout.toByteArray(), OutputWriterThread.UTF8_CHARSET));
+		Object data = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 		String[] target = Json.getString(data, 0).split(":", 2);
 		String line = Json.getString(data, 1);
 		boolean status = master.sendMessage(target[1], target[0], line);
@@ -271,7 +271,7 @@ final class MessageHttpServer {
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
-		byte[] b = Boolean.toString(status).getBytes(OutputWriterThread.UTF8_CHARSET);
+		byte[] b = Utils.toUtf8(Boolean.toString(status));
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();

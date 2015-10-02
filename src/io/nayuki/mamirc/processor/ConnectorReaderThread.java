@@ -11,6 +11,7 @@ import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class ConnectorReaderThread extends Thread {
@@ -51,7 +52,7 @@ final class ConnectorReaderThread extends Thread {
 					Integer.parseInt(parts[1]),
 					Long.parseLong(parts[2]),
 					Event.Type.fromOrdinal(Integer.parseInt(parts[3])),
-					parts[4].getBytes(OutputWriterThread.UTF8_CHARSET));
+					Utils.toUtf8(parts[4]));
 				master.processEvent(ev, true);
 			}
 		
@@ -124,7 +125,7 @@ final class ConnectorReaderThread extends Thread {
 		if (line == LineReader.BLANK_EOF || line == null)
 			return null;
 		else
-			return new String(line, OutputWriterThread.UTF8_CHARSET);
+			return Utils.fromUtf8(line);
 	}
 	
 }

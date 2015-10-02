@@ -13,6 +13,7 @@ import com.almworks.sqlite4java.SQLiteException;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 
 
 public final class MamircConnector {
@@ -117,7 +118,7 @@ public final class MamircConnector {
 		int conId = nextConnectionId;
 		ConnectionInfo info = new ConnectionInfo();
 		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION,
-			("connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata).getBytes(OutputWriterThread.UTF8_CHARSET));
+				Utils.toUtf8("connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata));
 		serverConnections.put(conId, info);
 		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
 		nextConnectionId++;
@@ -132,7 +133,7 @@ public final class MamircConnector {
 		if (info == null)
 			System.err.println("Warning: Connection " + conId + " does not exist");
 		else {
-			postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, "disconnect".getBytes(OutputWriterThread.UTF8_CHARSET));
+			postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("disconnect"));
 			try {
 				info.socket.close();  // Asynchronous termination
 			} catch (IOException e) {}
@@ -145,7 +146,7 @@ public final class MamircConnector {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, "opened".getBytes(OutputWriterThread.UTF8_CHARSET));
+		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("opened"));
 		info.socket = sock;
 		info.writer = writer;
 	}
@@ -156,7 +157,7 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, "closed".getBytes(OutputWriterThread.UTF8_CHARSET));
+		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("closed"));
 	}
 	
 	
@@ -207,7 +208,7 @@ public final class MamircConnector {
 		if (processorWriter != null) {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				bout.write(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal()).getBytes(OutputWriterThread.UTF8_CHARSET));
+				bout.write(Utils.toUtf8(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal())));
 				bout.write(ev.getLine());
 				processorWriter.postWrite(bout.toByteArray());
 			} catch (IOException e) {

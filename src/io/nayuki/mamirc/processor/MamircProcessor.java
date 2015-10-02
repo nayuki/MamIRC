@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
 
@@ -105,7 +106,7 @@ public final class MamircProcessor {
 	private void processConnection(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Possibly null
-		String line = new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET);
+		String line = Utils.fromUtf8(ev.getLine());
 		
 		if (line.startsWith("connect ")) {
 			String metadata = line.split(" ", 5)[4];
@@ -130,7 +131,7 @@ public final class MamircProcessor {
 		IrcNetwork profile = state.profile;
 		IrcLine msg;
 		try {
-			msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+			msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
 		} catch (IllegalArgumentException e) {  // Syntax error
 			return;
 		}
@@ -276,7 +277,7 @@ public final class MamircProcessor {
 		IrcNetwork profile = state.profile;
 		IrcLine msg;
 		try {
-			msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+			msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
 		} catch (IllegalArgumentException e) {  // Syntax error
 			return;
 		}
@@ -372,7 +373,7 @@ public final class MamircProcessor {
 			if (!activeProfiles.contains(net)) {
 				IrcNetwork.Server serv = net.servers.get(0);
 				String str = "connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + net.name;
-				writer.postWrite(str.getBytes(OutputWriterThread.UTF8_CHARSET));
+				writer.postWrite(Utils.toUtf8(str));
 			}
 		}
 	}

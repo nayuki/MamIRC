@@ -55,10 +55,10 @@ public final class LineReaderTest {
 	
 	private static void test(String raw, String... lines) {
 		try {
-			LineReader reader = new LineReader(new ByteArrayInputStream(raw.getBytes(OutputWriterThread.UTF8_CHARSET)));
+			LineReader reader = new LineReader(new ByteArrayInputStream(Utils.toUtf8(raw)));
 			for (String line : lines) {
 				byte[] actual = reader.readLine();
-				byte[] expected = line.getBytes(OutputWriterThread.UTF8_CHARSET);
+				byte[] expected = Utils.toUtf8(line);
 				Assert.assertNotNull(actual != null);
 				Assert.assertArrayEquals(expected, actual);
 			}
