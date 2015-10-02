@@ -11,6 +11,7 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class DatabaseLoggerThread extends Thread {
@@ -71,7 +72,7 @@ final class DatabaseLoggerThread extends Thread {
 			
 			// Query for next connection ID
 			SQLiteStatement getMaxConId = database.prepare("SELECT max(connectionId) FROM events");
-			step(getMaxConId, true);
+			Utils.stepStatement(getMaxConId, true);
 			if (getMaxConId.columnNull(0))
 				return 0;
 			else
@@ -140,11 +141,11 @@ final class DatabaseLoggerThread extends Thread {
 		} else {
 			if (flushRequested) {
 				// Drain the queue straightforwardly
-				step(beginTransaction, false);
+				Utils.stepStatement(beginTransaction, false);
 				beginTransaction.reset();
 				while (!queue.isEmpty())
 					insertEventIntoDb(queue.remove());
-				step(commitTransaction, false);
+				Utils.stepStatement(commitTransaction, false);
 				commitTransaction.reset();
 				flushRequested = false;
 				condFlushed.signal();
@@ -166,11 +167,11 @@ final class DatabaseLoggerThread extends Thread {
 				// return without explicit acknowledgement from the logger thread.
 				lock.unlock();
 				try {
-					step(beginTransaction, false);
+					Utils.stepStatement(beginTransaction, false);
 					beginTransaction.reset();
 					for (Event ev : events)
 						insertEventIntoDb(ev);
-					step(commitTransaction, false);
+					Utils.stepStatement(commitTransaction, false);
 					commitTransaction.reset();
 				} finally {
 					lock.lock();
@@ -191,7 +192,7 @@ final class DatabaseLoggerThread extends Thread {
 		insertEvent.bind(3, ev.timestamp);
 		insertEvent.bind(4, ev.type.ordinal());
 		insertEvent.bind(5, ev.getLine());
-		step(insertEvent, false);
+		Utils.stepStatement(insertEvent, false);
 		insertEvent.reset();
 	}
 	
@@ -241,12 +242,6 @@ final class DatabaseLoggerThread extends Thread {
 		} finally {
 			lock.unlock();
 		}
-	}
-	
-	
-	private static void step(SQLiteStatement stat, boolean expectingResult) throws SQLiteException {
-		if (stat.step() != expectingResult)
-			throw new AssertionError();
 	}
 	
 }

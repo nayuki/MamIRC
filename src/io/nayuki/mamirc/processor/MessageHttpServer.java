@@ -122,7 +122,7 @@ final class MessageHttpServer {
 			for (String party : entry.getValue()) {
 				windowQuery.bind(1, profile);
 				windowQuery.bind(2, party);
-				windowQuery.step();
+				Utils.stepStatement(windowQuery, true);
 				int window = windowQuery.columnInt(0);
 				windowQuery.reset();
 				
@@ -221,8 +221,7 @@ final class MessageHttpServer {
 				int winId = messageQuery.columnInt(1);
 				if (winId != currentWindow) {
 					windowQuery.bind(1, winId);
-					if (!windowQuery.step())
-						throw new RuntimeException();
+					Utils.stepStatement(windowQuery, true);
 					String party = windowQuery.columnString(0);
 					currentWindow = winId;
 					windowQuery.reset();

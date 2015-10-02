@@ -8,6 +8,7 @@ import java.util.concurrent.BlockingQueue;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class DatabaseLoggerThread extends Thread {
@@ -100,8 +101,7 @@ final class DatabaseLoggerThread extends Thread {
 		insertMessage.bind(3, (Long)msg[2]);
 		insertMessage.bind(4, getWindowId((String)msg[3], (String)msg[4]));
 		insertMessage.bind(5, (String)msg[5]);
-		if (insertMessage.step())
-			throw new AssertionError();
+		Utils.stepStatement(insertMessage, false);
 		insertMessage.reset();
 	}
 	
@@ -116,8 +116,7 @@ final class DatabaseLoggerThread extends Thread {
 				id = queryWindow.columnInt(0);
 			
 			else {
-				if (!queryWindowMax.step())
-					throw new AssertionError();
+				Utils.stepStatement(queryWindowMax, true);
 				if (queryWindowMax.columnNull(0))
 					id = 0;
 				else
@@ -128,8 +127,7 @@ final class DatabaseLoggerThread extends Thread {
 				insertWindow.bind(2, profile);
 				insertWindow.bind(3, party);
 				insertWindow.bind(4, party.toLowerCase());
-				if (insertWindow.step())
-					throw new AssertionError();
+				Utils.stepStatement(insertWindow, false);
 				insertWindow.reset();
 			}
 			queryWindow.reset();
