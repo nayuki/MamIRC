@@ -86,18 +86,22 @@ public final class MamircProcessor {
 	public synchronized void processEvent(Event ev, boolean realtime) {
 		if (ev == null)
 			throw new NullPointerException();
-		switch (ev.type) {
-			case CONNECTION:
-				processConnection(ev, realtime);
-				break;
-			case RECEIVE:
-				processReceive(ev, realtime);
-				break;
-			case SEND:
-				processSend(ev, realtime);
-				break;
-			default:
-				throw new AssertionError();
+		try {
+			switch (ev.type) {
+				case CONNECTION:
+					processConnection(ev, realtime);
+					break;
+				case RECEIVE:
+					processReceive(ev, realtime);
+					break;
+				case SEND:
+					processSend(ev, realtime);
+					break;
+				default:
+					throw new AssertionError();
+			}
+		} catch (IrcSyntaxException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -129,19 +133,13 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg;
-		try {
-			msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
-		} catch (IllegalArgumentException e) {  // Syntax error
-			return;
-		}
-		List<String> params = msg.parameters;
+		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
 		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
 				String fromname = msg.prefixName;
-				String toname = params.get(0);
+				String toname = msg.getParameter(0);
 				if (fromname.equals(state.currentNickname))
 					state.currentNickname = toname;
 				for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
@@ -157,19 +155,19 @@ public final class MamircProcessor {
 			
 			case "JOIN": {
 				String who = msg.prefixName;
-				String chan = params.get(0);
+				String chan = msg.getParameter(0);
 				if (who.equals(state.currentNickname) && !curchans.containsKey(chan))
 					curchans.put(chan, new ConnectionState.ChannelState());
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
 					String line = msg.command + " " + who;
-					postMessage(conId, ev.sequence, ev.timestamp, profile.name, params.get(0), line);
+					postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.getParameter(0), line);
 				}
 				break;
 			}
 			
 			case "PART": {
 				String who = msg.prefixName;
-				String chan = params.get(0);
+				String chan = msg.getParameter(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
 					String line = msg.command + " " + who;
 					postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
@@ -181,10 +179,10 @@ public final class MamircProcessor {
 			
 			case "PRIVMSG": {
 				String who = msg.prefixName;
-				String target = params.get(0);
+				String target = msg.getParameter(0);
 				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
 					target = who;
-				String text = params.get(1);
+				String text = msg.getParameter(1);
 				String line = msg.command + " " + who + " " + text;
 				postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
 				break;
@@ -195,7 +193,7 @@ public final class MamircProcessor {
 				if (!who.equals(state.currentNickname)) {
 					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
-							String line = msg.command + " " + who + " " + params.get(0);
+							String line = msg.command + " " + who + " " + msg.getParameter(0);
 							postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
 						}
 					}
@@ -242,14 +240,14 @@ public final class MamircProcessor {
 			}
 			
 			case "353": {  // RPL_NAMREPLY
-				String chan = params.get(2);
+				String chan = msg.getParameter(2);
 				if (curchans.containsKey(chan)) {
 					ConnectionState.ChannelState chanstate = curchans.get(chan);
 					if (!chanstate.processingNamesReply) {
 						chanstate.members.clear();
 						chanstate.processingNamesReply = true;
 					}
-					for (String name : params.get(3).split(" ")) {
+					for (String name : msg.getParameter(3).split(" ")) {
 						if (name.startsWith("@") || name.startsWith("+"))
 							name = name.substring(1);
 						chanstate.members.add(name);
@@ -275,12 +273,7 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg;
-		try {
-			msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
-		} catch (IllegalArgumentException e) {  // Syntax error
-			return;
-		}
+		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
@@ -290,7 +283,7 @@ public final class MamircProcessor {
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
 				if (state.registrationState != ConnectionState.RegState.REGISTERED)
-					state.currentNickname = msg.parameters.get(0);
+					state.currentNickname = msg.getParameter(0);
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
@@ -302,11 +295,11 @@ public final class MamircProcessor {
 			}
 			
 			case "PRIVMSG": {
-				if (msg.parameters.size() == 3 && msg.parameters.get(0).equals("NickServ") && msg.parameters.get(1).equals("IDENTIFY"))
+				if (msg.parameters.size() == 3 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).equals("IDENTIFY"))
 					state.sentNickservPassword = true;
 				String src = state.currentNickname;
-				String party = msg.parameters.get(0);
-				String text = msg.parameters.get(1);
+				String party = msg.getParameter(0);
+				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
 				postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
 				break;

@@ -32,7 +32,7 @@ final class IrcLine {
 		// Parse prefix and command
 		Matcher m = PREFIX_COMMAND_REGEX.matcher(line);
 		if (!m.matches())
-			throw new IllegalArgumentException("Syntax error in prefix or command");
+			throw new IrcSyntaxException("Syntax error in prefix or command");
 		if (m.start(1) != -1) {
 			String prefix = line.substring(m.start(1) + 1, m.end(1) - 1);
 			int i = prefix.indexOf('@');
@@ -72,12 +72,24 @@ final class IrcLine {
 				if (i == -1)
 					i = rest.length();
 				if (i == 1)
-					throw new IllegalArgumentException("Multiple spaces between parameters");
+					throw new IrcSyntaxException("Multiple spaces between parameters");
 				params.add(rest.substring(1, i));
 				rest = rest.substring(i);
 			}
 		}
 		parameters = Collections.unmodifiableList(params);
+	}
+	
+	
+	/*---- Methods ----*/
+	
+	public String getParameter(int index) {
+		if (index < 0)
+			throw new IndexOutOfBoundsException();
+		else if (index >= parameters.size())
+			throw new IrcSyntaxException("Missing expected parameter at index " + index);
+		else
+			return parameters.get(index);
 	}
 	
 	
