@@ -231,7 +231,7 @@ public final class MamircProcessor {
 					state.rejectedNicknames = null;
 					if (realtime) {
 						if (profile.nickservPassword != null && !state.sentNickservPassword)
-							send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
+							send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 						for (String chan : profile.channels)
 							send(conId, "JOIN", chan);
 					}
@@ -295,7 +295,7 @@ public final class MamircProcessor {
 			}
 			
 			case "PRIVMSG": {
-				if (msg.parameters.size() == 3 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).equals("IDENTIFY"))
+				if (msg.parameters.size() == 3 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).toUpperCase().startsWith("IDENTIFY "))
 					state.sentNickservPassword = true;
 				String src = state.currentNickname;
 				String party = msg.getParameter(0);
@@ -348,7 +348,7 @@ public final class MamircProcessor {
 				
 				case REGISTERED: {
 					if (profile.nickservPassword != null && !state.sentNickservPassword)
-						send(conId, "PRIVMSG", "NickServ", "IDENTIFY", profile.nickservPassword);
+						send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 					for (String chan : profile.channels) {
 						if (!state.currentChannels.containsKey(chan))
 							send(conId, "JOIN", chan);
