@@ -5,82 +5,91 @@ var windowListElem = document.getElementById("window-list");
 var messageListElem = document.getElementById("message-list");
 var inputBoxElem = document.getElementById("input-box");
 
-var activeWindow = null;
-var windowNames = [];
-var messageData = new Object();
-var connectionSequences = new Object();
+var activeWindowName = null;  // String
+var windowNames      = null;  // List<String>
+var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
+var nextUpdateId     = null;  // Integer
 
 
 function init() {
-	removeChildren(windowListElem);
-	removeChildren(messageListElem);
 	document.getElementsByTagName("form")[0].onsubmit = sendMessage;
-	
+	getState();
+}
+
+
+function getState() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
-		ingestMessages(JSON.parse(xhr.response));
-		setActiveWindow(windowNames[0]);
-		pollNewMessages();
+		loadState(JSON.parse(xhr.response));
+		updateState();
 	};
 	xhr.ontimeout = xhr.onerror = function() {
 		var li = document.createElement("li");
 		li.appendChild(document.createTextNode("(Unable to connect to data provider)"));
 		windowListElem.appendChild(li);
 	};
-	xhr.open("GET", "get-messages.json", true);
+	xhr.open("GET", "get-state.json", true);
 	xhr.responseType = "text";
-	xhr.timeout = 5000;
+	xhr.timeout = 10000;
 	xhr.send();
 }
 
 
+function loadState(data) {
+	windowNames = [];
+	windowMessages = {};
+	nextUpdateId = data.nextUpdateId;
+	
+	for (var profileName in data.messages) {
+		for (var targetName in data.messages[profileName]) {
+			var windowName = profileName + "\n" + targetName;
+			windowNames.push(windowName);
+			windowMessages[windowName] = data.messages[profileName][targetName];
+		}
+	}
+	
+	windowNames.sort();
+	redrawWindowList();
+	if (windowNames.length > 0)
+		setActiveWindow(windowNames[0]);
+}
+
+
+function redrawWindowList() {
+	removeChildren(windowListElem);
+	for (var i = 0; i < windowNames.length; i++) {
+		var li = document.createElement("li");
+		var a = document.createElement("a");
+		var windowName = windowNames[i];
+		var parts = windowName.split("\n");
+		a.appendChild(document.createTextNode(parts[1] + " (" + parts[0] + ")"));
+		a.href = "#";
+		a.onclick = (function(name) {
+			return function() {
+				setActiveWindow(name);
+				return false;
+			};
+		})(windowName);
+		li.appendChild(a);
+		windowListElem.appendChild(li);
+	}
+}
+
+
 function setActiveWindow(name) {
-	activeWindow = name;
-	var windowLis = windowListElem.childNodes;
+	if (activeWindowName == name)
+		return;
+	
+	activeWindowName = name;
+	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0; i < windowLis.length; i++)
-		windowLis[i].className = (windowLis[i].firstChild.firstChild.nodeValue == name) ? "selected" : "";
+		windowLis[i].className = windowNames[i] == name ? "selected" : "";
 	
 	removeChildren(messageListElem);
-	var data = messageData[name];
-	for (var i = 0; i < data.length; i++) {
-		var tr = document.createElement("tr");
-		var td = document.createElement("td");
-		td.appendChild(document.createTextNode(formatDate(data[i][0])));
-		tr.appendChild(td);
-		td = document.createElement("td");
-		td.appendChild(document.createTextNode(data[i][1]));
-		tr.appendChild(td);
-		td = document.createElement("td");
-		var s = data[i][2];
-		var match = ME_INCOMING_REGEX.exec(s);
-		if (match != null) {
-			var em = document.createElement("em");
-			em.appendChild(document.createTextNode(match[1]));
-			td.appendChild(em);
-		} else {
-			while (s != "") {
-				match = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
-				if (match == null)
-					match = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
-				if (match == null) {
-					td.appendChild(document.createTextNode(s));
-					break;
-				} else {
-					if (match[1].length > 0)
-						td.appendChild(document.createTextNode(match[1]));
-					var a = document.createElement("a");
-					a.href = match[2];
-					a.target = "_blank";
-					a.appendChild(document.createTextNode(match[2]));
-					td.appendChild(a);
-					s = match[3];
-				}
-			}
-		}
-		tr.appendChild(td);
-		messageListElem.appendChild(tr);
-	}
-	if (data.length > 0) {
+	var messages = windowMessages[name];
+	for (var i = 0; i < messages.length; i++)
+		messageListElem.appendChild(messageToRow(messages[i]));
+	if (messages.length > 0) {
 		messageListElem.parentNode.style.tableLayout = "auto";
 		var a = messageListElem.firstChild.children[0].clientWidth;
 		var b = messageListElem.firstChild.children[1].clientWidth;
@@ -90,102 +99,134 @@ function setActiveWindow(name) {
 	}
 }
 
+
+// 'msg' is a length-2 array of int timestamp, string line.
+function messageToRow(msg) {
+	var who = "RAW";  // String
+	var lineElems = null;  // Array of DOM nodes
+	var parts = split2(msg[1]);
+	
+	if (parts[0] == "PRIVMSG") {
+		var subparts = split2(parts[1]);
+		who = subparts[0];
+		lineElems = [];
+		var s = subparts[1];
+		var match = ME_INCOMING_REGEX.exec(s);
+		if (match != null) {
+			var em = document.createElement("em");
+			em.appendChild(document.createTextNode(match[1]));
+			lineElems.push(em);
+		} else {
+			while (s != "") {
+				match = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
+				if (match == null)
+					match = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
+				if (match == null) {
+					lineElems.push(document.createTextNode(s));
+					break;
+				} else {
+					if (match[1].length > 0)
+						lineElems.push(document.createTextNode(match[1]));
+					var a = document.createElement("a");
+					a.href = match[2];
+					a.target = "_blank";
+					a.appendChild(document.createTextNode(match[2]));
+					lineElems.push(a);
+					s = match[3];
+				}
+			}
+		}
+	} else if (parts[0] == "NICK") {
+		var subparts = split2(parts[1]);
+		who = "*";
+		lineElems = [document.createTextNode(subparts[0] + " changed their name to " + subparts[1])];
+	} else if (parts[0] == "JOIN") {
+		who = "*";
+		lineElems = [document.createTextNode(parts[1] + " joined the channel")];
+	} else if (parts[0] == "PART") {
+		who = "*";
+		lineElems = [document.createTextNode(parts[1] + " left the channel")];
+	} else if (parts[0] == "QUIT") {
+		var subparts = split2(parts[1]);
+		who = "*";
+		lineElems = [document.createTextNode(subparts[0] + " has quit: " + subparts[1])];
+	}
+	
+	var tr = document.createElement("tr");
+	var td = document.createElement("td");
+	td.appendChild(document.createTextNode(formatDate(msg[0])));
+	tr.appendChild(td);
+	td = document.createElement("td");
+	td.appendChild(document.createTextNode(who));
+	tr.appendChild(td);
+	td = document.createElement("td");
+	if (lineElems == null)
+		lineElems = [document.createTextNode(msg[1])];
+	for (var i = 0; i < lineElems.length; i++)
+		td.appendChild(lineElems[i]);
+	tr.appendChild(td);
+	return tr;
+}
+
 var ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
 var ME_OUTGOING_REGEX = /^\/me (.*)$/i;
 
 
-function pollNewMessages() {
+function updateState() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
 		if (xhr.status != 200)
 			xhr.onerror();
 		else {
-			var data = JSON.parse(xhr.response);
-			if (ingestMessages(data)) {
-				var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
-				var scrollPosition = document.documentElement.scrollTop;
-				setActiveWindow(activeWindow);
-				if (scrollToBottom)
-					window.scrollTo(0, document.documentElement.scrollHeight);
-				else
-					window.scrollTo(0, scrollPosition);
-			}
-			pollNewMessages();
+			loadUpdates(JSON.parse(xhr.response));
+			updateState();
 		}
 	};
 	xhr.ontimeout = xhr.onerror = function() {
-		setTimeout(pollNewMessages, 60000);
+		setTimeout(updateState, 60000);
 	};
-	xhr.open("POST", "get-new-messages.json", true);
+	xhr.open("POST", "get-updates.json", true);
 	xhr.responseType = "text";
-	xhr.timeout = 600000;
-	xhr.send(JSON.stringify(connectionSequences));
+	xhr.timeout = 80000;
+	xhr.send(JSON.stringify(nextUpdateId));
 }
 
 
-function ingestMessages(data) {
-	var windowsChanged = false;
-	var activeWindowChanged = false;
-	for (var profile in data) {
-		for (var party in data[profile].windows) {
-			var windowName = party + ":" + profile;
+function loadUpdates(data) {
+	var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
+	var scrollPosition = document.documentElement.scrollTop;
+	var activeWindowUpdated = false;
+	
+	nextUpdateId = data.nextUpdateId;
+	var updates = data.updates;
+	for (var i = 0; i < updates.length; i++) {
+		var parts = updates[i].split("\n");
+		if (parts[0] == "APPEND") {
+			var windowName = parts[1] + "\n" + parts[2];
 			if (windowNames.indexOf(windowName) == -1) {
+				windowMessages[windowName] = [];
 				windowNames.push(windowName);
-				messageData[windowName] = [];
-				windowsChanged = true;
+				windowNames.sort();
+				redrawWindowList();
 			}
-			if (activeWindow != null && windowName == activeWindow)
-				activeWindowChanged = true;
-			var messages = messageData[windowName];
-			var msgs = data[profile].windows[party];
-			for (var i = 0; i < msgs.length; i++) {
-				var s = msgs[i][1];
-				var parts = split2(s);
-				var who = null;
-				var line = null;
-				if (parts[0] == "PRIVMSG") {
-					var subparts = split2(parts[1]);
-					who = subparts[0];
-					line = subparts[1];
-				} else if (parts[0] == "NICK") {
-					var subparts = split2(parts[1]);
-					who = "*";
-					line = subparts[0] + " changed their name to " + subparts[1];
-				} else if (parts[0] == "JOIN") {
-					who = "*";
-					line = parts[1] + " joined the channel";
-				} else if (parts[0] == "PART") {
-					who = "*";
-					line = parts[1] + " left the channel";
-				} else if (parts[0] == "QUIT") {
-					var subparts = split2(parts[1]);
-					who = "*";
-					line = subparts[0] + " has quit: " + subparts[1];
-				}
-				if (who != null && line != null)
-					messages.push([msgs[i][0], who, line]);
+			var msg = [parseInt(parts[3], 10), parts[4]];
+			windowMessages[windowName].push(msg);
+			if (windowName == activeWindowName) {
+				messageListElem.appendChild(messageToRow(msg));
+				activeWindowUpdated = true;
 			}
 		}
-		connectionSequences[profile] = [data[profile]["connection-id"], data[profile]["max-sequence"]];
 	}
 	
-	if (windowsChanged) {
-		removeChildren(windowListElem);
-		for (var i = 0; i < windowNames.length; i++) {
-			var li = document.createElement("li");
-			var a = document.createElement("a");
-			a.href = "#";
-			a.onclick = (function(name) {
-				return function() {
-					setActiveWindow(name);
-					return false;
-				}; })(windowNames[i]);
-			a.appendChild(document.createTextNode(windowNames[i]));
-			li.appendChild(a);
-			windowListElem.appendChild(li);
-		}
+	if (activeWindowUpdated) {
+		messageListElem.parentNode.style.tableLayout = "auto";
+		var a = messageListElem.firstChild.children[0].clientWidth;
+		var b = messageListElem.firstChild.children[1].clientWidth;
+		messageListElem.parentNode.style.tableLayout = "fixed";
+		messageListElem.firstChild.children[0].style.width = a + "px";
+		messageListElem.firstChild.children[1].style.width = b + "px";
+		window.scrollTo(0, scrollToBottom ? document.documentElement.scrollHeight : scrollPosition);
 	}
-	return activeWindowChanged;
 }
 
 
@@ -207,7 +248,8 @@ function sendMessage() {
 	var match = ME_OUTGOING_REGEX.exec(text);
 	if (match != null)
 		text = "\u0001ACTION " + match[1] + "\u0001";
-	xhr.send(JSON.stringify([activeWindow, text]));
+	var parts = activeWindowName.split("\n");
+	xhr.send(JSON.stringify([parts[0], parts[1], text]));
 	
 	return false;  // To prevent the form submitting
 }

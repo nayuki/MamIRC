@@ -3,11 +3,13 @@ package io.nayuki.mamirc.processor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,7 +39,6 @@ public final class MamircProcessor {
 	private final ProcessorConfiguration myConfiguration;
 	
 	// Current worker threads
-	private DatabaseLoggerThread databaseLogger;
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
 	
@@ -45,6 +46,9 @@ public final class MamircProcessor {
 	
 	// Mutable current state
 	private final Map<Integer,ConnectionState> ircConnections;
+	private final Map<String,Map<String,List<Object[]>>> windowMessages;  // Payload is {long timestamp, String message}
+	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
+	private int nextUpdateId;
 	
 	
 	
@@ -54,20 +58,11 @@ public final class MamircProcessor {
 		if (conConfig == null || procConfig == null)
 			throw new NullPointerException();
 		myConfiguration = procConfig;
-		databaseLogger = null;
 		writer = null;
 		ircConnections = new HashMap<>();
-		
-		// Wait for database logger to be ready before connecting
-		new DatabaseLoggerThread(this, myConfiguration.databaseFile).start();
-		synchronized(this) {
-			// That thread will call this.databaseLoggerReady()
-			while (databaseLogger == null) {
-				try {
-					this.wait();
-				} catch (InterruptedException e) {}
-			}
-		}
+		windowMessages = new TreeMap<>();
+		recentUpdates = new ArrayList<>();
+		nextUpdateId = 0;
 		
 		reader = new ConnectorReaderThread(this, conConfig);
 		reader.start();
@@ -122,6 +117,7 @@ public final class MamircProcessor {
 			state.registrationState = ConnectionState.RegState.OPENED;
 			if (realtime)
 				send(conId, "NICK", state.profile.nicknames.get(0));
+			addUpdate("CONNECTED\n" + state.profile.name);
 			
 		} else if (line.equals("disconnect") || line.equals("closed"))
 			ircConnections.remove(conId);
@@ -140,14 +136,16 @@ public final class MamircProcessor {
 			case "NICK": {
 				String fromname = msg.prefixName;
 				String toname = msg.getParameter(0);
-				if (fromname.equals(state.currentNickname))
+				if (fromname.equals(state.currentNickname)) {
 					state.currentNickname = toname;
+					addUpdate("MYNICK\n" + state.profile.name + "\n" + toname);
+				}
 				for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 					Set<String> members = entry.getValue().members;
 					if (members.remove(fromname)) {
 						members.add(toname);
 						String line = msg.command + " " + fromname + " " + toname;
-						postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+						addMessage(profile.name, entry.getKey(), ev.timestamp, line);
 					}
 				}
 				break;
@@ -156,11 +154,13 @@ public final class MamircProcessor {
 			case "JOIN": {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
-				if (who.equals(state.currentNickname) && !curchans.containsKey(chan))
+				if (who.equals(state.currentNickname) && !curchans.containsKey(chan)) {
 					curchans.put(chan, new ConnectionState.ChannelState());
+					addUpdate("JOINED\n" + state.profile.name + "\n" + chan);
+				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
 					String line = msg.command + " " + who;
-					postMessage(conId, ev.sequence, ev.timestamp, profile.name, msg.getParameter(0), line);
+					addMessage(profile.name, msg.getParameter(0), ev.timestamp, line);
 				}
 				break;
 			}
@@ -170,10 +170,12 @@ public final class MamircProcessor {
 				String chan = msg.getParameter(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
 					String line = msg.command + " " + who;
-					postMessage(conId, ev.sequence, ev.timestamp, profile.name, chan, line);
+					addMessage(profile.name, chan, ev.timestamp, line);
 				}
-				if (who.equals(state.currentNickname))
+				if (who.equals(state.currentNickname)) {
 					curchans.remove(chan);
+					addUpdate("PARTED\n" + state.profile.name + "\n" + chan);
+				}
 				break;
 			}
 			
@@ -184,7 +186,7 @@ public final class MamircProcessor {
 					target = who;
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + who + " " + text;
-				postMessage(conId, ev.sequence, ev.timestamp, profile.name, target, line);
+				addMessage(profile.name, target, ev.timestamp, line);
 				break;
 			}
 			
@@ -194,9 +196,11 @@ public final class MamircProcessor {
 					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
 							String line = msg.command + " " + who + " " + msg.getParameter(0);
-							postMessage(conId, ev.sequence, ev.timestamp, profile.name, entry.getKey(), line);
+							addMessage(profile.name, entry.getKey(), ev.timestamp, line);
 						}
 					}
+				} else {
+					addUpdate("QUITTED\n" + state.profile.name);
 				}
 				break;
 			}
@@ -235,6 +239,7 @@ public final class MamircProcessor {
 						for (String chan : profile.channels)
 							send(conId, "JOIN", chan);
 					}
+					addUpdate("MYNICK\n" + profile.name + "\n" + state.currentNickname);
 				}
 				break;
 			}
@@ -252,6 +257,13 @@ public final class MamircProcessor {
 							name = name.substring(1);
 						chanstate.members.add(name);
 					}
+					StringBuilder sb = new StringBuilder();
+					for (String name : chanstate.members) {
+						if (sb.length() > 0)
+							sb.append(" ");
+						sb.append(name);
+					}
+					addUpdate("SETCHANNELMEMBERS\n" + profile.name + "\n" + sb.toString());
 				}
 				break;
 			}
@@ -301,7 +313,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				postMessage(conId, ev.sequence, ev.timestamp, profile.name, party, line);
+				addMessage(profile.name, party, ev.timestamp, line);
 				break;
 			}
 			
@@ -385,27 +397,6 @@ public final class MamircProcessor {
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
-	private void postMessage(int connectionId, int sequence, long timestamp, String profile, String party, String line) {
-		databaseLogger.postMessage(connectionId, sequence, timestamp, profile, party, line);
-		if (server != null) {
-			synchronized(server) {
-				server.notifyAll();
-			}
-		}
-	}
-	
-	
-	public synchronized Map<Object[],List<String>> getActiveChannels() {
-		Map<Object[],List<String>> result = new HashMap<>();
-		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
-			Object[] key = {entry.getKey(), entry.getValue().profile.name};
-			result.put(key, new ArrayList<>(entry.getValue().currentChannels.keySet()));
-		}
-		return result;
-	}
-	
-	
 	public synchronized boolean sendMessage(String profile, String party, String line) {
 		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
 			if (entry.getValue().profile.name.equals(profile)) {
@@ -417,14 +408,6 @@ public final class MamircProcessor {
 	}
 	
 	
-	public synchronized void databaseLoggerReady(DatabaseLoggerThread logger) {
-		if (databaseLogger != null)
-			throw new IllegalStateException();
-		databaseLogger = logger;
-		this.notify();
-	}
-	
-	
 	public synchronized void attachConnectorWriter(OutputWriterThread writer) {
 		if (this.writer != null)
 			throw new IllegalStateException();
@@ -433,9 +416,101 @@ public final class MamircProcessor {
 	
 	
 	public synchronized void terminate() {
-		databaseLogger.terminate();
 		if (server != null)
 			server.server.stop(0);
+	}
+	
+	
+	// Must be called from one of the synchronized methods above.
+	private void addUpdate(String update) {
+		if (update == null)
+			throw new NullPointerException();
+		
+		// Store the update
+		recentUpdates.add(new Object[]{nextUpdateId, update});
+		nextUpdateId++;
+		
+		// Clean up the list if it gets too big
+		if (recentUpdates.size() > 1000)
+			recentUpdates.subList(0, recentUpdates.size() / 2).clear();
+		
+		// Unblock any currently waiting server threads
+		this.notifyAll();
+	}
+	
+	
+	// Must be called from one of the synchronized methods above.
+	private void addMessage(String profile, String target, long timestamp, String line) {
+		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
+		if (!windowMessages.containsKey(profile))
+			windowMessages.put(profile, new TreeMap<>());
+		Map<String,List<Object[]>> innerMap = windowMessages.get(profile);
+		if (!innerMap.containsKey(target))
+			innerMap.put(target, new ArrayList<>());
+		innerMap.get(target).add(new Object[]{timestamp, line});
+	}
+	
+	
+	public synchronized Map<String,Object> getState() {
+		Map<String,Object> result = new HashMap<>();
+		
+		// States of current connections
+		Map<String,Map<String,Object>> outConnections = new HashMap<>();
+		for (Map.Entry<Integer,ConnectionState> conEntry : ircConnections.entrySet()) {
+			ConnectionState inConState = conEntry.getValue();
+			Map<String,Object> outConState = new HashMap<>();
+			outConState.put("currentNickname", inConState.currentNickname);
+			
+			Map<String,ConnectionState.ChannelState> inChannels = inConState.currentChannels;
+			Map<String,Map<String,Object>> outChannels = new HashMap<>();
+			for (Map.Entry<String,ConnectionState.ChannelState> chanEntry : inChannels.entrySet()) {
+				Map<String,Object> outChanState = new HashMap<>();
+				outChanState.put("members", new ArrayList<>(chanEntry.getValue().members));
+				outChannels.put(chanEntry.getKey(), outChanState);
+			}
+			outConState.put("channels", outChannels);
+			
+			outConnections.put(inConState.profile.name, outConState);
+		}
+		result.put("connections", outConnections);
+		
+		// Messages in current windows
+		Map<String,Map<String,List<List<Object>>>> outMessages = new HashMap<>();
+		for (Map.Entry<String,Map<String,List<Object[]>>> profileEntry : windowMessages.entrySet()) {
+			Map<String,List<List<Object>>> outSuperMsgs = new HashMap<>();
+			for (Map.Entry<String,List<Object[]>> targetEntry : profileEntry.getValue().entrySet()) {
+				List<List<Object>> outMsgs = new ArrayList<>();
+				for (Object[] msg : targetEntry.getValue())
+					outMsgs.add(Arrays.asList(msg));
+				outSuperMsgs.put(targetEntry.getKey(), outMsgs);
+			}
+			outMessages.put(profileEntry.getKey(), outSuperMsgs);
+		}
+		result.put("messages", outMessages);
+		
+		result.put("nextUpdateId", nextUpdateId);
+		return result;
+	}
+	
+	
+	public synchronized Map<String,Object> getUpdates(int startId) {
+		int i = recentUpdates.size();
+		while (i >= 1 && (Integer)recentUpdates.get(i - 1)[0] >= startId)
+			i--;
+		
+		if (i == 0)
+			return null;  // No overlap
+		else {
+			Map<String,Object> result = new HashMap<>();
+			List<String> updates = new ArrayList<>();
+			while (i < recentUpdates.size()) {
+				updates.add((String)recentUpdates.get(i)[1]);
+				i++;
+			}
+			result.put("updates", updates);
+			result.put("nextUpdateId", nextUpdateId);
+			return result;
+		}
 	}
 	
 	

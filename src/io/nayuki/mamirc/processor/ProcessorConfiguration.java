@@ -18,7 +18,6 @@ final class ProcessorConfiguration {
 	
 	/*---- Fields ----*/
 	
-	public final File databaseFile;  // Not null. File existence not checked.
 	public final int webServerPort;  // In the range [0, 65535].
 	public final Map<String,IrcNetwork> ircNetworks;  // Not null, keys/values not null, immutable.
 	
@@ -33,7 +32,6 @@ final class ProcessorConfiguration {
 			throw new IllegalArgumentException("Invalid configuration file");
 		
 		// Convert to internal data format
-		databaseFile = new File(Json.getString(data, "database-file"));
 		webServerPort = Json.getInt(data, "web-server-port");
 		if ((webServerPort & 0xFFFF) != webServerPort)
 			throw new IllegalStateException("Invalid configuration file");
