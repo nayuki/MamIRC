@@ -128,10 +128,15 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		IrcLine msg;
+		try {
+			msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		} catch (IllegalArgumentException e) {  // Syntax error
+			return;
+		}
 		List<String> params = msg.parameters;
 		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
-		switch (msg.command) {
+		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
 				String fromname = msg.prefixName;
@@ -269,8 +274,13 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
-		switch (msg.command) {
+		IrcLine msg;
+		try {
+			msg = new IrcLine(new String(ev.getLine(), OutputWriterThread.UTF8_CHARSET));
+		} catch (IllegalArgumentException e) {  // Syntax error
+			return;
+		}
+		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
 				if (state.registrationState == ConnectionState.RegState.OPENED) {
