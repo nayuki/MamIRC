@@ -49,6 +49,7 @@ public final class MamircProcessor {
 	private final Map<String,String> windowCaseMap;
 	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
 	private int nextUpdateId;
+	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	
 	
 	
@@ -64,6 +65,7 @@ public final class MamircProcessor {
 		windowCaseMap = new HashMap<>();
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
+		connectionAttemptState = new HashMap<>();
 		
 		writer = null;
 		reader = new ConnectorReaderThread(this, conConfig);
@@ -121,8 +123,10 @@ public final class MamircProcessor {
 				send(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED\n" + state.profile.name);
 			
-		} else if (line.equals("disconnect") || line.equals("closed"))
+		} else if (line.equals("disconnect") || line.equals("closed")) {
 			ircConnections.remove(conId);
+			tryConnect(state.profile);
+		}
 	}
 	
 	
@@ -242,6 +246,7 @@ public final class MamircProcessor {
 							send(conId, "JOIN", chan);
 					}
 					addUpdate("MYNICK\n" + profile.name + "\n" + state.currentNickname);
+					connectionAttemptState.remove(state.profile);
 				}
 				break;
 			}
@@ -377,12 +382,49 @@ public final class MamircProcessor {
 		
 		// Connect to networks
 		for (IrcNetwork net : myConfiguration.ircNetworks.values()) {
-			if (!activeProfiles.contains(net)) {
-				IrcNetwork.Server serv = net.servers.get(0);
-				String str = "connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + net.name;
-				writer.postWrite(Utils.toUtf8(str));
-			}
+			if (!activeProfiles.contains(net))
+				tryConnect(net);
 		}
+	}
+	
+	
+	// Must be called from one of the synchronized methods above.
+	private void tryConnect(final IrcNetwork net) {
+		final int delay;
+		if (!connectionAttemptState.containsKey(net)) {
+			connectionAttemptState.put(net, new int[]{0, 1000});
+			delay = 0;
+		} else
+			delay = connectionAttemptState.get(net)[1];
+		
+		new Thread() {
+			public void run() {
+				try {
+					Thread.sleep(delay);
+				} catch (InterruptedException e) {}
+				
+				synchronized(MamircProcessor.this) {
+					for (ConnectionState state : ircConnections.values()) {
+						if (state.profile == net)
+							break;
+					}
+					
+					int[] attemptState = connectionAttemptState.get(net);
+					IrcNetwork.Server serv = net.servers.get(attemptState[0]);
+					String str = "connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + net.name;
+					writer.postWrite(Utils.toUtf8(str));
+					
+					if (1000 < attemptState[1] && attemptState[1] < 200000)
+						attemptState[1] *= 2;  // Exponential backoff
+					attemptState[0]++;
+					if (attemptState[0] == net.servers.size()) {
+						attemptState[0] = 0;
+						if (attemptState[1] == 1000)
+							attemptState[1] *= 2;
+					}
+				}
+			}
+		}.start();
 	}
 	
 	
