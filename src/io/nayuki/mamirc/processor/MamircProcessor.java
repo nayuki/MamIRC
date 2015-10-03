@@ -47,6 +47,7 @@ public final class MamircProcessor {
 	// Mutable current state
 	private final Map<Integer,ConnectionState> ircConnections;
 	private final Map<String,Map<String,List<Object[]>>> windowMessages;  // Payload is {long timestamp, String message}
+	private final Map<String,String> windowCaseMap;
 	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
 	private int nextUpdateId;
 	
@@ -61,6 +62,7 @@ public final class MamircProcessor {
 		writer = null;
 		ircConnections = new HashMap<>();
 		windowMessages = new TreeMap<>();
+		windowCaseMap = new HashMap<>();
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
 		
@@ -441,13 +443,20 @@ public final class MamircProcessor {
 	
 	// Must be called from one of the synchronized methods above.
 	private void addMessage(String profile, String target, long timestamp, String line) {
-		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
 		if (!windowMessages.containsKey(profile))
 			windowMessages.put(profile, new TreeMap<>());
 		Map<String,List<Object[]>> innerMap = windowMessages.get(profile);
-		if (!innerMap.containsKey(target))
-			innerMap.put(target, new ArrayList<>());
+		if (!innerMap.containsKey(target)) {
+			String lower = profile + "\n" + target.toLowerCase();
+			if (windowCaseMap.containsKey(lower))
+				target = windowCaseMap.get(lower).split("\n", 2)[1];
+			else {
+				innerMap.put(target, new ArrayList<>());
+				windowCaseMap.put(lower, profile + "\n" + target);
+			}
+		}
 		innerMap.get(target).add(new Object[]{timestamp, line});
+		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
 	}
 	
 	
