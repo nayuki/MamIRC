@@ -38,10 +38,9 @@ public final class MamircProcessor {
 	// Immutable
 	private final ProcessorConfiguration myConfiguration;
 	
-	// Current worker threads
+	// Current workers
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
-	
 	private MessageHttpServer server;
 	
 	// Mutable current state
@@ -59,13 +58,14 @@ public final class MamircProcessor {
 		if (conConfig == null || procConfig == null)
 			throw new NullPointerException();
 		myConfiguration = procConfig;
-		writer = null;
+		
 		ircConnections = new HashMap<>();
 		windowMessages = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
 		
+		writer = null;
 		reader = new ConnectorReaderThread(this, conConfig);
 		reader.start();
 		try {
@@ -502,7 +502,12 @@ public final class MamircProcessor {
 	}
 	
 	
+	// Returns a JSON object containing updates with id >= startId (the list might be empty),
+	// or null to indicate that the request is invalid and the client must request the full state.
 	public synchronized Map<String,Object> getUpdates(int startId) {
+		if (startId < 0 || startId > nextUpdateId)
+			return null;
+		
 		int i = recentUpdates.size();
 		while (i >= 1 && (Integer)recentUpdates.get(i - 1)[0] >= startId)
 			i--;

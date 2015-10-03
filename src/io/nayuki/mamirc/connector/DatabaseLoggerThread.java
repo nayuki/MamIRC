@@ -110,6 +110,7 @@ final class DatabaseLoggerThread extends Thread {
 		// Clean up
 		} catch (SQLiteException e) {
 			e.printStackTrace();
+			System.exit(1);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

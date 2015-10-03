@@ -1,6 +1,7 @@
 package io.nayuki.mamirc.processor;
 
 
+@SuppressWarnings("serial")
 public final class IrcSyntaxException extends RuntimeException {
 	
 	public IrcSyntaxException() {
