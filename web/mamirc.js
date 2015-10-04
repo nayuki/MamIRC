@@ -10,6 +10,8 @@ var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
 var nextUpdateId     = null;  // Integer
 
+var MAX_MESSAGES_PER_WINDOW = 3000;
+
 
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = sendMessage;
@@ -44,7 +46,10 @@ function loadState(data) {
 		for (var targetName in data.messages[profileName]) {
 			var windowName = profileName + "\n" + targetName;
 			windowNames.push(windowName);
-			windowMessages[windowName] = data.messages[profileName][targetName];
+			var messages = data.messages[profileName][targetName];
+			if (messages.length > MAX_MESSAGES_PER_WINDOW)
+				messages = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
+			windowMessages[windowName] = messages;
 		}
 	}
 	
@@ -210,9 +215,14 @@ function loadUpdates(data) {
 				redrawWindowList();
 			}
 			var msg = [parseInt(parts[3], 10), parts[4]];
-			windowMessages[windowName].push(msg);
+			var messages = windowMessages[windowName];
+			messages.push(msg);
+			if (messages.length > MAX_MESSAGES_PER_WINDOW)
+				windowMessages[windowName] = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);
 			if (windowName == activeWindowName) {
 				messageListElem.appendChild(messageToRow(msg));
+				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
+					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
 		}

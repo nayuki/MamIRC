@@ -497,7 +497,10 @@ public final class MamircProcessor {
 				windowCaseMap.put(lower, profile + "\n" + target);
 			}
 		}
-		innerMap.get(target).add(new Object[]{timestamp, line});
+		List<Object[]> list = innerMap.get(target);
+		list.add(new Object[]{timestamp, line});
+		if (list.size() - 100 >= 10000)
+			list.subList(0, 100).clear();
 		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
 	}
 	
