@@ -143,6 +143,11 @@ function messageToRow(msg) {
 				em.appendChild(lineElems[i]);
 			lineElems = [em];
 		}
+	} else if (parts[0] == "NOTICE") {
+		var subparts = split2(parts[1]);
+		who = "(" + subparts[0] + ")";
+		lineElems = [document.createTextNode(subparts[1])];
+		
 	} else if (parts[0] == "NICK") {
 		var subparts = split2(parts[1]);
 		who = "*";

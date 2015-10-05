@@ -170,6 +170,16 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "NOTICE": {
+				String who = msg.prefixName;
+				String target = msg.getParameter(0);
+				if (target.equals(state.currentNickname))
+					target = who;
+				String line = msg.command + " " + who + " " + msg.getParameter(1);
+				addMessage(profile.name, target, ev.timestamp, line);
+				break;
+			}
+			
 			case "PART": {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
@@ -309,6 +319,15 @@ public final class MamircProcessor {
 			case "USER": {
 				if (state.registrationState == ConnectionState.RegState.NICK_SENT)
 					state.registrationState = ConnectionState.RegState.USER_SENT;
+				break;
+			}
+			
+			case "NOTICE": {
+				String src = state.currentNickname;
+				String party = msg.getParameter(0);
+				String text = msg.getParameter(1);
+				String line = msg.command + " " + src + " " + text;
+				addMessage(profile.name, party, ev.timestamp, line);
 				break;
 			}
 			
