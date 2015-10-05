@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -21,8 +22,9 @@ final class MessageHttpServer {
 	
 	/*---- Fields ----*/
 	
-	public final HttpServer server;
 	private final MamircProcessor master;
+	private final HttpServer server;
+	private final ExecutorService executor;
 	
 	
 	/*---- Constructor ----*/
@@ -105,7 +107,9 @@ final class MessageHttpServer {
 			}
 		});
 		
-		server.setExecutor(Executors.newFixedThreadPool(4));
+		executor = Executors.newFixedThreadPool(4);
+		server.setExecutor(executor);
+		server.start();
 	}
 	
 	
@@ -152,6 +156,12 @@ final class MessageHttpServer {
 				break;
 			out.write(buf, 0, n);
 		}
+	}
+	
+	
+	public void terminate() {
+		server.stop(0);
+		executor.shutdown();
 	}
 	
 }

@@ -72,7 +72,6 @@ public final class MamircProcessor {
 		reader.start();
 		try {
 			server = new MessageHttpServer(this, procConfig.webServerPort);
-			server.server.start();
 		} catch (IOException e) {
 			e.printStackTrace();
 			terminate();
@@ -461,7 +460,7 @@ public final class MamircProcessor {
 	
 	public synchronized void terminate() {
 		if (server != null)
-			server.server.stop(0);
+			server.terminate();
 	}
 	
 	
