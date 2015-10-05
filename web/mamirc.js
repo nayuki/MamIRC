@@ -241,26 +241,39 @@ function loadUpdates(data) {
 
 
 function sendMessage() {
-	inputBoxElem.disabled = true;
-	
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		inputBoxElem.value = "";
-		inputBoxElem.disabled = false;
-	};
-	xhr.ontimeout = xhr.onerror = function() {
-		inputBoxElem.disabled = false;
-	};
-	xhr.open("POST", "send-message.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
 	var text = inputBoxElem.value;
-	var match = ME_OUTGOING_REGEX.exec(text);
-	if (match != null)
-		text = "\u0001ACTION " + match[1] + "\u0001";
-	var parts = activeWindowName.split("\n");
-	xhr.send(JSON.stringify([parts[0], parts[1], text]));
-	
+	if ((/^\/query [^ ]+$/i).test(text)) {
+		// Open and switch to window
+		var windowName = activeWindowName.split("\n")[0] + "\n" + text.substring(7);
+		if (windowNames.indexOf(windowName) == -1) {
+			windowNames.push(windowName);
+			windowNames.sort();
+			redrawWindowList();
+			windowMessages[windowName] = [];
+		}
+		setActiveWindow(windowName);
+		inputBoxElem.value = "";
+		
+	} else {
+		inputBoxElem.disabled = true;
+		
+		var xhr = new XMLHttpRequest();
+		xhr.onload = function() {
+			inputBoxElem.value = "";
+			inputBoxElem.disabled = false;
+		};
+		xhr.ontimeout = xhr.onerror = function() {
+			inputBoxElem.disabled = false;
+		};
+		xhr.open("POST", "send-message.json", true);
+		xhr.responseType = "text";
+		xhr.timeout = 5000;
+		var match = ME_OUTGOING_REGEX.exec(text);
+		if (match != null)
+			text = "\u0001ACTION " + match[1] + "\u0001";
+		var parts = activeWindowName.split("\n");
+		xhr.send(JSON.stringify([parts[0], parts[1], text]));
+	}
 	return false;  // To prevent the form submitting
 }
 
