@@ -19,6 +19,7 @@ final class ProcessorConfiguration {
 	/*---- Fields ----*/
 	
 	public final int webServerPort;  // In the range [0, 65535].
+	public final String webUiPassword;  // Not null
 	public final Map<String,IrcNetwork> ircNetworks;  // Not null, keys/values not null, immutable.
 	
 	
@@ -35,6 +36,7 @@ final class ProcessorConfiguration {
 		webServerPort = Json.getInt(data, "web-server-port");
 		if ((webServerPort & 0xFFFF) != webServerPort)
 			throw new IllegalStateException("Invalid configuration file");
+		webUiPassword = Json.getString(data, "web-ui-password");
 		
 		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format
 		Map<String,Object> netsIn = Json.getMap(data, "irc-networks");

@@ -9,31 +9,48 @@ var activeWindowName = null;  // String
 var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
 var nextUpdateId     = null;  // Integer
+var password         = null;  // String
 
 var MAX_MESSAGES_PER_WINDOW = 3000;
 
 
 function init() {
-	document.getElementsByTagName("form")[0].onsubmit = sendMessage;
+	document.getElementsByTagName("form")[0].onsubmit = authenticate;
+	document.getElementsByTagName("form")[1].onsubmit = sendMessage;
+}
+
+
+function authenticate() {
+	password = document.getElementById("password").value;
 	getState();
+	return false;  // To prevent the form submitting
 }
 
 
 function getState() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
-		loadState(JSON.parse(xhr.response));
-		updateState();
+		var data = JSON.parse(xhr.response);
+		if (typeof data == "string") {
+			var elem = document.getElementById("login-status");
+			removeChildren(elem);
+			elem.appendChild(document.createTextNode(data));
+		} else {
+			document.getElementById("login").style.display = "none";
+			document.getElementById("main").style.display = "block";
+			loadState(data);
+			updateState();
+		}
 	};
 	xhr.ontimeout = xhr.onerror = function() {
 		var li = document.createElement("li");
 		li.appendChild(document.createTextNode("(Unable to connect to data provider)"));
 		windowListElem.appendChild(li);
 	};
-	xhr.open("GET", "get-state.json", true);
+	xhr.open("POST", "get-state.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 10000;
-	xhr.send();
+	xhr.send(JSON.stringify({"password":password}));
 }
 
 
@@ -200,7 +217,7 @@ function updateState() {
 	xhr.open("POST", "get-updates.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 80000;
-	xhr.send(JSON.stringify(nextUpdateId));
+	xhr.send(JSON.stringify({"password":password, "nextUpdateId":nextUpdateId}));
 }
 
 
@@ -279,7 +296,7 @@ function sendMessage() {
 		if (match != null)
 			text = "\u0001ACTION " + match[1] + "\u0001";
 		var parts = activeWindowName.split("\n");
-		xhr.send(JSON.stringify([parts[0], parts[1], text]));
+		xhr.send(JSON.stringify({"password":password, "payload":[parts[0], parts[1], text]}));
 	}
 	return false;  // To prevent the form submitting
 }

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
@@ -24,11 +23,14 @@ final class MessageHttpServer {
 	
 	private final HttpServer server;
 	private final ExecutorService executor;
+	private final String password;
 	
 	
 	/*---- Constructor ----*/
 	
-	public MessageHttpServer(final MamircProcessor master, int port) throws IOException {
+	public MessageHttpServer(final MamircProcessor master, int port, String password) throws IOException {
+		this.password = password;
+		
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		// Static files
@@ -59,7 +61,18 @@ final class MessageHttpServer {
 		
 		server.createContext("/get-state.json", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
-				byte[] b = Utils.toUtf8(Json.serialize(master.getState()));
+				// Read request
+				ByteArrayOutputStream bout = new ByteArrayOutputStream();
+				copyStream(he.getRequestBody(), bout);
+				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
+				
+				Object respData;
+				if (checkPassword(Json.getString(reqData, "password")))
+					respData = master.getState();
+				else
+					respData = "Authentication error";
+				
+				byte[] b = Utils.toUtf8(Json.serialize(respData));
 				Headers head = he.getResponseHeaders();
 				head.set("Content-Type", "application/json; charset=UTF-8");
 				head.set("Cache-Control", "no-cache");
@@ -74,25 +87,29 @@ final class MessageHttpServer {
 				// Read request
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				copyStream(he.getRequestBody(), bout);
-				int startId = Json.getInt(Json.parse(Utils.fromUtf8(bout.toByteArray())));
+				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 				
-				// Get or wait for new data
-				Map<String,Object> data;
-				synchronized(master) {
-					data = master.getUpdates(startId);
-					if (data != null && Json.getList(data, "updates").size() == 0) {
-						try {
-							master.wait(60000);
-						} catch (InterruptedException e) {}
-						data = master.getUpdates(startId);
+				Object respData;
+				if (checkPassword(Json.getString(reqData, "password"))) {
+					// Get or wait for new data
+					int startId = Json.getInt(reqData, "nextUpdateId");
+					synchronized(master) {
+						respData = master.getUpdates(startId);
+						if (respData != null && Json.getList(respData, "updates").size() == 0) {
+							try {
+								master.wait(60000);
+							} catch (InterruptedException e) {}
+							respData = master.getUpdates(startId);
+						}
 					}
-				}
+				} else
+					respData = "Authentication error";
 				
 				// Write response
 				Headers head = he.getResponseHeaders();
 				head.set("Content-Type", "application/json; charset=UTF-8");
 				head.set("Cache-Control", "no-cache");
-				byte[] b = Utils.toUtf8(Json.serialize(data));
+				byte[] b = Utils.toUtf8(Json.serialize(respData));
 				he.sendResponseHeaders(200, b.length);
 				he.getResponseBody().write(b);
 				he.close();
@@ -103,16 +120,21 @@ final class MessageHttpServer {
 			public void handle(HttpExchange he) throws IOException {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				copyStream(he.getRequestBody(), bout);
-				Object data = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-				String profile = Json.getString(data, 0);
-				String target = Json.getString(data, 1);
-				String line = Json.getString(data, 2);
-				boolean status = master.sendMessage(profile, target, line);
+				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
+				
+				Object respData;
+				if (checkPassword(Json.getString(reqData, "password"))) {
+					String profile = Json.getString(reqData, "payload", 0);
+					String target = Json.getString(reqData, "payload", 1);
+					String line = Json.getString(reqData, "payload", 2);
+					respData = master.sendMessage(profile, target, line);
+				} else
+					respData = "Authentication error";
 				
 				Headers head = he.getResponseHeaders();
 				head.set("Content-Type", "application/json; charset=UTF-8");
 				head.set("Cache-Control", "no-cache");
-				byte[] b = Utils.toUtf8(Boolean.toString(status));
+				byte[] b = Utils.toUtf8(Json.serialize(respData));
 				he.sendResponseHeaders(200, b.length);
 				he.getResponseBody().write(b);
 				he.close();
@@ -148,6 +170,16 @@ final class MessageHttpServer {
 	public void terminate() {
 		server.stop(0);
 		executor.shutdown();
+	}
+	
+	
+	private boolean checkPassword(String s) {
+		if (s.length() != password.length())
+			return false;
+		int diff = 0;
+		for (int i = 0; i < s.length(); i++)
+			diff ^= s.charAt(i) ^ password.charAt(i);
+		return diff == 0;
 	}
 	
 }

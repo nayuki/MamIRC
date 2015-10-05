@@ -14,6 +14,18 @@ body {
 	overflow-y: scroll;
 }
 
+#login {
+	display: table;
+	width: 100%;
+	height: 100%;
+}
+
+#login form {
+	display: table-cell;
+	text-align: center;
+	vertical-align: middle;
+}
+
 #main {
 	display: table;
 	width: 100%;
