@@ -7,8 +7,6 @@ html {
 }
 
 body {
-	display: table;
-	width: 100%;
 	height: 100%;
 	margin: 0em;
 	padding: 0em 0em 1.0em;
@@ -16,19 +14,25 @@ body {
 	overflow-y: scroll;
 }
 
-body > div {
+#main {
+	display: table;
+	width: 100%;
+	height: 100%;
+}
+
+#main > section {
 	display: table-row;
 }
 
-body > div:nth-child(1) {
+#main > section:nth-child(1) {
 	height: 1%;
 }
 
-body > div:nth-child(2) {
+#main > section:nth-child(2) {
 	height: 99%;
 }
 
-body > div:nth-child(2) > div {
+#main > section:nth-child(2) > div {
 	display: table-cell;
 	vertical-align: bottom;
 }

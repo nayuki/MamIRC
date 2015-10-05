@@ -10,45 +10,47 @@
 	</head>
 	
 	<body>
-		<div>
-			<h1>MamIRC</h1>
-			
-			<h2>Windows</h2>
-			<ul id="window-list">
-				<li>(None)</li>
-			</ul>
-			
-			<h2>Messages</h2>
-		</div>
-		<div>
-			<div>
-				<table>
-					<thead>
-						<tr>
-							<th>Time</th>
-							<th>Nickname</th>
-							<th>Message</th>
-						</tr>
-					</thead>
-					<tbody id="message-list">
-						<tr>
-							<td colspan="3">(None)</td>
-						</tr>
-					</tbody>
-					<tfoot>
-						<tr>
-							<td></td>
-							<td></td>
-							<td>
-								<form action="#" method="get">
-									<input type="text" id="input-box"/>
-								</form>
-							</td>
-						</tr>
-					</tfoot>
-				</table>
-			</div>
-		</div>
+		<article id="main">
+			<section>
+				<h1>MamIRC</h1>
+				
+				<h2>Windows</h2>
+				<ul id="window-list">
+					<li>(None)</li>
+				</ul>
+				
+				<h2>Messages</h2>
+			</section>
+			<section>
+				<div>
+					<table>
+						<thead>
+							<tr>
+								<th>Time</th>
+								<th>Nickname</th>
+								<th>Message</th>
+							</tr>
+						</thead>
+						<tbody id="message-list">
+							<tr>
+								<td colspan="3">(None)</td>
+							</tr>
+						</tbody>
+						<tfoot>
+							<tr>
+								<td></td>
+								<td></td>
+								<td>
+									<form action="#" method="get">
+										<input type="text" id="input-box"/>
+									</form>
+								</td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			</section>
+		</article>
 		
 		<script type="application/javascript" src="mamirc.js"></script>
 	</body>
