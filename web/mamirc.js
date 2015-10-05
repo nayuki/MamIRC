@@ -19,6 +19,7 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementsByTagName("form")[1].onsubmit = sendMessage;
+	document.getElementById("password").focus();
 }
 
 
@@ -78,8 +79,10 @@ function loadState(data) {
 	
 	windowNames.sort();
 	redrawWindowList();
-	if (windowNames.length > 0)
+	if (windowNames.length > 0) {
 		setActiveWindow(windowNames[0]);
+		window.scrollTo(0, document.documentElement.scrollHeight);
+	}
 }
 
 
