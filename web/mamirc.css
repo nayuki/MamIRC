@@ -115,6 +115,10 @@ tbody td:nth-child(3) {
 	word-wrap: break-word;
 }
 
+#nickname {
+	vertical-align: middle;
+}
+
 input {
 	font-family: inherit;
 }

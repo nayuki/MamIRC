@@ -4,10 +4,12 @@
 var windowListElem = document.getElementById("window-list");
 var messageListElem = document.getElementById("message-list");
 var inputBoxElem = document.getElementById("input-box");
+var nicknameElem = document.getElementById("nickname");
 
 var activeWindowName = null;  // String
 var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
+var currentNicknames = null;  // Map<String, String>
 var nextUpdateId     = null;  // Integer
 var password         = null;  // String
 
@@ -57,6 +59,7 @@ function getState() {
 function loadState(data) {
 	windowNames = [];
 	windowMessages = {};
+	currentNicknames = {};
 	nextUpdateId = data.nextUpdateId;
 	
 	for (var profileName in data.messages) {
@@ -69,6 +72,9 @@ function loadState(data) {
 			windowMessages[windowName] = messages;
 		}
 	}
+	
+	for (var profileName in data.connections)
+		currentNicknames[profileName] = data.connections[profileName].currentNickname;
 	
 	windowNames.sort();
 	redrawWindowList();
@@ -106,6 +112,9 @@ function setActiveWindow(name) {
 	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0; i < windowLis.length; i++)
 		windowLis[i].className = windowNames[i] == name ? "selected" : "";
+	
+	removeChildren(nicknameElem);
+	nicknameElem.appendChild(document.createTextNode(currentNicknames[name.split("\n")[0]]));
 	
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
@@ -247,6 +256,13 @@ function loadUpdates(data) {
 				messageListElem.appendChild(messageToRow(msg));
 				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
 					messageListElem.removeChild(messageListElem.firstChild);
+				activeWindowUpdated = true;
+			}
+		} else if (parts[0] == "MYNICK") {
+			currentNicknames[parts[1]] = parts[2];
+			if (activeWindowName.split("\n")[0] == parts[1]) {
+				removeChildren(nicknameElem);
+				nicknameElem.appendChild(document.createTextNode(parts[2]));
 				activeWindowUpdated = true;
 			}
 		}
