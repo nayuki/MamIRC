@@ -22,15 +22,13 @@ final class MessageHttpServer {
 	
 	/*---- Fields ----*/
 	
-	private final MamircProcessor master;
 	private final HttpServer server;
 	private final ExecutorService executor;
 	
 	
 	/*---- Constructor ----*/
 	
-	public MessageHttpServer(MamircProcessor master, int port) throws IOException {
-		this.master = master;
+	public MessageHttpServer(final MamircProcessor master, int port) throws IOException {
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		// Static files
@@ -103,7 +101,21 @@ final class MessageHttpServer {
 		
 		server.createContext("/send-message.json", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
-				handleSendMessage(he);
+				ByteArrayOutputStream bout = new ByteArrayOutputStream();
+				copyStream(he.getRequestBody(), bout);
+				Object data = Json.parse(Utils.fromUtf8(bout.toByteArray()));
+				String profile = Json.getString(data, 0);
+				String target = Json.getString(data, 1);
+				String line = Json.getString(data, 2);
+				boolean status = master.sendMessage(profile, target, line);
+				
+				Headers head = he.getResponseHeaders();
+				head.set("Content-Type", "application/json; charset=UTF-8");
+				head.set("Cache-Control", "no-cache");
+				byte[] b = Utils.toUtf8(Boolean.toString(status));
+				he.sendResponseHeaders(200, b.length);
+				he.getResponseBody().write(b);
+				he.close();
 			}
 		});
 		
@@ -121,32 +133,6 @@ final class MessageHttpServer {
 	
 	
 	/*---- Methods ----*/
-	
-	private void handleSendMessage(HttpExchange he) throws IOException {
-		ByteArrayOutputStream bout = new ByteArrayOutputStream();
-		InputStream in = he.getRequestBody();
-		byte[] buf = new byte[1024];
-		while (true) {
-			int n = in.read(buf);
-			if (n == -1)
-				break;
-			bout.write(buf, 0, n);
-		}
-		Object data = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-		String profile = Json.getString(data, 0);
-		String target = Json.getString(data, 1);
-		String line = Json.getString(data, 2);
-		boolean status = master.sendMessage(profile, target, line);
-		
-		Headers head = he.getResponseHeaders();
-		head.set("Content-Type", "application/json; charset=UTF-8");
-		head.set("Cache-Control", "no-cache");
-		byte[] b = Utils.toUtf8(Boolean.toString(status));
-		he.sendResponseHeaders(200, b.length);
-		he.getResponseBody().write(b);
-		he.close();
-	}
-	
 	
 	private static void copyStream(InputStream in, OutputStream out) throws IOException {
 		byte[] buf = new byte[1024];
