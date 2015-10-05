@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
@@ -59,88 +60,62 @@ final class MessageHttpServer {
 			}
 		});
 		
-		server.createContext("/get-state.json", new HttpHandler() {
+		// Dynamic actions
+		HttpHandler apiHandler = new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
-				// Read request
+				// Read request and parse JSON
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				copyStream(he.getRequestBody(), bout);
 				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 				
-				Object respData;
-				if (checkPassword(Json.getString(reqData, "password")))
-					respData = master.getState();
-				else
-					respData = "Authentication error";
+				// Check password field
+				if (!checkPassword(Json.getString(reqData, "password"))) {
+					writeJsonResponse(he, "Authentication error");
+					return;
+				}
 				
-				byte[] b = Utils.toUtf8(Json.serialize(respData));
-				Headers head = he.getResponseHeaders();
-				head.set("Content-Type", "application/json; charset=UTF-8");
-				head.set("Cache-Control", "no-cache");
-				he.sendResponseHeaders(200, b.length);
-				he.getResponseBody().write(b);
-				he.close();
-			}
-		});
-		
-		server.createContext("/get-updates.json", new HttpHandler() {
-			public void handle(HttpExchange he) throws IOException {
-				// Read request
-				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				copyStream(he.getRequestBody(), bout);
-				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-				
-				Object respData;
-				if (checkPassword(Json.getString(reqData, "password"))) {
-					// Get or wait for new data
-					int startId = Json.getInt(reqData, "nextUpdateId");
-					synchronized(master) {
-						respData = master.getUpdates(startId);
-						if (respData != null && Json.getList(respData, "updates").size() == 0) {
-							try {
-								master.wait(60000);
-							} catch (InterruptedException e) {}
-							respData = master.getUpdates(startId);
-						}
+				// Handle each API call
+				switch (he.getRequestURI().getPath()) {
+					case "/get-state.json": {
+						writeJsonResponse(he, master.getState());
+						break;
 					}
-				} else
-					respData = "Authentication error";
-				
-				// Write response
-				Headers head = he.getResponseHeaders();
-				head.set("Content-Type", "application/json; charset=UTF-8");
-				head.set("Cache-Control", "no-cache");
-				byte[] b = Utils.toUtf8(Json.serialize(respData));
-				he.sendResponseHeaders(200, b.length);
-				he.getResponseBody().write(b);
-				he.close();
+					
+					case "/get-updates.json": {
+						// Get or wait for new data
+						int startId = Json.getInt(reqData, "nextUpdateId");
+						synchronized(master) {
+							Map<String,Object> data = master.getUpdates(startId);
+							if (data != null && Json.getList(data, "updates").size() == 0) {
+								try {
+									master.wait(60000);
+								} catch (InterruptedException e) {}
+								data = master.getUpdates(startId);
+							}
+							writeJsonResponse(he, data);
+						}
+						break;
+					}
+					
+					case "/send-message.json": {
+						String profile = Json.getString(reqData, "payload", 0);
+						String target = Json.getString(reqData, "payload", 1);
+						String line = Json.getString(reqData, "payload", 2);
+						Boolean status = master.sendMessage(profile, target, line);
+						writeJsonResponse(he, status);
+						break;
+					}
+					
+					default:
+						throw new AssertionError();
+				}
 			}
-		});
+		};
+		server.createContext("/get-state.json", apiHandler);
+		server.createContext("/get-updates.json", apiHandler);
+		server.createContext("/send-message.json", apiHandler);
 		
-		server.createContext("/send-message.json", new HttpHandler() {
-			public void handle(HttpExchange he) throws IOException {
-				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				copyStream(he.getRequestBody(), bout);
-				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-				
-				Object respData;
-				if (checkPassword(Json.getString(reqData, "password"))) {
-					String profile = Json.getString(reqData, "payload", 0);
-					String target = Json.getString(reqData, "payload", 1);
-					String line = Json.getString(reqData, "payload", 2);
-					respData = master.sendMessage(profile, target, line);
-				} else
-					respData = "Authentication error";
-				
-				Headers head = he.getResponseHeaders();
-				head.set("Content-Type", "application/json; charset=UTF-8");
-				head.set("Cache-Control", "no-cache");
-				byte[] b = Utils.toUtf8(Json.serialize(respData));
-				he.sendResponseHeaders(200, b.length);
-				he.getResponseBody().write(b);
-				he.close();
-			}
-		});
-		
+		// Start the server
 		executor = Executors.newFixedThreadPool(4);
 		server.setExecutor(executor);
 		server.start();
@@ -180,6 +155,17 @@ final class MessageHttpServer {
 		for (int i = 0; i < s.length(); i++)
 			diff ^= s.charAt(i) ^ password.charAt(i);
 		return diff == 0;
+	}
+	
+	
+	private static void writeJsonResponse(HttpExchange he, Object data) throws IOException {
+		Headers head = he.getResponseHeaders();
+		head.set("Content-Type", "application/json; charset=UTF-8");
+		head.set("Cache-Control", "no-cache");
+		byte[] b = Utils.toUtf8(Json.serialize(data));
+		he.sendResponseHeaders(200, b.length);
+		he.getResponseBody().write(b);
+		he.close();
 	}
 	
 }
