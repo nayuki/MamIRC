@@ -116,30 +116,32 @@ function messageToRow(msg) {
 		who = subparts[0];
 		lineElems = [];
 		var s = subparts[1];
-		var match = ME_INCOMING_REGEX.exec(s);
-		if (match != null) {
-			var em = document.createElement("em");
-			em.appendChild(document.createTextNode(match[1]));
-			lineElems.push(em);
-		} else {
-			while (s != "") {
-				match = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
-				if (match == null)
-					match = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
-				if (match == null) {
-					lineElems.push(document.createTextNode(s));
-					break;
-				} else {
-					if (match[1].length > 0)
-						lineElems.push(document.createTextNode(match[1]));
-					var a = document.createElement("a");
-					a.href = match[2];
-					a.target = "_blank";
-					a.appendChild(document.createTextNode(match[2]));
-					lineElems.push(a);
-					s = match[3];
-				}
+		var mematch = ME_INCOMING_REGEX.exec(s);
+		if (mematch != null)
+			s = mematch[1];
+		while (s != "") {
+			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
+			if (linkmatch == null)
+				linkmatch = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
+			if (linkmatch == null) {
+				lineElems.push(document.createTextNode(s));
+				break;
+			} else {
+				if (linkmatch[1].length > 0)
+					lineElems.push(document.createTextNode(linkmatch[1]));
+				var a = document.createElement("a");
+				a.href = linkmatch[2];
+				a.target = "_blank";
+				a.appendChild(document.createTextNode(linkmatch[2]));
+				lineElems.push(a);
+				s = linkmatch[3];
 			}
+		}
+		if (mematch != null) {
+			var em = document.createElement("em");
+			for (var i = 0; i < lineElems.length; i++)
+				em.appendChild(lineElems[i]);
+			lineElems = [em];
 		}
 	} else if (parts[0] == "NICK") {
 		var subparts = split2(parts[1]);
