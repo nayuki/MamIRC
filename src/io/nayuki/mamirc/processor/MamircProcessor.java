@@ -25,6 +25,11 @@ public final class MamircProcessor {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws IOException {
+		if (args.length != 2) {
+			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor connector.ini processor.ini");
+			System.exit(1);
+		}
+		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
 		new MamircProcessor(
 			new ConnectorConfiguration(new File(args[0])),

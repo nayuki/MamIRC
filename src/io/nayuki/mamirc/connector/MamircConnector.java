@@ -21,6 +21,11 @@ public final class MamircConnector {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws IOException, SQLiteException {
+		if (args.length != 1) {
+			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector connector.ini");
+			System.exit(1);
+		}
+		
 		// Prevent sqlite4java module from polluting stderr with debug messages
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		
