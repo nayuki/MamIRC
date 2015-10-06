@@ -221,32 +221,23 @@ public final class MamircConnector {
 	
 	// Must only be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
 	private void handlePotentialPing(int conId, byte[] line) {
-		// Pseudocode:
-		//   if (line.contains("PING"))
-		//     sendMessage("PONG" + line.parameters);
-		//   /* Else do nothing */
+		// Skip prefix, if any
+		int i = 0;
+		if (line.length >= 1 && line[i] == ':') {
+			i++;
+			while (i < line.length && line[i] != ' ')
+				i++;
+			if (i < line.length && line[i] == ' ')
+				i++;
+		}
 		
-		// Check if string contains "PING" in ASCII anywhere, without allocating new objects
-		for (int i = 0; i < line.length - 3; i++) {
-			if (line[i] == 'P' && line[i + 1] == 'I' && line[i + 2] == 'N' && line[i + 3] == 'G') {
-				// Candidate line found; do precise parse to decide
-				int start = 0;
-				
-				// Discard optional prefix
-				if (line.length >= 1 && line[0] == ':') {
-					start++;
-					while (start < line.length && line[start] == ' ')
-						start++;
-				}
-				
-				// Check command
-				if (line.length - start >= 4 && line[start] == 'P' && line[start + 1] == 'I' && line[start + 2] == 'N' && line[start + 3] == 'G') {
-					byte[] reply = Arrays.copyOfRange(line, start, line.length);  // Copy the command and parameters verbatim
-					reply[1] = 'O';  // Change "PING" to "PONG"
-					sendMessage(conId, reply, processorReader);
-				}
-				return;  // Because parsing the full line is precise, we do not need to check any more candidates
-			}
+		// Check that next 4 characters are "PING" case-insensitively, followed by space or end of string
+		if (line.length - i >= 4 && (line[i + 0] & 0xDF) == 'P' && (line[i + 1] & 0xDF) == 'I' && (line[i + 2] & 0xDF) == 'N' && (line[i + 3] & 0xDF) == 'G'
+				&& (line.length - i == 4 || line[i + 4] == ' ')) {
+			// Create reply by dropping prefix, changing PING to PONG, and copying parameters
+			byte[] reply = Arrays.copyOfRange(line, i, line.length);
+			reply[1] += 6;
+			sendMessage(conId, reply, processorReader);
 		}
 	}
 	
