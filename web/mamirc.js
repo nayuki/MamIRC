@@ -5,6 +5,7 @@ var windowListElem = document.getElementById("window-list");
 var messageListElem = document.getElementById("message-list");
 var inputBoxElem = document.getElementById("input-box");
 var nicknameElem = document.getElementById("nickname");
+var passwordElem = document.getElementById("password");
 
 var activeWindowName = null;  // String
 var windowNames      = null;  // List<String>
@@ -19,16 +20,19 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementsByTagName("form")[1].onsubmit = handleInputLine;
-	document.getElementById("password").focus();
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
 	};
+	passwordElem.oninput = function() {
+		removeChildren(document.getElementById("login-status"));
+	};
+	passwordElem.focus();
 }
 
 
 function authenticate() {
-	password = document.getElementById("password").value;
+	password = passwordElem.value;
 	getState();
 	return false;  // To prevent the form submitting
 }
@@ -43,6 +47,7 @@ function getState() {
 			removeChildren(elem);
 			elem.appendChild(document.createTextNode(data));
 		} else {
+			passwordElem.blur();
 			document.getElementById("login").style.display = "none";
 			document.getElementById("main").style.display = "block";
 			loadState(data);
