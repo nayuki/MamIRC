@@ -315,6 +315,22 @@ function handleInputLine() {
 			setActiveWindow(windowName);
 			inputBoxElem.value = "";
 			
+		} else if (cmd == "msg" && text.split(" ").length >= 3) {
+			// Open and switch to window
+			var parts = split2(text.substring(5));
+			var target = parts[0];
+			var text = parts[1];
+			var profile = activeWindowName.split("\n")[0];
+			var windowName = profile + "\n" + target;
+			if (windowNames.indexOf(windowName) == -1) {
+				windowNames.push(windowName);
+				windowNames.sort();
+				redrawWindowList();
+				windowMessages[windowName] = [];
+			}
+			setActiveWindow(windowName);
+			sendMessage(profile, target, text);
+			
 		} else
 			alert("Invalid command");
 	
