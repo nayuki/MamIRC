@@ -18,8 +18,12 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
-	document.getElementsByTagName("form")[1].onsubmit = sendMessage;
+	document.getElementsByTagName("form")[1].onsubmit = handleInputLine;
 	document.getElementById("password").focus();
+	inputBoxElem.oninput = function() {
+		var text = inputBoxElem.value;
+		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
+	};
 }
 
 
@@ -123,8 +127,8 @@ function setActiveWindow(name) {
 	var messages = windowMessages[name];
 	for (var i = 0; i < messages.length; i++)
 		messageListElem.appendChild(messageToRow(messages[i]));
+	messageListElem.parentNode.style.tableLayout = "auto";
 	if (messages.length > 0) {
-		messageListElem.parentNode.style.tableLayout = "auto";
 		var a = messageListElem.firstChild.children[0].clientWidth;
 		var b = messageListElem.firstChild.children[1].clientWidth;
 		messageListElem.parentNode.style.tableLayout = "fixed";
@@ -210,7 +214,6 @@ function messageToRow(msg) {
 }
 
 var ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
-var ME_OUTGOING_REGEX = /^\/me (.*)$/i;
 
 
 function updateState() {
@@ -283,41 +286,60 @@ function loadUpdates(data) {
 }
 
 
-function sendMessage() {
+function handleInputLine() {
 	var text = inputBoxElem.value;
-	if ((/^\/query [^ ]+$/i).test(text)) {
-		// Open and switch to window
-		var windowName = activeWindowName.split("\n")[0] + "\n" + text.substring(7);
-		if (windowNames.indexOf(windowName) == -1) {
-			windowNames.push(windowName);
-			windowNames.sort();
-			redrawWindowList();
-			windowMessages[windowName] = [];
-		}
-		setActiveWindow(windowName);
-		inputBoxElem.value = "";
-		
-	} else {
-		inputBoxElem.disabled = true;
-		
-		var xhr = new XMLHttpRequest();
-		xhr.onload = function() {
-			inputBoxElem.value = "";
-			inputBoxElem.disabled = false;
-		};
-		xhr.ontimeout = xhr.onerror = function() {
-			inputBoxElem.disabled = false;
-		};
-		xhr.open("POST", "send-message.json", true);
-		xhr.responseType = "text";
-		xhr.timeout = 5000;
-		var match = ME_OUTGOING_REGEX.exec(text);
-		if (match != null)
-			text = "\u0001ACTION " + match[1] + "\u0001";
+	if (text.startsWith("//")) {  // Ordinary message beginning with slash
 		var parts = activeWindowName.split("\n");
-		xhr.send(JSON.stringify({"password":password, "payload":[parts[0], parts[1], text]}));
+		sendMessage(parts[0], parts[1], text.substring(1));
+		
+	} else if (text.startsWith("/")) {  // Command or special message
+		var i = text.indexOf(" ");
+		if (i == -1)
+			i = text.length;
+		var cmd = text.substring(1, i).toLowerCase();
+		
+		if (cmd == "me" && text.length - i >= 2) {
+			var text = "\u0001ACTION " + text.substring(4) + "\u0001";
+			var parts = activeWindowName.split("\n");
+			sendMessage(parts[0], parts[1], text);
+			
+		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(text)) {
+			// Open and switch to window
+			var windowName = activeWindowName.split("\n")[0] + "\n" + text.substring(7);
+			if (windowNames.indexOf(windowName) == -1) {
+				windowNames.push(windowName);
+				windowNames.sort();
+				redrawWindowList();
+				windowMessages[windowName] = [];
+			}
+			setActiveWindow(windowName);
+			inputBoxElem.value = "";
+			
+		} else
+			alert("Invalid command");
+	
+	} else {  // Ordinary message
+		var parts = activeWindowName.split("\n");
+		sendMessage(parts[0], parts[1], text);
 	}
 	return false;  // To prevent the form submitting
+}
+
+
+function sendMessage(profile, target, text) {
+	inputBoxElem.disabled = true;
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		inputBoxElem.value = "";
+		inputBoxElem.disabled = false;
+	};
+	xhr.ontimeout = xhr.onerror = function() {
+		inputBoxElem.disabled = false;
+	};
+	xhr.open("POST", "send-message.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, text]}));
 }
 
 
