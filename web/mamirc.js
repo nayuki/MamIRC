@@ -126,7 +126,7 @@ function setActiveWindow(name) {
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
 	for (var i = 0; i < messages.length; i++)
-		messageListElem.appendChild(messageToRow(messages[i]));
+		messageListElem.appendChild(messageToRow(messages[i], name));
 	messageListElem.parentNode.style.tableLayout = "auto";
 	if (messages.length > 0) {
 		var a = messageListElem.firstChild.children[0].clientWidth;
@@ -139,10 +139,11 @@ function setActiveWindow(name) {
 
 
 // 'msg' is a length-2 array of int timestamp, string line.
-function messageToRow(msg) {
+function messageToRow(msg, windowName) {
 	var who = "RAW";  // String
 	var lineElems = null;  // Array of DOM nodes
 	var parts = split2(msg[1]);
+	var rowClass = "";
 	
 	if (parts[0] == "PRIVMSG") {
 		var subparts = split2(parts[1]);
@@ -152,6 +153,27 @@ function messageToRow(msg) {
 		var mematch = ME_INCOMING_REGEX.exec(s);
 		if (mematch != null)
 			s = mematch[1];
+		
+		var myNickname = currentNicknames[windowName.split("\n")[0]];
+		if (who == myNickname)
+			rowClass = "outgoing";
+		else {
+			// Look for a whole word containing my nickname
+			var txt = s.toLowerCase();
+			var pat = myNickname.toLowerCase();
+			var i = 0;
+			while (true) {
+				i = txt.indexOf(pat, i);
+				if (i == -1)
+					break;
+				if ((i == 0 || /^\W$/.test(txt.charAt(i - 1))) &&
+						(i + pat.length == txt.length || /^\W$/.test(txt.charAt(i + pat.length)))) {
+					rowClass = "nickflag";
+					break;
+				}
+			}
+		}
+		
 		while (s != "") {
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
 			if (linkmatch == null)
@@ -210,6 +232,7 @@ function messageToRow(msg) {
 	for (var i = 0; i < lineElems.length; i++)
 		td.appendChild(lineElems[i]);
 	tr.appendChild(td);
+	tr.className = rowClass;
 	return tr;
 }
 
@@ -259,7 +282,7 @@ function loadUpdates(data) {
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)
 				windowMessages[windowName] = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);
 			if (windowName == activeWindowName) {
-				messageListElem.appendChild(messageToRow(msg));
+				messageListElem.appendChild(messageToRow(msg, windowName));
 				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
