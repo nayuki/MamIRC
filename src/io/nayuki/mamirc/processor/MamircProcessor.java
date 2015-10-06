@@ -116,7 +116,7 @@ public final class MamircProcessor {
 				throw new IllegalStateException("No profile: " + metadata);
 			ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
 			
-		} else if (line.equals("opened")) {
+		} else if (line.startsWith("opened ")) {
 			state.registrationState = ConnectionState.RegState.OPENED;
 			if (realtime)
 				send(conId, "NICK", state.profile.nicknames.get(0));

@@ -146,7 +146,7 @@ public final class MamircConnector {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("opened"));
+		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("opened " + sock.getInetAddress().getHostAddress()));
 		info.socket = sock;
 		info.writer = writer;
 	}
