@@ -504,14 +504,14 @@ public final class MamircProcessor {
 	// Must be called from one of the synchronized methods above.
 	private void addMessage(String profile, String target, long timestamp, String line) {
 		if (!windowMessages.containsKey(profile))
-			windowMessages.put(profile, new TreeMap<>());
+			windowMessages.put(profile, new TreeMap<String,List<Object[]>>());
 		Map<String,List<Object[]>> innerMap = windowMessages.get(profile);
 		if (!innerMap.containsKey(target)) {
 			String lower = profile + "\n" + target.toLowerCase();
 			if (windowCaseMap.containsKey(lower))
 				target = windowCaseMap.get(lower).split("\n", 2)[1];
 			else {
-				innerMap.put(target, new ArrayList<>());
+				innerMap.put(target, new ArrayList<Object[]>());
 				windowCaseMap.put(lower, profile + "\n" + target);
 			}
 		}
