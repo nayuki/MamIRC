@@ -59,6 +59,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
+	// 'line' must not contain '\0', '\r', or '\n'.
 	// Can be called safely from any thread. Must not be called after terminate().
 	// Caller must never change the values inside the array after it is passed into this method.
 	public void postWrite(byte[] line) {
@@ -70,6 +71,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
+	// 'line' must not contain '\0', '\r', or '\n'. It is converted to bytes in UTF-8.
 	// Can be called safely from any thread. Must not be called after terminate().
 	public void postWrite(String line) {
 		if (line == null)

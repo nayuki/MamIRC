@@ -14,6 +14,8 @@ import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 
 
+// Reads each line from a socket and relays it back to the master.
+// Also handles the connection initialization and clean-up.
 final class ServerReaderThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -28,6 +30,7 @@ final class ServerReaderThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
+	// Note: The socket is created on the new thread, not on the caller's thread.
 	public ServerReaderThread(MamircConnector master, int conId, String hostname, int port, boolean useSsl) {
 		if (master == null || hostname == null)
 			throw new NullPointerException();
@@ -84,7 +87,7 @@ final class ServerReaderThread extends Thread {
 	
 	// Initialization-on-demand holder idiom
 	private static final class SsfHolder {
-		public static final SSLSocketFactory SSL_SOCKET_FACTORY;
+		public static final SSLSocketFactory SSL_SOCKET_FACTORY;  // Singleton
 		static {
 			SSLSocketFactory result = null;
 			try {

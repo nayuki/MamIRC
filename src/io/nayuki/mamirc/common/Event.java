@@ -12,7 +12,7 @@ public final class Event {
 	public final int sequence;      // 0, 1, 2, etc., resetting with each connection
 	public final long timestamp;    // Based on Unix epoch, in milliseconds
 	public final Type type;         // Not null
-	private final byte[] line;      // Not null
+	private final byte[] line;      // Not null, and does not contain '\0', '\r', or '\n'
 	
 	
 	/*---- Constructors ----*/

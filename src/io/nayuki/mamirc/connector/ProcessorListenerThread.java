@@ -6,6 +6,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 
+// Manages a server socket to listen for incoming processor connections,
+// and launches a new ProcessorReaderThread on each connection received.
 final class ProcessorListenerThread extends Thread {
 	
 	/*---- Fields ----*/

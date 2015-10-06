@@ -34,6 +34,7 @@ public final class MamircProcessor {
 		new MamircProcessor(
 			new ConnectorConfiguration(new File(args[0])),
 			new ProcessorConfiguration(new File(args[1])));
+		// The main thread returns, while other threads live on
 	}
 	
 	

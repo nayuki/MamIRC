@@ -38,7 +38,10 @@ public final class MamircConnector {
 	
 	
 	
-	/*---- Fields (global state) ----*/
+	/*---- Fields ----*/
+	
+	// All of these fields are global state. Any read/write access
+	// must be done while synchronized on this MamircConnector object!
 	
 	// Connections to remote IRC servers
 	private int nextConnectionId;
@@ -84,9 +87,7 @@ public final class MamircConnector {
 	
 	
 	/*---- Methods for accessing/updating global state ----*/
-	
-	// These synchronized methods can be called safely from any thread.
-	
+		
 	// Should only be called from ProcessorReaderThread.
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		// Kick out existing processor, and set fields
@@ -116,7 +117,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread.
+	// Should only be called from ProcessorReaderThread. Metadata must not contain '\0', '\r', or '\n'.
 	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -130,7 +131,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread and terminateConnector().
+	// Should only be called from ProcessorReaderThread or terminateConnector().
 	public synchronized void disconnectServer(int conId, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;

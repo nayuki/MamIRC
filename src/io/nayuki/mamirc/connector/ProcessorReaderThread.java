@@ -19,6 +19,7 @@ final class ProcessorReaderThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
+	// Should only be called from ProcessorListenerThread.
 	public ProcessorReaderThread(MamircConnector master, Socket sock, byte[] password) {
 		if (master == null || sock == null || password == null)
 			throw new NullPointerException();
@@ -90,6 +91,7 @@ final class ProcessorReaderThread extends Thread {
 	
 	/*---- Helper definitions ----*/
 	
+	// Performs a constant-time equality comparison if both arrays are the same length.
 	private static boolean equalsTimingSafe(byte[] a, byte[] b) {
 		if (a.length != b.length)
 			return false;
