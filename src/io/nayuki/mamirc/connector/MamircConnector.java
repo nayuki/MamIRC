@@ -91,11 +91,8 @@ public final class MamircConnector {
 	// Should only be called from ProcessorReaderThread.
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		// Kick out existing processor, and set fields
-		if (processorReader != null) {
-			try {
-				processorReader.socket.close();  // Asynchronous termination
-			} catch (IOException e) {}
-		}
+		if (processorReader != null)
+			processorReader.terminate();  // Asynchronous termination
 		processorReader = reader;
 		processorWriter = writer;
 		
@@ -196,11 +193,8 @@ public final class MamircConnector {
 		for (int conId : serverConnections.keySet())
 			disconnectServer(conId, processorReader);
 		
-		if (processorReader != null) {
-			try {
-				processorReader.socket.close();
-			} catch (IOException e) {}
-		}
+		if (processorReader != null)
+			processorReader.terminate();
 		
 		try {
 			processorListener.serverSocket.close();

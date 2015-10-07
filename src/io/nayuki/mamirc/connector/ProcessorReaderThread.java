@@ -12,7 +12,7 @@ final class ProcessorReaderThread extends Thread {
 	/*---- Fields ----*/
 	
 	private final MamircConnector master;
-	public final Socket socket;
+	private final Socket socket;
 	private final byte[] password;
 	
 	
@@ -24,7 +24,7 @@ final class ProcessorReaderThread extends Thread {
 			throw new NullPointerException();
 		this.master = master;
 		socket = sock;
-		this.password = password.clone();  // Defensive copy
+		this.password = password;
 	}
 	
 	
@@ -77,10 +77,16 @@ final class ProcessorReaderThread extends Thread {
 				master.detachProcessor(this);
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
 			}
-			try {
-				socket.close();
-			} catch (IOException e) {}
+			terminate();
 		}
+	}
+	
+	
+	// Thread-safe, should only be called from MamircConnector or this class itself.
+	public void terminate() {
+		try {
+			socket.close();
+		} catch (IOException e) {}
 	}
 	
 	
@@ -103,9 +109,8 @@ final class ProcessorReaderThread extends Thread {
 		public void run() {
 			try {
 				Thread.sleep(AUTHENTICATION_TIMEOUT);
-				socket.close();  // Will not be called if sleep is interrupted
-			} catch (IOException e) {}
-			catch (InterruptedException e) {}
+				terminate();  // Will not be called if sleep is interrupted
+			} catch (InterruptedException e) {}
 		}
 	}
 	
