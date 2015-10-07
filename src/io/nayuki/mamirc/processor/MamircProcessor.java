@@ -598,6 +598,13 @@ public final class MamircProcessor {
 	}
 	
 	
+	public synchronized void closeWindow(String profile, String party) {
+		Map<String,Window> inner = windows.get(profile);
+		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
+			addUpdate("CLOSEWIN\n" + profile + "\n" + party);
+	}
+	
+	
 	
 	/*---- Nested classes ----*/
 	

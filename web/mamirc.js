@@ -110,6 +110,7 @@ function redrawWindowList() {
 				return false;
 			};
 		})(windowName);
+		li.className = windowName == activeWindowName ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
 	}
@@ -301,6 +302,19 @@ function loadUpdates(data) {
 				nicknameElem.appendChild(document.createTextNode(parts[2]));
 				activeWindowUpdated = true;
 			}
+		} else if (parts[0] == "CLOSEWIN") {
+			var windowName = parts[1] + "\n" + parts[2];
+			var index = windowNames.indexOf(windowName);
+			if (index != -1) {
+				windowNames.splice(index, 1);
+				redrawWindowList();
+				if (windowName == activeWindowName) {
+					if (windowNames.length > 0)
+						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
+					else
+						removeChildren(messageListElem);
+				}
+			}
 		}
 	}
 	
@@ -386,6 +400,15 @@ function sendMessage(profile, target, text) {
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, text]}));
+}
+
+
+function closeWindow(profile, target) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", "close-window.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
 }
 
 
