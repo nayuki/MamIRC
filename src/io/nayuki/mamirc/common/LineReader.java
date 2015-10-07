@@ -16,6 +16,7 @@ public final class LineReader {
 	// Current accumulating line
 	private byte[] lineBuffer;
 	private int lineLength;
+	private final int maxLineLength;
 	
 	private byte[] readBuffer;
 	private int readLength;
@@ -26,11 +27,19 @@ public final class LineReader {
 	/*---- Constructor ----*/
 	
 	public LineReader(InputStream in) {
+		this(in, 1000);
+	}
+		
+	
+	public LineReader(InputStream in, int maxLen) {
 		if (in == null)
 			throw new NullPointerException();
+		if (maxLen <= 0)
+			throw new IllegalArgumentException();
 		input = in;
-		lineBuffer = new byte[1024];
+		lineBuffer = new byte[Math.min(1024, maxLen)];
 		lineLength = 0;
+		maxLineLength = maxLen;
 		readBuffer = new byte[4096];
 		readLength = 0;
 		readOffset = 0;
@@ -55,13 +64,16 @@ public final class LineReader {
 				readLength = input.read(readBuffer);
 				readOffset = 0;
 				if (readLength == -1) {  // End of stream reached just now
-					byte[] result = takeCurrentLine();
+					byte[] result;
+					if (lineLength == -1)
+						result = null;
+					else if (lineLength == 0)
+						result = BLANK_EOF;
+					else
+						result = takeCurrentLine();
 					readBuffer = null;
 					lineBuffer = null;
-					if (result.length == 0)
-						return BLANK_EOF;
-					else
-						return result;
+					return result;
 				}
 			}
 			
@@ -69,27 +81,49 @@ public final class LineReader {
 			while (readOffset < readLength) {
 				byte b = readBuffer[readOffset];
 				readOffset++;
-				switch (b) {
-					case '\r':
-					{
-						prevWasCr = true;
-						return takeCurrentLine();
-					}
-					
-					case '\n':
-						if (prevWasCr) {
-							prevWasCr = false;
-							break;
-						} else
+				
+				if (lineLength != -1) {
+					switch (b) {
+						case '\r':
+							prevWasCr = true;
 							return takeCurrentLine();
 						
-					default:
-						if (lineLength == lineBuffer.length)
-							lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
-						lineBuffer[lineLength] = b;
-						lineLength++;
-						prevWasCr = false;
-						break;
+						case '\n':
+							if (prevWasCr) {
+								prevWasCr = false;
+								break;
+							} else
+								return takeCurrentLine();
+							
+						default:
+							prevWasCr = false;
+							if (lineLength == maxLineLength) {
+								lineLength = -1;  // Poison the current line
+								continue;
+							} else {
+								if (lineLength == lineBuffer.length)
+									lineBuffer = Arrays.copyOf(lineBuffer, Math.min(lineBuffer.length * 2, maxLineLength));
+								lineBuffer[lineLength] = b;
+								lineLength++;
+								break;
+							}
+					}
+					
+				} else {
+					switch (b) {
+						case '\r':
+							lineLength = 0;
+							prevWasCr = true;
+							break;
+						case '\n':
+							lineLength = 0;
+							prevWasCr = false;
+							break;
+						default:
+							// Keep lineLength == -1
+							prevWasCr = false;
+							break;
+					}
 				}
 			}
 		}

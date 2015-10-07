@@ -52,6 +52,16 @@ public final class LineReaderTest {
 		test("ba\n\rcd", "ba", "", "cd");
 	}
 	
+	@Test public void testLongLines() {
+		try {
+			LineReader reader = new LineReader(new ByteArrayInputStream(Utils.toUtf8("a\r12345\r\nxyzabc\n \n7890123\nABCDEF")), 5);
+			Assert.assertArrayEquals(Utils.toUtf8("a"), reader.readLine());
+			Assert.assertArrayEquals(Utils.toUtf8("12345"), reader.readLine());
+			Assert.assertArrayEquals(Utils.toUtf8(" "), reader.readLine());
+			Assert.assertNull(reader.readLine());
+		} catch (IOException e) {}
+	}
+	
 	
 	private static void test(String raw, String... lines) {
 		try {
