@@ -59,12 +59,13 @@ public final class LineReader {
 					readBuffer = null;
 					lineBuffer = null;
 					if (result.length == 0)
-						return BLANK_EOF;  // Same content as just byte[0], but usefully indicates that the next call will return null
+						return BLANK_EOF;
 					else
 						return result;
 				}
 			}
 			
+			// Consume characters in the read buffer
 			while (readOffset < readLength) {
 				byte b = readBuffer[readOffset];
 				readOffset++;
@@ -102,6 +103,7 @@ public final class LineReader {
 	}
 	
 	
+	// Same content as just byte[0], but usefully indicates that the next call will return null
 	public static final byte[] BLANK_EOF = new byte[0];
 	
 }
