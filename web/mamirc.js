@@ -140,6 +140,8 @@ function setActiveWindow(name) {
 		messageListElem.firstChild.children[0].style.width = a + "px";
 		messageListElem.firstChild.children[1].style.width = b + "px";
 	}
+	var parts = name.split("\n");
+	document.title = parts[1] + " - " + parts[0] + " - MamIRC";
 }
 
 
