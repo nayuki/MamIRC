@@ -52,7 +52,7 @@ public final class MamircProcessor {
 	
 	// Mutable current state
 	private final Map<Integer,ConnectionState> ircConnections;
-	private final Map<String,Map<String,List<Object[]>>> windowMessages;  // Payload is {long timestamp, String message}
+	private final Map<String,Map<String,Window>> windows;
 	private final Map<String,String> windowCaseMap;
 	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
 	private int nextUpdateId;
@@ -68,7 +68,7 @@ public final class MamircProcessor {
 		myConfiguration = procConfig;
 		
 		ircConnections = new HashMap<>();
-		windowMessages = new TreeMap<>();
+		windows = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
@@ -510,20 +510,20 @@ public final class MamircProcessor {
 	
 	// Must be called from one of the synchronized methods above.
 	private void addMessage(String profile, String target, long timestamp, String line) {
-		if (!windowMessages.containsKey(profile))
-			windowMessages.put(profile, new TreeMap<String,List<Object[]>>());
-		Map<String,List<Object[]>> innerMap = windowMessages.get(profile);
+		if (!windows.containsKey(profile))
+			windows.put(profile, new TreeMap<String,Window>());
+		Map<String,Window> innerMap = windows.get(profile);
 		if (!innerMap.containsKey(target)) {
 			String lower = profile + "\n" + target.toLowerCase();
 			if (windowCaseMap.containsKey(lower))
 				target = windowCaseMap.get(lower).split("\n", 2)[1];
 			else {
-				innerMap.put(target, new ArrayList<Object[]>());
+				innerMap.put(target, new Window());
 				windowCaseMap.put(lower, profile + "\n" + target);
 			}
 		}
-		List<Object[]> list = innerMap.get(target);
-		list.add(new Object[]{timestamp, line});
+		List<Window.Line> list = innerMap.get(target).lines;
+		list.add(new Window.Line(timestamp, line));
 		if (list.size() - 100 >= 10000)
 			list.subList(0, 100).clear();
 		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
@@ -555,12 +555,12 @@ public final class MamircProcessor {
 		
 		// Messages in current windows
 		Map<String,Map<String,List<List<Object>>>> outMessages = new HashMap<>();
-		for (Map.Entry<String,Map<String,List<Object[]>>> profileEntry : windowMessages.entrySet()) {
+		for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
 			Map<String,List<List<Object>>> outSuperMsgs = new HashMap<>();
-			for (Map.Entry<String,List<Object[]>> targetEntry : profileEntry.getValue().entrySet()) {
+			for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
 				List<List<Object>> outMsgs = new ArrayList<>();
-				for (Object[] msg : targetEntry.getValue())
-					outMsgs.add(Arrays.asList(msg));
+				for (Window.Line msg : targetEntry.getValue().lines)
+					outMsgs.add(Arrays.<Object>asList(msg.timestamp, msg.payload));
 				outSuperMsgs.put(targetEntry.getKey(), outMsgs);
 			}
 			outMessages.put(profileEntry.getKey(), outSuperMsgs);
