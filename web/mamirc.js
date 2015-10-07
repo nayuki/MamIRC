@@ -165,6 +165,7 @@ function messageToRow(msg, windowName) {
 	var lineElems = null;  // Array of DOM nodes
 	var parts = split2(msg[1]);
 	var rowClass = "";
+	var quoteText = null;
 	
 	if (parts[0] == "PRIVMSG") {
 		var subparts = split2(parts[1]);
@@ -194,6 +195,7 @@ function messageToRow(msg, windowName) {
 				}
 			}
 		}
+		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");
 		
 		while (s != "") {
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
@@ -218,6 +220,9 @@ function messageToRow(msg, windowName) {
 			for (var i = 0; i < lineElems.length; i++)
 				em.appendChild(lineElems[i]);
 			lineElems = [em];
+			quoteText = "* " + who + " " + quoteText;
+		} else {
+			quoteText = "<" + who + "> " + quoteText;
 		}
 	} else if (parts[0] == "NOTICE") {
 		var subparts = split2(parts[1]);
@@ -244,15 +249,44 @@ function messageToRow(msg, windowName) {
 	var td = document.createElement("td");
 	td.appendChild(document.createTextNode(formatDate(msg[0])));
 	tr.appendChild(td);
+	
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
+	if (who != "*" && who != "RAW") {
+		td.oncontextmenu = function(ev) {
+			openContextMenu(ev.pageX, ev.pageY, [["Open PM window", function() {
+				var windowName = activeWindowName.split("\n")[0] + "\n" + who;
+				if (windowNames.indexOf(windowName) == -1) {
+					windowNames.push(windowName);
+					windowNames.sort();
+					redrawWindowList();
+					windowMessages[windowName] = [];
+				}
+				setActiveWindow(windowName);
+				inputBoxElem.value = "";
+			}]]);
+			return false;
+		};
+	}
 	tr.appendChild(td);
+	
 	td = document.createElement("td");
 	if (lineElems == null)
 		lineElems = [document.createTextNode(msg[1])];
 	for (var i = 0; i < lineElems.length; i++)
 		td.appendChild(lineElems[i]);
+	if (quoteText != null) {
+		td.oncontextmenu = function(ev) {
+			openContextMenu(ev.pageX, ev.pageY, [["Quote text", function() {
+				inputBoxElem.value = quoteText;
+				inputBoxElem.focus();
+				inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
+			}]]);
+			return false;
+		};
+	}
 	tr.appendChild(td);
+	
 	tr.className = rowClass;
 	return tr;
 }
