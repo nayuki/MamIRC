@@ -10,6 +10,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 
@@ -67,7 +68,11 @@ final class ServerReaderThread extends Thread {
 				byte[] line = reader.readLine();
 				if (line == LineReader.BLANK_EOF || line == null)
 					break;
-				master.receiveMessage(connectionId, line);
+				boolean valid = true;
+				for (byte b : line)
+					valid &= b != '\0';
+				if (valid)
+					master.receiveMessage(connectionId, new CleanLine(line));
 			}
 			
 		// Clean up

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
@@ -121,7 +122,7 @@ public final class MamircConnector {
 		int conId = nextConnectionId;
 		ConnectionInfo info = new ConnectionInfo();
 		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
-		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8(str));
+		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine(str));
 		serverConnections.put(conId, info);
 		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
 		nextConnectionId++;
@@ -136,7 +137,7 @@ public final class MamircConnector {
 		if (info == null)
 			System.err.println("Warning: Connection " + conId + " does not exist");
 		else {
-			postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("disconnect"));
+			postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("disconnect"));
 			try {
 				info.socket.close();  // Asynchronous termination
 			} catch (IOException e) {}
@@ -149,7 +150,7 @@ public final class MamircConnector {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("opened " + sock.getInetAddress().getHostAddress()));
+		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("opened " + sock.getInetAddress().getHostAddress()));
 		info.socket = sock;
 		info.writer = writer;
 	}
@@ -160,19 +161,19 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
-		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("closed"));
+		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("closed"));
 	}
 	
 	
-	// Should only be called from ServerReaderThread. 'line' must not contain '\0', '\r', or '\n'.
-	public synchronized void receiveMessage(int conId, byte[] line) {
+	// Should only be called from ServerReaderThread.
+	public synchronized void receiveMessage(int conId, CleanLine line) {
 		postEvent(conId, serverConnections.get(conId), Event.Type.RECEIVE, line);
 		handlePotentialPing(conId, line);
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread and handlePotentialPing(). 'line' must not contain '\0', '\r', or '\n'.
-	public synchronized void sendMessage(int conId, byte[] line, ProcessorReaderThread reader) {
+	// Should only be called from ProcessorReaderThread and handlePotentialPing().
+	public synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
@@ -203,15 +204,15 @@ public final class MamircConnector {
 	}
 	
 	
-	// Must only be called from one of the synchronized methods above. 'line' must not contain '\0', '\r', or '\n'.
-	private void postEvent(int conId, ConnectionInfo info, Event.Type type, byte[] line) {
+	// Must only be called from one of the synchronized methods above.
+	private void postEvent(int conId, ConnectionInfo info, Event.Type type, CleanLine line) {
 		Event ev = new Event(conId, info.nextSequence(), type, line);
 		if (processorWriter != null) {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				bout.write(Utils.toUtf8(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal())));
-				bout.write(line);
-				processorWriter.postWrite(bout.toByteArray());
+				bout.write(line.getData());
+				processorWriter.postWrite(new CleanLine(bout.toByteArray()));
 			} catch (IOException e) {
 				throw new AssertionError(e);
 			}
@@ -221,24 +222,25 @@ public final class MamircConnector {
 	
 	
 	// Must only be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
-	private void handlePotentialPing(int conId, byte[] line) {
+	private void handlePotentialPing(int conId, CleanLine line) {
 		// Skip prefix, if any
+		byte[] b = line.getData();
 		int i = 0;
-		if (line.length >= 1 && line[i] == ':') {
+		if (b.length >= 1 && b[i] == ':') {
 			i++;
-			while (i < line.length && line[i] != ' ')
+			while (i < b.length && b[i] != ' ')
 				i++;
-			if (i < line.length && line[i] == ' ')
+			if (i < b.length && b[i] == ' ')
 				i++;
 		}
 		
 		// Check that next 4 characters are "PING" case-insensitively, followed by space or end of string
-		if (line.length - i >= 4 && (line[i + 0] & 0xDF) == 'P' && (line[i + 1] & 0xDF) == 'I' && (line[i + 2] & 0xDF) == 'N' && (line[i + 3] & 0xDF) == 'G'
-				&& (line.length - i == 4 || line[i + 4] == ' ')) {
+		if (b.length - i >= 4 && (b[i + 0] & 0xDF) == 'P' && (b[i + 1] & 0xDF) == 'I' && (b[i + 2] & 0xDF) == 'N' && (b[i + 3] & 0xDF) == 'G'
+				&& (b.length - i == 4 || b[i + 4] == ' ')) {
 			// Create reply by dropping prefix, changing PING to PONG, and copying parameters
-			byte[] reply = Arrays.copyOfRange(line, i, line.length);
+			byte[] reply = Arrays.copyOfRange(b, i, b.length);
 			reply[1] += 6;
-			sendMessage(conId, reply, processorReader);
+			sendMessage(conId, new CleanLine(reply), processorReader);
 		}
 	}
 	

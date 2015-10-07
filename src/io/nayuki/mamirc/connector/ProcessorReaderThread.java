@@ -3,6 +3,7 @@ package io.nayuki.mamirc.connector;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
@@ -109,11 +110,7 @@ final class ProcessorReaderThread extends Thread {
 				
 			} else if (cmd.equals("send") && parts.length >= 3) {
 				byte[] payload = Arrays.copyOfRange(line, cmd.length() + parts[1].length() + 2, line.length);
-				for (byte b : payload) {
-					if (b == '\0')
-						throw new IllegalArgumentException();
-				}
-				master.sendMessage(Integer.parseInt(parts[1]), payload, this);
+				master.sendMessage(Integer.parseInt(parts[1]), new CleanLine(payload), this);
 				
 			} else {
 				System.err.println("Unknown line from processor: " + lineStr);

@@ -13,7 +13,7 @@ public final class OutputWriterThread extends Thread {
 	
 	private final OutputStream output;
 	private final byte[] newline;
-	private BlockingQueue<byte[]> queue;
+	private BlockingQueue<CleanLine> queue;
 	
 	
 	/*---- Constructor ----*/
@@ -34,16 +34,17 @@ public final class OutputWriterThread extends Thread {
 		try {
 			byte[] buf = new byte[1024];  // Allocate buffer outside of loop for efficiency
 			while (true) {
-				byte[] line = queue.take();
+				CleanLine line = queue.take();
 				if (line == TERMINATOR)
 					break;
 				
 				// Ugly logic for merely: output.write(line + newline)
-				int totalLen = line.length + newline.length;
+				byte[] b = line.getData();
+				int totalLen = b.length + newline.length;
 				if (totalLen > buf.length)
 					buf = new byte[totalLen];
-				System.arraycopy(line, 0, buf, 0, line.length);
-				System.arraycopy(newline, 0, buf, line.length, newline.length);
+				System.arraycopy(b, 0, buf, 0, b.length);
+				System.arraycopy(newline, 0, buf, b.length, newline.length);
 				output.write(buf, 0, totalLen);
 			}
 			
@@ -59,10 +60,9 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// 'line' must not contain '\0', '\r', or '\n'.
 	// Can be called safely from any thread. Must not be called after terminate().
 	// Caller must never change the values inside the array after it is passed into this method.
-	public void postWrite(byte[] line) {
+	public void postWrite(CleanLine line) {
 		if (line == null)
 			throw new NullPointerException();
 		try {
@@ -76,7 +76,7 @@ public final class OutputWriterThread extends Thread {
 	public void postWrite(String line) {
 		if (line == null)
 			throw new NullPointerException();
-		postWrite(Utils.toUtf8(line));
+		postWrite(new CleanLine(line));
 	}
 	
 	
@@ -90,6 +90,6 @@ public final class OutputWriterThread extends Thread {
 	
 	/*---- Helper definitions ----*/
 	
-	private static final byte[] TERMINATOR = new byte[0];
+	private static final CleanLine TERMINATOR = new CleanLine("");
 	
 }

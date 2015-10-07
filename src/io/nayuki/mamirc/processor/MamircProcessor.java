@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
@@ -114,7 +115,7 @@ public final class MamircProcessor {
 	private void processConnection(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Possibly null
-		String line = Utils.fromUtf8(ev.getLine());
+		String line = Utils.fromUtf8(ev.line.getData());
 		
 		if (line.startsWith("connect ")) {
 			String metadata = line.split(" ", 5)[4];
@@ -140,7 +141,7 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
+		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
 		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
 		switch (msg.command.toUpperCase()) {
 			
@@ -307,7 +308,7 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		ConnectionState state = ircConnections.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.getLine()));
+		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
@@ -436,7 +437,7 @@ public final class MamircProcessor {
 					int[] attemptState = connectionAttemptState.get(net);
 					IrcNetwork.Server serv = net.servers.get(attemptState[0]);
 					String str = "connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + net.name;
-					writer.postWrite(Utils.toUtf8(str));
+					writer.postWrite(new CleanLine(str));
 					
 					if (1000 < attemptState[1] && attemptState[1] < 200000)
 						attemptState[1] *= 2;  // Exponential backoff

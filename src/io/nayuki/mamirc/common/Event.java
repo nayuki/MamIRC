@@ -12,46 +12,36 @@ public final class Event {
 	public final int sequence;      // 0, 1, 2, etc., resetting with each connection
 	public final long timestamp;    // Based on Unix epoch, in milliseconds
 	public final Type type;         // Not null
-	private final byte[] line;      // Not null, and does not contain '\0', '\r', or '\n'
+	public final CleanLine line;    // Not null
 	
 	
 	/*---- Constructors ----*/
 	
 	// Creates an event with the given data and uses the current time as the timestamp.
-	public Event(int conId, int seq, Type type, byte[] line) {
+	public Event(int conId, int seq, Type type, CleanLine line) {
 		this(conId, seq, System.currentTimeMillis(), type, line);
 	}
 	
 	
-	// Creates an event with the given data. The line must not contain '\0', '\r', or '\n'.
+	// Creates an event with the given data.
 	// The byte array is cloned and stored in this data structure, so the caller
 	// is allowed to change the array values after the constructor returns.
-	public Event(int conId, int seq, long time, Type type, byte[] line) {
+	public Event(int conId, int seq, long time, Type type, CleanLine line) {
 		if (type == null || line == null)
 			throw new NullPointerException();
-		for (byte b : line) {
-			if (b == '\0' || b == '\r' || b == '\n')
-				throw new IllegalArgumentException("Invalid characters in line");
-		}
 		connectionId = conId;
 		sequence = seq;
 		timestamp = time;
 		this.type = type;
-		this.line = line.clone();  // Defensive copy
+		this.line = line;
 	}
 	
 	
 	/*---- Methods ----*/
 	
-	// Returns a unique copy of the line byte array.
-	public byte[] getLine() {
-		return line.clone();  // Defensive copy
-	}
-	
-	
 	public String toString() {
 		return String.format("Event(conId=%d, seq=%d, time=%d, type=%s, line=%s)",
-			connectionId, sequence, timestamp, type.toString(), Utils.fromUtf8(line));
+			connectionId, sequence, timestamp, type.toString(), Utils.fromUtf8(line.getData()));
 	}
 	
 	

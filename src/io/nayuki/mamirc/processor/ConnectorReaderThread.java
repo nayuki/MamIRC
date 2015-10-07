@@ -7,6 +7,7 @@ import java.util.Map;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.LineReader;
@@ -52,7 +53,7 @@ final class ConnectorReaderThread extends Thread {
 					Integer.parseInt(parts[1]),
 					Long.parseLong(parts[2]),
 					Event.Type.fromOrdinal(Integer.parseInt(parts[3])),
-					Utils.toUtf8(parts[4]));
+					new CleanLine(parts[4]));
 				master.processEvent(ev, true);
 			}
 		
@@ -79,7 +80,7 @@ final class ConnectorReaderThread extends Thread {
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		master.attachConnectorWriter(writer);
 		writer.start();
-		writer.postWrite(configuration.getConnectorPassword());
+		writer.postWrite(new CleanLine(configuration.getConnectorPassword()));
 		
 		LineReader reader = new LineReader(socket.getInputStream());
 		String line = readStringLine(reader);
@@ -107,7 +108,7 @@ final class ConnectorReaderThread extends Thread {
 			query.bind(1, conId);
 			query.bind(2, nextSeq);
 			while (query.step()) {
-				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), query.columnBlob(3));
+				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), new CleanLine(query.columnBlob(3)));
 				master.processEvent(ev, false);  // Non-real-time
 			}
 			query.reset();
