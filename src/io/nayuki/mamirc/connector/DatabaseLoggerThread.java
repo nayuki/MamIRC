@@ -140,49 +140,48 @@ final class DatabaseLoggerThread extends Thread {
 			}
 			return !terminateRequested;
 			
+		} else if (flushRequested) {
+			// Drain the queue straightforwardly
+			Utils.stepStatement(beginTransaction, false);
+			beginTransaction.reset();
+			while (!queue.isEmpty())
+				insertEventIntoDb(queue.remove());
+			Utils.stepStatement(commitTransaction, false);
+			commitTransaction.reset();
+			flushRequested = false;
+			condFlushed.signal();
+			return !terminateRequested;
+			
 		} else {
-			if (flushRequested) {
-				// Drain the queue straightforwardly
+			// Wait to gather quick request-response events
+			condUrgent.await(GATHER_DATA_DELAY, TimeUnit.MILLISECONDS);
+			
+			// Drain the queue without blocking on I/O
+			Event[] events = new Event[queue.size()];
+			for (int i = 0; i < events.length; i++)
+				events[i] = queue.remove();
+			if (!queue.isEmpty())
+				throw new AssertionError();
+			
+			// Do all database I/O while allowing other threads to post events.
+			// Note: Queue is empty and lock is dropped, but the data is not committed yet!
+			// Thus flushQueue() cannot simply check for an empty queue and
+			// return without explicit acknowledgement from the logger thread.
+			lock.unlock();
+			try {
 				Utils.stepStatement(beginTransaction, false);
 				beginTransaction.reset();
-				while (!queue.isEmpty())
-					insertEventIntoDb(queue.remove());
+				for (Event ev : events)
+					insertEventIntoDb(ev);
 				Utils.stepStatement(commitTransaction, false);
 				commitTransaction.reset();
-				flushRequested = false;
-				condFlushed.signal();
-				
-			} else {
-				// Wait to gather quick request-response events
-				condUrgent.await(GATHER_DATA_DELAY, TimeUnit.MILLISECONDS);
-				
-				// Drain the queue without blocking on I/O
-				Event[] events = new Event[queue.size()];
-				for (int i = 0; i < events.length; i++)
-					events[i] = queue.remove();
-				if (!queue.isEmpty())
-					throw new AssertionError();
-				
-				// Do all database I/O while allowing other threads to post events.
-				// Note: Queue is empty and lock is dropped, but the data is not committed yet!
-				// Thus flushQueue() cannot simply check for an empty queue and
-				// return without explicit acknowledgement from the logger thread.
-				lock.unlock();
-				try {
-					Utils.stepStatement(beginTransaction, false);
-					beginTransaction.reset();
-					for (Event ev : events)
-						insertEventIntoDb(ev);
-					Utils.stepStatement(commitTransaction, false);
-					commitTransaction.reset();
-				} finally {
-					lock.lock();
-				}
-				// At this point, the queue may be non-empty and the flags may have changed
-				
-				if (!flushRequested)
-					condUrgent.await(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
+			} finally {
+				lock.lock();
 			}
+			// At this point, the queue may be non-empty and the flags may have changed
+			
+			if (!flushRequested)
+				condUrgent.await(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
 			return true;  // Re-evaluate the full situation even if termination is requested
 		}
 	}

@@ -25,7 +25,6 @@ final class ServerReaderThread extends Thread {
 	private final String hostname;
 	private final int port;
 	private final boolean useSsl;
-	private Socket socket;
 	
 	
 	/*---- Constructor ----*/
@@ -48,21 +47,22 @@ final class ServerReaderThread extends Thread {
 	/*---- Methods ----*/
 	
 	public void run() {
+		Socket sock = null;
 		OutputWriterThread writer = null;
 		try {
 			// Create socket
 			if (useSsl)
-				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
+				sock = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
 			else
-				socket = new Socket(hostname, port);
+				sock = new Socket(hostname, port);
 			
 			// Initialize stuff
-			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
+			writer = new OutputWriterThread(sock.getOutputStream(), new byte[]{'\r','\n'});
 			writer.start();
-			master.connectionOpened(connectionId, socket, writer);
+			master.connectionOpened(connectionId, sock, writer);
 			
 			// Read and forward lines
-			LineReader reader = new LineReader(socket.getInputStream());
+			LineReader reader = new LineReader(sock.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();
 				if (line == LineReader.BLANK_EOF || line == null)
@@ -73,9 +73,9 @@ final class ServerReaderThread extends Thread {
 		// Clean up
 		} catch (IOException e) {}
 		finally {
-			if (socket != null) {
+			if (sock != null) {
 				try {
-					socket.close();
+					sock.close();
 				} catch (IOException e) {}
 				if (writer != null)
 					writer.terminate();  // This reader is exclusively responsible for terminating the writer

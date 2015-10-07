@@ -123,8 +123,8 @@ public final class MamircConnector {
 			return;
 		int conId = nextConnectionId;
 		ConnectionInfo info = new ConnectionInfo();
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION,
-				Utils.toUtf8("connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata));
+		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
+		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8(str));
 		serverConnections.put(conId, info);
 		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
 		nextConnectionId++;
@@ -139,7 +139,7 @@ public final class MamircConnector {
 		if (info == null)
 			System.err.println("Warning: Connection " + conId + " does not exist");
 		else {
-			postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("disconnect"));
+			postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("disconnect"));
 			try {
 				info.socket.close();  // Asynchronous termination
 			} catch (IOException e) {}
@@ -152,7 +152,7 @@ public final class MamircConnector {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("opened " + sock.getInetAddress().getHostAddress()));
+		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("opened " + sock.getInetAddress().getHostAddress()));
 		info.socket = sock;
 		info.writer = writer;
 	}
@@ -163,13 +163,13 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
-		postEvent(conId, info.nextSequence(), Event.Type.CONNECTION, Utils.toUtf8("closed"));
+		postEvent(conId, info, Event.Type.CONNECTION, Utils.toUtf8("closed"));
 	}
 	
 	
 	// Should only be called from ServerReaderThread.
 	public synchronized void receiveMessage(int conId, byte[] line) {
-		postEvent(conId, serverConnections.get(conId).nextSequence(), Event.Type.RECEIVE, line);
+		postEvent(conId, serverConnections.get(conId), Event.Type.RECEIVE, line);
 		handlePotentialPing(conId, line);
 	}
 	
@@ -178,9 +178,10 @@ public final class MamircConnector {
 	public synchronized void sendMessage(int conId, byte[] line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
-		if (serverConnections.containsKey(conId)) {
-			postEvent(conId, serverConnections.get(conId).nextSequence(), Event.Type.SEND, line);
-			serverConnections.get(conId).write(line);
+		ConnectionInfo info = serverConnections.get(conId);
+		if (info != null && info.writer != null) {
+			postEvent(conId, info, Event.Type.SEND, line);
+			info.writer.postWrite(line);
 		} else
 			System.err.println("Warning: Connection " + conId + " does not exist");
 	}
@@ -209,8 +210,8 @@ public final class MamircConnector {
 	
 	
 	// Must only be called from one of the synchronized methods above.
-	private void postEvent(int conId, int seq, Event.Type type, byte[] line) {
-		Event ev = new Event(conId, seq, type, line);
+	private void postEvent(int conId, ConnectionInfo info, Event.Type type, byte[] line) {
+		Event ev = new Event(conId, info.nextSequence(), type, line);
 		if (processorWriter != null) {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -269,13 +270,6 @@ public final class MamircConnector {
 			int result = nextSequence;
 			nextSequence++;
 			return result;
-		}
-		
-		
-		public void write(byte[] line) {
-			if (writer == null)
-				throw new IllegalStateException("Not connected");
-			writer.postWrite(line);
 		}
 		
 	}

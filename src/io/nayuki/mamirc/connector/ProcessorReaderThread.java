@@ -14,7 +14,6 @@ final class ProcessorReaderThread extends Thread {
 	private final MamircConnector master;
 	public final Socket socket;
 	private final byte[] password;
-	private boolean isAuthenticated;
 	
 	
 	/*---- Constructor ----*/
@@ -35,7 +34,6 @@ final class ProcessorReaderThread extends Thread {
 		OutputWriterThread writer = null;
 		try {
 			// Set up the authentication timeout
-			isAuthenticated = false;
 			Thread killer = new KillerThread();
 			killer.start();
 			
@@ -45,9 +43,6 @@ final class ProcessorReaderThread extends Thread {
 			killer.interrupt();  // Killer is no longer needed, now that we have read the line
 			if (!equalsTimingSafe(line, password))
 				return;  // Authentication failure
-			synchronized(this) {
-				isAuthenticated = true;
-			}
 			
 			// Launch writer thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
@@ -108,10 +103,7 @@ final class ProcessorReaderThread extends Thread {
 		public void run() {
 			try {
 				Thread.sleep(AUTHENTICATION_TIMEOUT);
-				synchronized(ProcessorReaderThread.this) {
-					if (!isAuthenticated)
-						socket.close();
-				}
+				socket.close();  // Will not be called if sleep is interrupted
 			} catch (IOException e) {}
 			catch (InterruptedException e) {}
 		}
