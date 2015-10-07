@@ -126,3 +126,29 @@ input {
 input.is-command {
 	color: #2060FF;
 }
+
+#menu {
+	position: absolute;
+	padding: 0.3em;
+	border: 1px solid #C0C0C0;
+	border-radius: 0.2em;
+	background-color: #FFFFFF;
+	box-shadow: 0.2em 0.2em 0.3em #505050;
+}
+
+#menu ul, li {
+	margin: 0em;
+	padding: 0em;
+	list-style-type: none;
+}
+
+#menu a {
+	display: block;
+	padding: 0.4em 0.8em;
+	text-decoration: none;
+	color: inherit;
+}
+
+#menu a:hover {
+	background-color: #E0E0E0;
+}

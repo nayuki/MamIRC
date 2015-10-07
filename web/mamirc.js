@@ -20,6 +20,11 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementsByTagName("form")[1].onsubmit = handleInputLine;
+	document.documentElement.onmousedown = function(ev) {
+		var elem = document.getElementById("menu");
+		if (elem != null)
+			elem.parentNode.removeChild(elem);
+	};
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
@@ -110,6 +115,34 @@ function redrawWindowList() {
 				return false;
 			};
 		})(windowName);
+		a.oncontextmenu = (function(profile, target) {
+			return function(ev) {
+				var elem = document.getElementById("menu");
+				if (elem != null)
+					elem.parentNode.removeChild(elem);
+				
+				var div = document.createElement("div");
+				div.id = "menu";
+				div.style.left = ev.pageX + "px";
+				div.style.top  = ev.pageY + "px";
+				var ul = document.createElement("ul");
+				var li = document.createElement("li");
+				var a = document.createElement("a");
+				a.appendChild(document.createTextNode("Close window"));
+				a.href = "#";
+				a.onclick = function() {
+					closeWindow(profile, target);
+					div.parentNode.removeChild(div);
+				};
+				li.appendChild(a);
+				ul.appendChild(li);
+				div.appendChild(ul);
+				div.onmousedown = function(ev) { ev.stopPropagation(); };
+				
+				document.getElementsByTagName("body")[0].appendChild(div);
+				return false;
+			};
+		})(parts[0], parts[1]);
 		li.className = windowName == activeWindowName ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
