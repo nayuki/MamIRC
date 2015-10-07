@@ -26,11 +26,7 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementsByTagName("form")[1].onsubmit = handleInputLine;
-	document.documentElement.onmousedown = function(ev) {
-		var elem = document.getElementById("menu");
-		if (elem != null)
-			elem.parentNode.removeChild(elem);
-	};
+	document.documentElement.onmousedown = closeContextMenu;
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
@@ -123,29 +119,7 @@ function redrawWindowList() {
 		})(windowName);
 		a.oncontextmenu = (function(profile, target) {
 			return function(ev) {
-				var elem = document.getElementById("menu");
-				if (elem != null)
-					elem.parentNode.removeChild(elem);
-				
-				var div = document.createElement("div");
-				div.id = "menu";
-				div.style.left = ev.pageX + "px";
-				div.style.top  = ev.pageY + "px";
-				var ul = document.createElement("ul");
-				var li = document.createElement("li");
-				var a = document.createElement("a");
-				a.appendChild(document.createTextNode("Close window"));
-				a.href = "#";
-				a.onclick = function() {
-					closeWindow(profile, target);
-					div.parentNode.removeChild(div);
-				};
-				li.appendChild(a);
-				ul.appendChild(li);
-				div.appendChild(ul);
-				div.onmousedown = function(ev) { ev.stopPropagation(); };
-				
-				document.getElementsByTagName("body")[0].appendChild(div);
+				openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, target); }]]);
 				return false;
 			};
 		})(parts[0], parts[1]);
@@ -448,6 +422,44 @@ function closeWindow(profile, target) {
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
+}
+
+
+// x and y are numbers, items is a list of pairs {text string, onclick function}.
+function openContextMenu(x, y, items) {
+	closeContextMenu();
+	var div = document.createElement("div");
+	div.id = "menu";
+	div.style.left = x + "px";
+	div.style.top  = y + "px";
+	var ul = document.createElement("ul");
+	
+	for (var i = 0; i < items.length; i++) {
+		var li = document.createElement("li");
+		var a = document.createElement("a");
+		a.appendChild(document.createTextNode(items[i][0]));
+		a.href = "#";
+		a.onclick = (function(func) {
+			return function() {
+				func();
+				closeContextMenu();
+				return false;
+			};
+		})(items[i][1]);
+		li.appendChild(a);
+		ul.appendChild(li);
+	}
+	
+	div.appendChild(ul);
+	div.onmousedown = function(ev) { ev.stopPropagation(); };
+	document.getElementsByTagName("body")[0].appendChild(div);
+}
+
+
+function closeContextMenu() {
+	var elem = document.getElementById("menu");
+	if (elem != null)
+		elem.parentNode.removeChild(elem);
 }
 
 
