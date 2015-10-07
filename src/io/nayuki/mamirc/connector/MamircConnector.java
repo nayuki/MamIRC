@@ -164,14 +164,14 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ServerReaderThread.
+	// Should only be called from ServerReaderThread. 'line' must not contain '\0', '\r', or '\n'.
 	public synchronized void receiveMessage(int conId, byte[] line) {
 		postEvent(conId, serverConnections.get(conId), Event.Type.RECEIVE, line);
 		handlePotentialPing(conId, line);
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread and handlePotentialPing().
+	// Should only be called from ProcessorReaderThread and handlePotentialPing(). 'line' must not contain '\0', '\r', or '\n'.
 	public synchronized void sendMessage(int conId, byte[] line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -203,14 +203,14 @@ public final class MamircConnector {
 	}
 	
 	
-	// Must only be called from one of the synchronized methods above.
+	// Must only be called from one of the synchronized methods above. 'line' must not contain '\0', '\r', or '\n'.
 	private void postEvent(int conId, ConnectionInfo info, Event.Type type, byte[] line) {
 		Event ev = new Event(conId, info.nextSequence(), type, line);
 		if (processorWriter != null) {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				bout.write(Utils.toUtf8(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal())));
-				bout.write(ev.getLine());
+				bout.write(line);
 				processorWriter.postWrite(bout.toByteArray());
 			} catch (IOException e) {
 				throw new AssertionError(e);
