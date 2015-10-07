@@ -1,12 +1,16 @@
 "use strict";
 
 
-var windowListElem = document.getElementById("window-list");
-var messageListElem = document.getElementById("message-list");
-var inputBoxElem = document.getElementById("input-box");
-var nicknameElem = document.getElementById("nickname");
-var passwordElem = document.getElementById("password");
+/*---- Global variables ----*/
 
+// Document nodes (elements)
+var windowListElem  = document.getElementById("window-list");
+var messageListElem = document.getElementById("message-list");
+var inputBoxElem    = document.getElementById("input-box");
+var nicknameElem    = document.getElementById("nickname");
+var passwordElem    = document.getElementById("password");
+
+// Main state
 var activeWindowName = null;  // String
 var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
@@ -16,6 +20,8 @@ var password         = null;  // String
 
 var MAX_MESSAGES_PER_WINDOW = 3000;
 
+
+/*---- Major functions ----*/
 
 function init() {
 	document.getElementsByTagName("form")[0].onsubmit = authenticate;
@@ -445,6 +451,8 @@ function closeWindow(profile, target) {
 }
 
 
+/*---- Simple utility functions ----*/
+
 function formatDate(timestamp) {
 	var d = new Date(timestamp);
 	return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + "\u00A0" +
@@ -476,4 +484,7 @@ function split2(str) {
 }
 
 
+/*---- Miscellaneous ----*/
+
+// The call to init() must come last due to variables being declared and initialized.
 init();
