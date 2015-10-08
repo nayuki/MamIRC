@@ -10,16 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
-import io.nayuki.mamirc.processor.MamircProcessor.IrcSession.RegState;
+import io.nayuki.mamirc.processor.IrcSession.RegState;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
 
@@ -126,7 +124,7 @@ public final class MamircProcessor {
 			ircSessions.put(conId, new IrcSession(myConfiguration.ircNetworks.get(metadata)));
 			
 		} else if (line.startsWith("opened ")) {
-			state.registrationState = RegState.OPENED;
+			state.setRegistrationState(RegState.OPENED);
 			if (realtime)
 				send(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED\n" + state.profile.name);
@@ -144,13 +142,13 @@ public final class MamircProcessor {
 		IrcSession state = ircSessions.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
 		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
-		Map<String,IrcSession.ChannelState> curchans = state.currentChannels;
+		Map<String,IrcSession.ChannelState> curchans = state.getCurrentChannels();
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
 				String fromname = msg.prefixName;
 				String toname = msg.getParameter(0);
-				if (fromname.equals(state.currentNickname)) {
+				if (fromname.equals(state.getCurrentNickname())) {
 					state.setNickname(toname);
 					addUpdate("MYNICK\n" + state.profile.name + "\n" + toname);
 				}
@@ -168,7 +166,7 @@ public final class MamircProcessor {
 			case "JOIN": {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
-				if (who.equals(state.currentNickname) && !curchans.containsKey(chan)) {
+				if (who.equals(state.getCurrentNickname()) && !curchans.containsKey(chan)) {
 					curchans.put(chan, new IrcSession.ChannelState());
 					addUpdate("JOINED\n" + state.profile.name + "\n" + chan);
 				}
@@ -182,7 +180,7 @@ public final class MamircProcessor {
 			case "NOTICE": {
 				String who = msg.prefixName;
 				String target = msg.getParameter(0);
-				if (target.equals(state.currentNickname))
+				if (target.equals(state.getCurrentNickname()))
 					target = who;
 				String line = msg.command + " " + who + " " + msg.getParameter(1);
 				addMessage(profile.name, target, ev.timestamp, line, 0);
@@ -196,7 +194,7 @@ public final class MamircProcessor {
 					String line = msg.command + " " + who;
 					addMessage(profile.name, chan, ev.timestamp, line, 0);
 				}
-				if (who.equals(state.currentNickname)) {
+				if (who.equals(state.getCurrentNickname())) {
 					curchans.remove(chan);
 					addUpdate("PARTED\n" + state.profile.name + "\n" + chan);
 				}
@@ -211,7 +209,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + who + " " + text;
 				int flags = 0;
-				if (state.nickflagDetector.matcher(text).find())
+				if (state.getNickflagDetector().matcher(text).find())
 					flags |= 1 << 3;
 				addMessage(profile.name, target, ev.timestamp, line, flags);
 				break;
@@ -219,7 +217,7 @@ public final class MamircProcessor {
 			
 			case "QUIT": {
 				String who = msg.prefixName;
-				if (!who.equals(state.currentNickname)) {
+				if (!who.equals(state.getCurrentNickname())) {
 					for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
 							String line = msg.command + " " + who + " " + msg.getParameter(0);
@@ -233,12 +231,12 @@ public final class MamircProcessor {
 			}
 			
 			case "433": {  // ERR_NICKNAMEINUSE
-				if (state.registrationState != RegState.REGISTERED) {
-					state.rejectedNicknames.add(state.currentNickname);
+				if (state.getRegistrationState() != RegState.REGISTERED) {
+					state.moveNicknameToRejected();
 					if (realtime) {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
-							if (!state.rejectedNicknames.contains(nickname)) {
+							if (!state.getCurrentNickname().contains(nickname)) {
 								send(conId, "NICK", nickname);
 								found = true;
 								break;
@@ -257,16 +255,15 @@ public final class MamircProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (state.registrationState != RegState.REGISTERED) {
-					state.registrationState = RegState.REGISTERED;
-					state.rejectedNicknames = null;
+				if (state.getRegistrationState() != RegState.REGISTERED) {
+					state.setRegistrationState(RegState.REGISTERED);
 					if (realtime) {
-						if (profile.nickservPassword != null && !state.sentNickservPassword)
+						if (profile.nickservPassword != null && !state.getSentNickservPassword())
 							send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 						for (String chan : profile.channels)
 							send(conId, "JOIN", chan);
 					}
-					addUpdate("MYNICK\n" + profile.name + "\n" + state.currentNickname);
+					addUpdate("MYNICK\n" + profile.name + "\n" + state.getCurrentNickname());
 					connectionAttemptState.remove(state.profile);
 				}
 				break;
@@ -317,25 +314,25 @@ public final class MamircProcessor {
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
-				if (state.registrationState == RegState.OPENED) {
-					state.registrationState = RegState.NICK_SENT;
+				if (state.getRegistrationState() == RegState.OPENED) {
+					state.setRegistrationState(RegState.NICK_SENT);
 					if (realtime)
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
-				if (state.registrationState != RegState.REGISTERED)
+				if (state.getRegistrationState() != RegState.REGISTERED)
 					state.setNickname(msg.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
 			
 			case "USER": {
-				if (state.registrationState == RegState.NICK_SENT)
-					state.registrationState = RegState.USER_SENT;
+				if (state.getRegistrationState() == RegState.NICK_SENT)
+					state.setRegistrationState(RegState.USER_SENT);
 				break;
 			}
 			
 			case "NOTICE": {
-				String src = state.currentNickname;
+				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
@@ -345,8 +342,8 @@ public final class MamircProcessor {
 			
 			case "PRIVMSG": {
 				if (msg.parameters.size() == 2 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).toUpperCase().startsWith("IDENTIFY "))
-					state.sentNickservPassword = true;
-				String src = state.currentNickname;
+					state.setSentNickservPassword();
+				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
@@ -368,7 +365,7 @@ public final class MamircProcessor {
 			IrcNetwork profile = state.profile;
 			if (!activeProfiles.add(profile))
 				throw new IllegalStateException("Multiple active connections for profile: " + profile.name);
-			switch (state.registrationState) {
+			switch (state.getRegistrationState()) {
 				case CONNECTING:
 					break;
 				
@@ -379,10 +376,10 @@ public final class MamircProcessor {
 				
 				case NICK_SENT:
 				case USER_SENT: {
-					if (state.currentNickname == null) {
+					if (state.getCurrentNickname() == null) {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
-							if (!state.rejectedNicknames.contains(nickname)) {
+							if (!state.isNicknameRejected(nickname)) {
 								send(conId, "NICK", nickname);
 								found = true;
 								break;
@@ -390,16 +387,16 @@ public final class MamircProcessor {
 						}
 						if (!found)
 							writer.postWrite("disconnect " + conId);
-					} else if (state.registrationState == RegState.NICK_SENT)
+					} else if (state.getRegistrationState() == RegState.NICK_SENT)
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 					break;
 				}
 				
 				case REGISTERED: {
-					if (profile.nickservPassword != null && !state.sentNickservPassword)
+					if (profile.nickservPassword != null && !state.getSentNickservPassword())
 						send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 					for (String chan : profile.channels) {
-						if (!state.currentChannels.containsKey(chan))
+						if (!state.getCurrentChannels().containsKey(chan))
 							send(conId, "JOIN", chan);
 					}
 					break;
@@ -543,9 +540,9 @@ public final class MamircProcessor {
 		for (Map.Entry<Integer,IrcSession> conEntry : ircSessions.entrySet()) {
 			IrcSession inConState = conEntry.getValue();
 			Map<String,Object> outConState = new HashMap<>();
-			outConState.put("currentNickname", inConState.currentNickname);
+			outConState.put("currentNickname", inConState.getCurrentNickname());
 			
-			Map<String,IrcSession.ChannelState> inChannels = inConState.currentChannels;
+			Map<String,IrcSession.ChannelState> inChannels = inConState.getCurrentChannels();
 			Map<String,Map<String,Object>> outChannels = new HashMap<>();
 			for (Map.Entry<String,IrcSession.ChannelState> chanEntry : inChannels.entrySet()) {
 				Map<String,Object> outChanState = new HashMap<>();
@@ -620,59 +617,6 @@ public final class MamircProcessor {
 		Map<String,Window> inner = windows.get(profile);
 		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
 			addUpdate("CLOSEWIN\n" + profile + "\n" + party);
-	}
-	
-	
-	
-	/*---- Nested classes ----*/
-	
-	static final class IrcSession {
-		public IrcNetwork profile;             // Not null
-		public RegState registrationState;     // Not null
-		public Set<String> rejectedNicknames;  // Not null before successful registration, null thereafter
-		public String currentNickname;         // Can be null
-		public Pattern nickflagDetector;       // Can be null
-		public Map<String,ChannelState> currentChannels;  // Not null, size at least 0
-		
-		// The fields below are only used when processing archived events
-		// and during catch-up; they are unused during real-time processing.
-		public boolean sentNickservPassword;
-		
-		
-		public IrcSession(IrcNetwork profile) {
-			this.profile = profile;
-			registrationState = RegState.CONNECTING;
-			rejectedNicknames = new HashSet<>();
-			currentNickname = null;
-			currentChannels = new CaseInsensitiveTreeMap<>();
-			sentNickservPassword = false;
-		}
-		
-		
-		public static final class ChannelState {
-			public final Set<String> members;  // Not null, size at least 0
-			public boolean processingNamesReply;
-			
-			public ChannelState() {
-				members = new TreeSet<>();
-				processingNamesReply = false;
-			}
-		}
-		
-		
-		public void setNickname(String name) {
-			currentNickname = name;
-			if (name == null)
-				nickflagDetector = null;
-			else
-				nickflagDetector = Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(name) + "(?![A-Za-z0-9_])", Pattern.CASE_INSENSITIVE);
-		}
-		
-		
-		public enum RegState {
-			CONNECTING, OPENED, NICK_SENT, USER_SENT, REGISTERED;
-		}
-		
 	}
 	
 }
