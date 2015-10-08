@@ -341,8 +341,10 @@ function loadUpdates(data) {
 			var index = windowNames.indexOf(windowName);
 			if (index != -1) {
 				windowNames.splice(index, 1);
+				delete windowMessages[windowName];
 				redrawWindowList();
 				if (windowName == activeWindowName) {
+					inputBoxElem.value = "";
 					if (windowNames.length > 0)
 						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
 					else
