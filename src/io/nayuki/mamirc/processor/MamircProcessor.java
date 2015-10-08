@@ -157,7 +157,7 @@ public final class MamircProcessor {
 					if (members.remove(fromname)) {
 						members.add(toname);
 						String line = msg.command + " " + fromname + " " + toname;
-						addMessage(profile.name, entry.getKey(), ev.timestamp, line);
+						addMessage(profile.name, entry.getKey(), ev.timestamp, line, 0);
 					}
 				}
 				break;
@@ -172,7 +172,7 @@ public final class MamircProcessor {
 				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
 					String line = msg.command + " " + who;
-					addMessage(profile.name, msg.getParameter(0), ev.timestamp, line);
+					addMessage(profile.name, msg.getParameter(0), ev.timestamp, line, 0);
 				}
 				break;
 			}
@@ -183,7 +183,7 @@ public final class MamircProcessor {
 				if (target.equals(state.currentNickname))
 					target = who;
 				String line = msg.command + " " + who + " " + msg.getParameter(1);
-				addMessage(profile.name, target, ev.timestamp, line);
+				addMessage(profile.name, target, ev.timestamp, line, 0);
 				break;
 			}
 			
@@ -192,7 +192,7 @@ public final class MamircProcessor {
 				String chan = msg.getParameter(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
 					String line = msg.command + " " + who;
-					addMessage(profile.name, chan, ev.timestamp, line);
+					addMessage(profile.name, chan, ev.timestamp, line, 0);
 				}
 				if (who.equals(state.currentNickname)) {
 					curchans.remove(chan);
@@ -208,7 +208,7 @@ public final class MamircProcessor {
 					target = who;
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + who + " " + text;
-				addMessage(profile.name, target, ev.timestamp, line);
+				addMessage(profile.name, target, ev.timestamp, line, 0);
 				break;
 			}
 			
@@ -218,7 +218,7 @@ public final class MamircProcessor {
 					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
 							String line = msg.command + " " + who + " " + msg.getParameter(0);
-							addMessage(profile.name, entry.getKey(), ev.timestamp, line);
+							addMessage(profile.name, entry.getKey(), ev.timestamp, line, 0);
 						}
 					}
 				} else {
@@ -334,7 +334,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, ev.timestamp, line);
+				addMessage(profile.name, party, ev.timestamp, line, 0);
 				break;
 			}
 			
@@ -345,7 +345,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, ev.timestamp, line);
+				addMessage(profile.name, party, ev.timestamp, line, 0);
 				break;
 			}
 			
@@ -509,7 +509,7 @@ public final class MamircProcessor {
 	
 	
 	// Must be called from one of the synchronized methods above.
-	private void addMessage(String profile, String target, long timestamp, String line) {
+	private void addMessage(String profile, String target, long timestamp, String line, int flags) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
 		Map<String,Window> innerMap = windows.get(profile);
@@ -523,10 +523,10 @@ public final class MamircProcessor {
 			}
 		}
 		List<Window.Line> list = innerMap.get(target).lines;
-		list.add(new Window.Line(timestamp, line));
+		list.add(new Window.Line(timestamp, line, flags));
 		if (list.size() - 100 >= 10000)
 			list.subList(0, 100).clear();
-		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line);
+		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line + "\n" + flags);
 	}
 	
 	
@@ -560,7 +560,7 @@ public final class MamircProcessor {
 			for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
 				List<List<Object>> outMsgs = new ArrayList<>();
 				for (Window.Line msg : targetEntry.getValue().lines)
-					outMsgs.add(Arrays.<Object>asList(msg.timestamp, msg.payload));
+					outMsgs.add(Arrays.<Object>asList(msg.timestamp, msg.payload, msg.flags));
 				outSuperMsgs.put(targetEntry.getKey(), outMsgs);
 			}
 			outMessages.put(profileEntry.getKey(), outSuperMsgs);

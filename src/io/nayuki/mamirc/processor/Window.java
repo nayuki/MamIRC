@@ -20,12 +20,14 @@ final class Window {
 		
 		public final long timestamp;
 		public final String payload;
+		public final int flags;
 		
-		public Line(long timestamp, String payload) {
+		public Line(long timestamp, String payload, int flags) {
 			if (payload == null)
 				throw new NullPointerException();
 			this.timestamp = timestamp;
 			this.payload = payload;
+			this.flags = flags;
 		}
 		
 	}

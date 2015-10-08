@@ -331,7 +331,7 @@ function loadUpdates(data) {
 				windowNames.sort();
 				redrawWindowList();
 			}
-			var msg = [parseInt(parts[3], 10), parts[4]];
+			var msg = [parseInt(parts[3], 10), parts[4], parseInt(parts[5])];
 			var messages = windowMessages[windowName];
 			messages.push(msg);
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)
