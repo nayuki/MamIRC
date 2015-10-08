@@ -7,6 +7,7 @@
 var windowListElem  = document.getElementById("window-list");
 var messageListElem = document.getElementById("message-list");
 var inputBoxElem    = document.getElementById("input-box");
+var channelElem     = document.getElementById("channel");
 var nicknameElem    = document.getElementById("nickname");
 var passwordElem    = document.getElementById("password");
 
@@ -155,6 +156,8 @@ function setActiveWindow(name) {
 		messageListElem.firstChild.children[1].style.width = b + "px";
 	}
 	var parts = name.split("\n");
+	removeChildren(channelElem);
+	channelElem.appendChild(document.createTextNode(parts[1]));
 	document.title = parts[1] + " - " + parts[0] + " - MamIRC";
 }
 

@@ -120,7 +120,7 @@ tbody td:nth-child(3) {
 	word-wrap: break-word;
 }
 
-#nickname {
+tfoot td {
 	vertical-align: middle;
 }
 
