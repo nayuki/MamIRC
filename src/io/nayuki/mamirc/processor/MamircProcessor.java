@@ -602,6 +602,19 @@ public final class MamircProcessor {
 	}
 	
 	
+	public synchronized void openWindow(String profile, String party) {
+		String lower = profile + "\n" + party.toLowerCase();
+		if (windowCaseMap.containsKey(lower))
+			return;
+		if (!windows.containsKey(profile))
+			windows.put(profile, new TreeMap<String,Window>());
+		Map<String,Window> inner = windows.get(profile);
+		inner.put(party, new Window());
+		windowCaseMap.put(lower, profile + "\n" + party);
+		addUpdate("OPENWIN\n" + profile + "\n" + party);
+	}
+	
+	
 	public synchronized void closeWindow(String profile, String party) {
 		Map<String,Window> inner = windows.get(profile);
 		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)

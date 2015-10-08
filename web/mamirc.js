@@ -240,17 +240,7 @@ function messageToRow(msg, windowName) {
 	td.appendChild(document.createTextNode(who));
 	if (who != "*" && who != "RAW") {
 		td.oncontextmenu = function(ev) {
-			openContextMenu(ev.pageX, ev.pageY, [["Open PM window", function() {
-				var windowName = activeWindowName.split("\n")[0] + "\n" + who;
-				if (windowNames.indexOf(windowName) == -1) {
-					windowNames.push(windowName);
-					windowNames.sort();
-					redrawWindowList();
-					windowMessages[windowName] = [];
-				}
-				setActiveWindow(windowName);
-				inputBoxElem.value = "";
-			}]]);
+			openContextMenu(ev.pageX, ev.pageY, [["Open PM window", function() { openPrivateMessagingWindow(who); }]]);
 			return false;
 		};
 	}
@@ -336,6 +326,17 @@ function loadUpdates(data) {
 				nicknameElem.appendChild(document.createTextNode(parts[2]));
 				activeWindowUpdated = true;
 			}
+		} else if (parts[0] == "OPENWIN") {
+			var windowName = parts[1] + "\n" + parts[2];
+			var index = windowNames.indexOf(windowName);
+			if (index == -1) {
+				windowNames.push(windowName);
+				windowMessages[windowName] = [];
+				windowNames.sort();
+				redrawWindowList();
+				setActiveWindow(windowName);
+				inputBoxElem.value = "";
+			}
 		} else if (parts[0] == "CLOSEWIN") {
 			var windowName = parts[1] + "\n" + parts[2];
 			var index = windowNames.indexOf(windowName);
@@ -384,32 +385,20 @@ function handleInputLine() {
 			sendMessage(parts[0], parts[1], text);
 			
 		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(text)) {
-			// Open and switch to window
-			var windowName = activeWindowName.split("\n")[0] + "\n" + text.substring(7);
-			if (windowNames.indexOf(windowName) == -1) {
-				windowNames.push(windowName);
-				windowNames.sort();
-				redrawWindowList();
-				windowMessages[windowName] = [];
-			}
-			setActiveWindow(windowName);
-			inputBoxElem.value = "";
+			openPrivateMessagingWindow(text.substring(7));
 			
 		} else if (cmd == "msg" && text.split(" ").length >= 3) {
-			// Open and switch to window
 			var parts = split2(text.substring(5));
 			var target = parts[0];
 			var text = parts[1];
 			var profile = activeWindowName.split("\n")[0];
 			var windowName = profile + "\n" + target;
-			if (windowNames.indexOf(windowName) == -1) {
-				windowNames.push(windowName);
-				windowNames.sort();
-				redrawWindowList();
-				windowMessages[windowName] = [];
+			if (windowNames.indexOf(windowName) == -1)
+				openWindow(profile, target, function() { sendMessage(profile, target, text); });
+			else {
+				setActiveWindow(windowName);
+				sendMessage(profile, target, text);
 			}
-			setActiveWindow(windowName);
-			sendMessage(profile, target, text);
 			
 		} else
 			alert("Invalid command");
@@ -419,6 +408,18 @@ function handleInputLine() {
 		sendMessage(parts[0], parts[1], text);
 	}
 	return false;  // To prevent the form submitting
+}
+
+
+function openPrivateMessagingWindow(target) {
+	var profile = activeWindowName.split("\n")[0];
+	var windowName = profile + "\n" + target;
+	if (windowNames.indexOf(windowName) == -1)
+		openWindow(profile, target, null);
+	else {
+		setActiveWindow(windowName);
+		inputBoxElem.value = "";
+	}
 }
 
 
@@ -436,6 +437,17 @@ function sendMessage(profile, target, text) {
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, text]}));
+}
+
+
+function openWindow(profile, target, callback) {
+	var xhr = new XMLHttpRequest();
+	if (callback != null)
+		xhr.onload = callback;
+	xhr.open("POST", "open-window.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
 }
 
 

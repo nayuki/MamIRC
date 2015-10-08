@@ -106,6 +106,14 @@ final class MessageHttpServer {
 						break;
 					}
 					
+					case "/open-window.json": {
+						String profile = Json.getString(reqData, "payload", 0);
+						String target = Json.getString(reqData, "payload", 1);
+						master.openWindow(profile, target);
+						writeJsonResponse(he, true);
+						break;
+					}
+					
 					case "/close-window.json": {
 						String profile = Json.getString(reqData, "payload", 0);
 						String target = Json.getString(reqData, "payload", 1);
@@ -122,6 +130,7 @@ final class MessageHttpServer {
 		server.createContext("/get-state.json", apiHandler);
 		server.createContext("/get-updates.json", apiHandler);
 		server.createContext("/send-message.json", apiHandler);
+		server.createContext("/open-window.json", apiHandler);
 		server.createContext("/close-window.json", apiHandler);
 		
 		// Start the server
