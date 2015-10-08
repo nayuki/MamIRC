@@ -152,3 +152,11 @@ input.is-command {
 #menu a:hover {
 	background-color: #E0E0E0;
 }
+
+.outgoing td:nth-child(2), .outgoing td:nth-child(3) {
+	background: #e8e8ff;
+}
+
+.nickflag {
+	background: #ffe0d0;
+}

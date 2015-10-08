@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
@@ -208,7 +209,10 @@ public final class MamircProcessor {
 					target = who;
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + who + " " + text;
-				addMessage(profile.name, target, ev.timestamp, line, 0);
+				int flags = 0;
+				if (state.nickflagDetector.matcher(text).find())
+					flags |= 1 << 3;
+				addMessage(profile.name, target, ev.timestamp, line, flags);
 				break;
 			}
 			
@@ -345,7 +349,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, ev.timestamp, line, 0);
+				addMessage(profile.name, party, ev.timestamp, line, 1 << 2);
 				break;
 			}
 			
@@ -613,6 +617,7 @@ public final class MamircProcessor {
 		public RegState registrationState;     // Not null
 		public Set<String> rejectedNicknames;  // Not null before successful registration, null thereafter
 		public String currentNickname;         // Can be null
+		public Pattern nickflagDetector;       // Can be null
 		public Map<String,ChannelState> currentChannels;  // Not null, size at least 0
 		
 		// The fields below are only used when processing archived events
@@ -643,6 +648,10 @@ public final class MamircProcessor {
 		
 		public void setNickname(String name) {
 			currentNickname = name;
+			if (name == null)
+				nickflagDetector = null;
+			else
+				nickflagDetector = Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(name) + "(?![A-Za-z0-9_])", Pattern.CASE_INSENSITIVE);
 		}
 		
 		

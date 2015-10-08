@@ -176,25 +176,11 @@ function messageToRow(msg, windowName) {
 		if (mematch != null)
 			s = mematch[1];
 		
-		var myNickname = currentNicknames[windowName.split("\n")[0]];
-		if (who == myNickname)
-			rowClass = "outgoing";
-		else {
-			// Look for a whole word containing my nickname
-			var txt = s.toLowerCase();
-			var pat = myNickname.toLowerCase();
-			var i = 0;
-			while (true) {
-				i = txt.indexOf(pat, i);
-				if (i == -1)
-					break;
-				if ((i == 0 || /^\W$/.test(txt.charAt(i - 1))) &&
-						(i + pat.length == txt.length || /^\W$/.test(txt.charAt(i + pat.length)))) {
-					rowClass = "nickflag";
-					break;
-				}
-			}
-		}
+		var flags = msg[2];
+		if ((flags & 0x4) != 0)
+			rowClass += "outgoing ";
+		if ((flags & 0x8) != 0)
+			rowClass += "nickflag ";
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");
 		
 		while (s != "") {
@@ -287,7 +273,8 @@ function messageToRow(msg, windowName) {
 	}
 	tr.appendChild(td);
 	
-	tr.className = rowClass;
+	if (rowClass != "");
+		tr.className = rowClass;
 	return tr;
 }
 

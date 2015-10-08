@@ -20,7 +20,13 @@ final class Window {
 		
 		public final long timestamp;
 		public final String payload;
+		
+		/* 
+		 * Bit 2: Outgoing PRIVMSG/NOTICE from me
+		 * Bit 3: Incoming PRIVMSG/NOTICE containing my nickname
+		 */
 		public final int flags;
+		
 		
 		public Line(long timestamp, String payload, int flags) {
 			if (payload == null)
