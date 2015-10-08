@@ -19,6 +19,7 @@ import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.processor.MamircProcessor.IrcSession.RegState;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
 
@@ -52,7 +53,7 @@ public final class MamircProcessor {
 	private MessageHttpServer server;
 	
 	// Mutable current state
-	private final Map<Integer,ConnectionState> ircConnections;
+	private final Map<Integer,IrcSession> ircSessions;
 	private final Map<String,Map<String,Window>> windows;
 	private final Map<String,String> windowCaseMap;
 	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
@@ -68,7 +69,7 @@ public final class MamircProcessor {
 			throw new NullPointerException();
 		myConfiguration = procConfig;
 		
-		ircConnections = new HashMap<>();
+		ircSessions = new HashMap<>();
 		windows = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
 		recentUpdates = new ArrayList<>();
@@ -115,23 +116,23 @@ public final class MamircProcessor {
 	// Must only be called by processEvent().
 	private void processConnection(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
-		ConnectionState state = ircConnections.get(conId);  // Possibly null
+		IrcSession state = ircSessions.get(conId);  // Possibly null
 		String line = Utils.fromUtf8(ev.line.getData());
 		
 		if (line.startsWith("connect ")) {
 			String metadata = line.split(" ", 5)[4];
 			if (!myConfiguration.ircNetworks.containsKey(metadata))
 				throw new IllegalStateException("No profile: " + metadata);
-			ircConnections.put(conId, new ConnectionState(myConfiguration.ircNetworks.get(metadata)));
+			ircSessions.put(conId, new IrcSession(myConfiguration.ircNetworks.get(metadata)));
 			
 		} else if (line.startsWith("opened ")) {
-			state.registrationState = ConnectionState.RegState.OPENED;
+			state.registrationState = RegState.OPENED;
 			if (realtime)
 				send(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED\n" + state.profile.name);
 			
 		} else if (line.equals("disconnect") || line.equals("closed")) {
-			ircConnections.remove(conId);
+			ircSessions.remove(conId);
 			tryConnect(state.profile);
 		}
 	}
@@ -140,10 +141,10 @@ public final class MamircProcessor {
 	// Must only be called by processEvent().
 	private void processReceive(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
-		ConnectionState state = ircConnections.get(conId);  // Not null
+		IrcSession state = ircSessions.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
 		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
-		Map<String,ConnectionState.ChannelState> curchans = state.currentChannels;
+		Map<String,IrcSession.ChannelState> curchans = state.currentChannels;
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
@@ -153,7 +154,7 @@ public final class MamircProcessor {
 					state.setNickname(toname);
 					addUpdate("MYNICK\n" + state.profile.name + "\n" + toname);
 				}
-				for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
+				for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 					Set<String> members = entry.getValue().members;
 					if (members.remove(fromname)) {
 						members.add(toname);
@@ -168,7 +169,7 @@ public final class MamircProcessor {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
 				if (who.equals(state.currentNickname) && !curchans.containsKey(chan)) {
-					curchans.put(chan, new ConnectionState.ChannelState());
+					curchans.put(chan, new IrcSession.ChannelState());
 					addUpdate("JOINED\n" + state.profile.name + "\n" + chan);
 				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
@@ -219,7 +220,7 @@ public final class MamircProcessor {
 			case "QUIT": {
 				String who = msg.prefixName;
 				if (!who.equals(state.currentNickname)) {
-					for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
+					for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who)) {
 							String line = msg.command + " " + who + " " + msg.getParameter(0);
 							addMessage(profile.name, entry.getKey(), ev.timestamp, line, 0);
@@ -232,7 +233,7 @@ public final class MamircProcessor {
 			}
 			
 			case "433": {  // ERR_NICKNAMEINUSE
-				if (state.registrationState != ConnectionState.RegState.REGISTERED) {
+				if (state.registrationState != RegState.REGISTERED) {
 					state.rejectedNicknames.add(state.currentNickname);
 					if (realtime) {
 						boolean found = false;
@@ -256,8 +257,8 @@ public final class MamircProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (state.registrationState != ConnectionState.RegState.REGISTERED) {
-					state.registrationState = ConnectionState.RegState.REGISTERED;
+				if (state.registrationState != RegState.REGISTERED) {
+					state.registrationState = RegState.REGISTERED;
 					state.rejectedNicknames = null;
 					if (realtime) {
 						if (profile.nickservPassword != null && !state.sentNickservPassword)
@@ -274,7 +275,7 @@ public final class MamircProcessor {
 			case "353": {  // RPL_NAMREPLY
 				String chan = msg.getParameter(2);
 				if (curchans.containsKey(chan)) {
-					ConnectionState.ChannelState chanstate = curchans.get(chan);
+					IrcSession.ChannelState chanstate = curchans.get(chan);
 					if (!chanstate.processingNamesReply) {
 						chanstate.members.clear();
 						chanstate.processingNamesReply = true;
@@ -296,7 +297,7 @@ public final class MamircProcessor {
 			}
 			
 			case "366": {  // RPL_ENDOFNAMES
-				for (ConnectionState.ChannelState chanstate : curchans.values())
+				for (IrcSession.ChannelState chanstate : curchans.values())
 					chanstate.processingNamesReply = false;
 				break;
 			}
@@ -310,26 +311,26 @@ public final class MamircProcessor {
 	// Must only be called by processEvent().
 	private void processSend(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
-		ConnectionState state = ircConnections.get(conId);  // Not null
+		IrcSession state = ircSessions.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
 		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {
-				if (state.registrationState == ConnectionState.RegState.OPENED) {
-					state.registrationState = ConnectionState.RegState.NICK_SENT;
+				if (state.registrationState == RegState.OPENED) {
+					state.registrationState = RegState.NICK_SENT;
 					if (realtime)
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
-				if (state.registrationState != ConnectionState.RegState.REGISTERED)
+				if (state.registrationState != RegState.REGISTERED)
 					state.setNickname(msg.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
 			
 			case "USER": {
-				if (state.registrationState == ConnectionState.RegState.NICK_SENT)
-					state.registrationState = ConnectionState.RegState.USER_SENT;
+				if (state.registrationState == RegState.NICK_SENT)
+					state.registrationState = RegState.USER_SENT;
 				break;
 			}
 			
@@ -362,8 +363,8 @@ public final class MamircProcessor {
 	// Must only be called from ConnectorReaderThread, and only called once.
 	public synchronized void finishCatchup() {
 		Set<IrcNetwork> activeProfiles = new HashSet<>();
-		for (int conId : ircConnections.keySet()) {
-			ConnectionState state = ircConnections.get(conId);
+		for (int conId : ircSessions.keySet()) {
+			IrcSession state = ircSessions.get(conId);
 			IrcNetwork profile = state.profile;
 			if (!activeProfiles.add(profile))
 				throw new IllegalStateException("Multiple active connections for profile: " + profile.name);
@@ -389,7 +390,7 @@ public final class MamircProcessor {
 						}
 						if (!found)
 							writer.postWrite("disconnect " + conId);
-					} else if (state.registrationState == ConnectionState.RegState.NICK_SENT)
+					} else if (state.registrationState == RegState.NICK_SENT)
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 					break;
 				}
@@ -433,7 +434,7 @@ public final class MamircProcessor {
 				} catch (InterruptedException e) {}
 				
 				synchronized(MamircProcessor.this) {
-					for (ConnectionState state : ircConnections.values()) {
+					for (IrcSession state : ircSessions.values()) {
 						if (state.profile == net)
 							break;
 					}
@@ -471,7 +472,7 @@ public final class MamircProcessor {
 	
 	
 	public synchronized boolean sendMessage(String profile, String party, String line) {
-		for (Map.Entry<Integer,ConnectionState> entry : ircConnections.entrySet()) {
+		for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
 			if (entry.getValue().profile.name.equals(profile)) {
 				send(entry.getKey(), "PRIVMSG", party, line);
 				return true;
@@ -539,14 +540,14 @@ public final class MamircProcessor {
 		
 		// States of current connections
 		Map<String,Map<String,Object>> outConnections = new HashMap<>();
-		for (Map.Entry<Integer,ConnectionState> conEntry : ircConnections.entrySet()) {
-			ConnectionState inConState = conEntry.getValue();
+		for (Map.Entry<Integer,IrcSession> conEntry : ircSessions.entrySet()) {
+			IrcSession inConState = conEntry.getValue();
 			Map<String,Object> outConState = new HashMap<>();
 			outConState.put("currentNickname", inConState.currentNickname);
 			
-			Map<String,ConnectionState.ChannelState> inChannels = inConState.currentChannels;
+			Map<String,IrcSession.ChannelState> inChannels = inConState.currentChannels;
 			Map<String,Map<String,Object>> outChannels = new HashMap<>();
-			for (Map.Entry<String,ConnectionState.ChannelState> chanEntry : inChannels.entrySet()) {
+			for (Map.Entry<String,IrcSession.ChannelState> chanEntry : inChannels.entrySet()) {
 				Map<String,Object> outChanState = new HashMap<>();
 				outChanState.put("members", new ArrayList<>(chanEntry.getValue().members));
 				outChannels.put(chanEntry.getKey(), outChanState);
@@ -625,7 +626,7 @@ public final class MamircProcessor {
 	
 	/*---- Nested classes ----*/
 	
-	private static final class ConnectionState {
+	static final class IrcSession {
 		public IrcNetwork profile;             // Not null
 		public RegState registrationState;     // Not null
 		public Set<String> rejectedNicknames;  // Not null before successful registration, null thereafter
@@ -638,7 +639,7 @@ public final class MamircProcessor {
 		public boolean sentNickservPassword;
 		
 		
-		public ConnectionState(IrcNetwork profile) {
+		public IrcSession(IrcNetwork profile) {
 			this.profile = profile;
 			registrationState = RegState.CONNECTING;
 			rejectedNicknames = new HashSet<>();
