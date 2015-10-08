@@ -86,6 +86,7 @@ public final class MamircProcessor {
 	}
 	
 	
+	
 	/*---- Methods for manipulating global state ----*/
 	
 	public synchronized void processEvent(Event ev, boolean realtime) {
@@ -126,7 +127,7 @@ public final class MamircProcessor {
 		} else if (line.startsWith("opened ")) {
 			state.setRegistrationState(RegState.OPENED);
 			if (realtime)
-				send(conId, "NICK", state.profile.nicknames.get(0));
+				sendIrcLine(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED\n" + state.profile.name);
 			
 		} else if (line.equals("disconnect") || line.equals("closed")) {
@@ -237,7 +238,7 @@ public final class MamircProcessor {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
 							if (!state.getCurrentNickname().contains(nickname)) {
-								send(conId, "NICK", nickname);
+								sendIrcLine(conId, "NICK", nickname);
 								found = true;
 								break;
 							}
@@ -259,9 +260,9 @@ public final class MamircProcessor {
 					state.setRegistrationState(RegState.REGISTERED);
 					if (realtime) {
 						if (profile.nickservPassword != null && !state.getSentNickservPassword())
-							send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
+							sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 						for (String chan : profile.channels)
-							send(conId, "JOIN", chan);
+							sendIrcLine(conId, "JOIN", chan);
 					}
 					addUpdate("MYNICK\n" + profile.name + "\n" + state.getCurrentNickname());
 					connectionAttemptState.remove(state.profile);
@@ -317,7 +318,7 @@ public final class MamircProcessor {
 				if (state.getRegistrationState() == RegState.OPENED) {
 					state.setRegistrationState(RegState.NICK_SENT);
 					if (realtime)
-						send(conId, "USER", profile.username, "0", "*", profile.realname);
+						sendIrcLine(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
 				if (state.getRegistrationState() != RegState.REGISTERED)
 					state.setNickname(msg.getParameter(0));
@@ -370,7 +371,7 @@ public final class MamircProcessor {
 					break;
 				
 				case OPENED: {
-					send(conId, "NICK", profile.nicknames.get(0));
+					sendIrcLine(conId, "NICK", profile.nicknames.get(0));
 					break;
 				}
 				
@@ -380,7 +381,7 @@ public final class MamircProcessor {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
 							if (!state.isNicknameRejected(nickname)) {
-								send(conId, "NICK", nickname);
+								sendIrcLine(conId, "NICK", nickname);
 								found = true;
 								break;
 							}
@@ -388,16 +389,16 @@ public final class MamircProcessor {
 						if (!found)
 							writer.postWrite("disconnect " + conId);
 					} else if (state.getRegistrationState() == RegState.NICK_SENT)
-						send(conId, "USER", profile.username, "0", "*", profile.realname);
+						sendIrcLine(conId, "USER", profile.username, "0", "*", profile.realname);
 					break;
 				}
 				
 				case REGISTERED: {
 					if (profile.nickservPassword != null && !state.getSentNickservPassword())
-						send(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
+						sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
 					for (String chan : profile.channels) {
 						if (!state.getCurrentChannels().containsKey(chan))
-							send(conId, "JOIN", chan);
+							sendIrcLine(conId, "JOIN", chan);
 					}
 					break;
 				}
@@ -455,8 +456,8 @@ public final class MamircProcessor {
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
-	private void send(int conId, String cmd, String... params) {
+	// Must be called from one of the synchronized methods.
+	private void sendIrcLine(int conId, String cmd, String... params) {
 		StringBuilder sb = new StringBuilder("send ").append(conId).append(' ').append(cmd);
 		for (int i = 0; i < params.length; i++) {
 			sb.append(' ');
@@ -468,17 +469,7 @@ public final class MamircProcessor {
 	}
 	
 	
-	public synchronized boolean sendMessage(String profile, String party, String line) {
-		for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
-			if (entry.getValue().profile.name.equals(profile)) {
-				send(entry.getKey(), "PRIVMSG", party, line);
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	
+	// Must only be called from ConnectorReaderThread, and only called once.
 	public synchronized void attachConnectorWriter(OutputWriterThread writer) {
 		if (this.writer != null)
 			throw new IllegalStateException();
@@ -492,7 +483,7 @@ public final class MamircProcessor {
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
+	// Must be called from one of the synchronized methods.
 	private void addUpdate(String update) {
 		if (update == null)
 			throw new NullPointerException();
@@ -531,6 +522,10 @@ public final class MamircProcessor {
 		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line + "\n" + flags);
 	}
 	
+	
+	/*---- HTTP web API ----*/
+	
+	// The methods below should only be called from MessageHttpServer.
 	
 	public synchronized Map<String,Object> getState() {
 		Map<String,Object> result = new HashMap<>();
@@ -597,6 +592,17 @@ public final class MamircProcessor {
 			result.put("nextUpdateId", nextUpdateId);
 			return result;
 		}
+	}
+	
+	
+	public synchronized boolean sendMessage(String profile, String party, String line) {
+		for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
+			if (entry.getValue().profile.name.equals(profile)) {
+				sendIrcLine(entry.getKey(), "PRIVMSG", party, line);
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	
