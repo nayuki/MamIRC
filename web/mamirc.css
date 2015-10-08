@@ -3,14 +3,15 @@ html {
 	height: 100%;
 	margin: 0em auto;
 	padding: 0em;
+	background-color: #FFFFFF;
 	font-family: sans-serif;
+	color: #000000;
 }
 
 body {
 	height: 100%;
 	margin: 0em;
-	padding: 0em 0em 1.0em;
-	box-sizing: border-box;
+	padding: 0em;
 	overflow-y: scroll;
 }
 
@@ -42,6 +43,8 @@ body {
 
 #main > section:nth-child(2) {
 	height: 99%;
+	padding: 0em 0em 1.0em;
+	box-sizing: border-box;
 }
 
 #main > section:nth-child(2) > div {
@@ -82,6 +85,8 @@ input[type="text"] {
 }
 
 table {
+	margin: 0em 0em 0.5em;
+	padding: 0em;
 	width: 100%;
 	border-collapse: collapse;
 }
@@ -129,7 +134,7 @@ input.is-command {
 
 #menu {
 	position: absolute;
-	padding: 0.3em;
+	padding: 0.1em;
 	border: 1px solid #C0C0C0;
 	border-radius: 0.2em;
 	background-color: #FFFFFF;
@@ -144,7 +149,7 @@ input.is-command {
 
 #menu a {
 	display: block;
-	padding: 0.4em 0.8em;
+	padding: 0.3em 0.9em;
 	text-decoration: none;
 	color: inherit;
 }

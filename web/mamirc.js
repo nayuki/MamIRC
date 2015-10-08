@@ -56,7 +56,7 @@ function getState() {
 		} else {
 			passwordElem.blur();
 			document.getElementById("login").style.display = "none";
-			document.getElementById("main").style.display = "block";
+			document.getElementById("main").style.removeProperty("display");
 			loadState(data);
 			updateState();
 		}
