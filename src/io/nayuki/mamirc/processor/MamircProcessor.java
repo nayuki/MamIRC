@@ -149,7 +149,7 @@ public final class MamircProcessor {
 				String fromname = msg.prefixName;
 				String toname = msg.getParameter(0);
 				if (fromname.equals(state.currentNickname)) {
-					state.currentNickname = toname;
+					state.setNickname(toname);
 					addUpdate("MYNICK\n" + state.profile.name + "\n" + toname);
 				}
 				for (Map.Entry<String,ConnectionState.ChannelState> entry : curchans.entrySet()) {
@@ -242,7 +242,7 @@ public final class MamircProcessor {
 						if (!found)
 							writer.postWrite("disconnect " + conId);
 					} else
-						state.currentNickname = null;
+						state.setNickname(null);
 				}
 				break;
 			}
@@ -318,7 +318,7 @@ public final class MamircProcessor {
 						send(conId, "USER", profile.username, "0", "*", profile.realname);
 				}
 				if (state.registrationState != ConnectionState.RegState.REGISTERED)
-					state.currentNickname = msg.getParameter(0);
+					state.setNickname(msg.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
@@ -638,6 +638,11 @@ public final class MamircProcessor {
 				members = new TreeSet<>();
 				processingNamesReply = false;
 			}
+		}
+		
+		
+		public void setNickname(String name) {
+			currentNickname = name;
 		}
 		
 		
