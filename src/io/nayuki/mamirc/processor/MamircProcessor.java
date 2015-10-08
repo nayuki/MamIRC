@@ -343,7 +343,7 @@ public final class MamircProcessor {
 			}
 			
 			case "PRIVMSG": {
-				if (msg.parameters.size() == 3 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).toUpperCase().startsWith("IDENTIFY "))
+				if (msg.parameters.size() == 2 && msg.getParameter(0).equals("NickServ") && msg.getParameter(1).toUpperCase().startsWith("IDENTIFY "))
 					state.sentNickservPassword = true;
 				String src = state.currentNickname;
 				String party = msg.getParameter(0);
