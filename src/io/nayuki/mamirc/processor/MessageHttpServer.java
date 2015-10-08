@@ -38,13 +38,16 @@ final class MessageHttpServer {
 		server.createContext("/", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
 				try {
-					Headers head = he.getResponseHeaders();
 					String reqPath = he.getRequestURI().getPath();
 					for (String[] entry : STATIC_FILES) {
-						if (entry[0].equals(reqPath)) {
-							head.set("Content-Type", entry[2]);
+						String filePath = entry[0];
+						String uriPath = "/";
+						if (!filePath.equals("mamirc-web-ui.html"))
+							uriPath += filePath;
+						if (uriPath.equals(reqPath)) {
+							he.getResponseHeaders().set("Content-Type", entry[1]);
 							he.sendResponseHeaders(200, 0);
-							InputStream in = new FileInputStream(new File("web", entry[1]));
+							InputStream in = new FileInputStream(new File("web", entry[0]));
 							try {
 								copyStream(in, he.getResponseBody());
 							} finally {
@@ -53,6 +56,7 @@ final class MessageHttpServer {
 							return;
 						}
 					}
+					// If no match
 					he.sendResponseHeaders(404, 0);
 				} finally {
 					he.close();
@@ -141,9 +145,9 @@ final class MessageHttpServer {
 	
 	
 	private static final String[][] STATIC_FILES = {
-		{"/", "mamirc-web-ui.html", "application/xhtml+xml"},
-		{"/mamirc.css", "mamirc.css", "text/css"},
-		{"/mamirc.js", "mamirc.js", "application/javascript"},
+		{"mamirc-web-ui.html", "application/xhtml+xml"},
+		{"mamirc.css", "text/css"},
+		{"mamirc.js", "application/javascript"},
 	};
 	
 	
