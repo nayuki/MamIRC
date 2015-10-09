@@ -166,7 +166,7 @@ function setActiveWindow(name) {
 function messageToRow(msg, windowName) {
 	var who = "RAW";  // String
 	var lineElems = null;  // Array of DOM nodes
-	var parts = split2(msg[1]);
+	var parts = split2(msg[2]);
 	var rowClass = "";
 	var quoteText = null;
 	
@@ -179,7 +179,7 @@ function messageToRow(msg, windowName) {
 		if (mematch != null)
 			s = mematch[1];
 		
-		var flags = msg[2];
+		var flags = msg[3];
 		if ((flags & 0x4) != 0)
 			rowClass += "outgoing ";
 		if ((flags & 0x8) != 0)
@@ -236,7 +236,7 @@ function messageToRow(msg, windowName) {
 	
 	var tr = document.createElement("tr");
 	var td = document.createElement("td");
-	td.appendChild(document.createTextNode(formatDate(msg[0])));
+	td.appendChild(document.createTextNode(formatDate(msg[1])));
 	tr.appendChild(td);
 	
 	td = document.createElement("td");
@@ -251,7 +251,7 @@ function messageToRow(msg, windowName) {
 	
 	td = document.createElement("td");
 	if (lineElems == null)
-		lineElems = [document.createTextNode(msg[1])];
+		lineElems = [document.createTextNode(msg[2])];
 	for (var i = 0; i < lineElems.length; i++)
 		td.appendChild(lineElems[i]);
 	if (quoteText != null) {
@@ -311,7 +311,7 @@ function loadUpdates(data) {
 				windowNames.sort();
 				redrawWindowList();
 			}
-			var msg = [parseInt(parts[3], 10), parts[4], parseInt(parts[5])];
+			var msg = [parseInt(parts[3], 10), parseInt(parts[4], 10), parts[5], parseInt(parts[6])];
 			var messages = windowMessages[windowName];
 			messages.push(msg);
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)

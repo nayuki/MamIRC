@@ -515,11 +515,13 @@ public final class MamircProcessor {
 				windowCaseMap.put(lower, profile + "\n" + target);
 			}
 		}
-		List<Window.Line> list = innerMap.get(target).lines;
-		list.add(new Window.Line(timestamp, line, flags));
+		Window win = innerMap.get(target);
+		int sequence = win.nextSequence;
+		win.addLine(timestamp, line, flags);
+		List<Window.Line> list = win.lines;
 		if (list.size() - 100 >= 10000)
 			list.subList(0, 100).clear();
-		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + timestamp + "\n" + line + "\n" + flags);
+		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + sequence + "\n" + timestamp + "\n" + line + "\n" + flags);
 	}
 	
 	
@@ -557,7 +559,7 @@ public final class MamircProcessor {
 			for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
 				List<List<Object>> outMsgs = new ArrayList<>();
 				for (Window.Line msg : targetEntry.getValue().lines)
-					outMsgs.add(Arrays.<Object>asList(msg.timestamp, msg.payload, msg.flags));
+					outMsgs.add(Arrays.<Object>asList(msg.sequence, msg.timestamp, msg.payload, msg.flags));
 				outSuperMsgs.put(targetEntry.getKey(), outMsgs);
 			}
 			outMessages.put(profileEntry.getKey(), outSuperMsgs);
