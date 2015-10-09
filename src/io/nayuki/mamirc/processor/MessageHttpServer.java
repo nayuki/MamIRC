@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.DeflaterOutputStream;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -204,7 +205,25 @@ final class MessageHttpServer {
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", "application/json; charset=UTF-8");
 		head.set("Cache-Control", "no-cache");
+		
 		byte[] b = Utils.toUtf8(Json.serialize(data));
+		if (b.length > 3000) {  // Try to use compression
+			String accepted = he.getRequestHeaders().getFirst("Accept-Encoding");
+			if (accepted != null) {
+				for (String acc : accepted.split("\\s*,\\s*")) {
+					if (acc.equalsIgnoreCase("deflate")) {
+						ByteArrayOutputStream bout = new ByteArrayOutputStream();
+						DeflaterOutputStream dout = new DeflaterOutputStream(bout);
+						dout.write(b);
+						dout.close();
+						b = bout.toByteArray();
+						head.set("Content-Encoding", "deflate");
+						break;
+					}
+				}
+			}
+		}
+		
 		he.sendResponseHeaders(200, b.length);
 		he.getResponseBody().write(b);
 		he.close();
