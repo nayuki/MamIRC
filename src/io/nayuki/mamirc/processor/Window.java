@@ -9,7 +9,6 @@ final class Window {
 	public List<Line> lines;
 	public int nextSequence;
 	public int markedReadUntil;  // All lines with sequence < markedReadUntil are considered to be already read
-	public int clearedUntil;     // All lines with sequence < clearedUntil are hidden from the web UI
 	
 	
 	
@@ -17,7 +16,6 @@ final class Window {
 		lines = new ArrayList<>();
 		nextSequence = 0;
 		markedReadUntil = 0;
-		clearedUntil = 0;
 	}
 	
 	
@@ -25,6 +23,15 @@ final class Window {
 	public void addLine(long timestamp, String payload, int flags) {
 		lines.add(new Line(nextSequence, timestamp, payload, flags));
 		nextSequence++;
+	}
+	
+	
+	// Deletes all lines with sequence numbers strictly less than the given number.
+	public void clearUntil(int sequence) {
+		int i;
+		for (i = 0; i < lines.size() && lines.get(i).sequence < sequence; i++);
+		lines.subList(0, i).clear();
+		markedReadUntil = Math.max(markedReadUntil, sequence);
 	}
 	
 	
