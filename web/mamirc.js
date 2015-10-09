@@ -110,9 +110,12 @@ function redrawWindowList() {
 	removeChildren(windowListElem);
 	windowNames.forEach(function(windowName) {
 		// windowName has type str, and is of the form (profile+"\n"+party)
-		var a = document.createElement("a");
 		var parts = windowName.split("\n");
-		setElementText(a, parts[1] + " (" + parts[0] + ")");
+		var profile = parts[0];
+		var party = parts[1];
+		
+		var a = document.createElement("a");
+		setElementText(a, party + " (" + profile + ")");
 		a.href = "#";
 		a.onclick = (function(name) {
 			return function() {
@@ -125,7 +128,7 @@ function redrawWindowList() {
 				openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, target); }]]);
 				return false;
 			};
-		})(parts[0], parts[1]);
+		})(profile, party);
 		
 		var li = document.createElement("li");
 		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
@@ -149,9 +152,9 @@ function setActiveWindow(name) {
 		windowLis[i].className = windowNames[i] == name ? "selected" : "";
 	
 	removeChildren(messageListElem);
-	var messages = windowMessages[name];
-	messages.forEach(function(msg) {
-		messageListElem.appendChild(lineDataToRowElem(msg, name));
+	windowMessages[name].forEach(function(line) {
+		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
+		messageListElem.appendChild(lineDataToRowElem(line, name));
 	});
 	reflowMessagesTable();
 }
@@ -170,14 +173,21 @@ function reflowMessagesTable() {
 }
 
 
-// 'msg' is a length-2 array of int timestamp, string line.
-function lineDataToRowElem(msg, windowName) {
+// 'line' is a tuple; this returns a <tr> element.
+function lineDataToRowElem(line, windowName) {
+	// Input variables
+	var sequence = line[0];
+	var timestamp = line[1];
+	var payload = line[2];
+	var flags = line[3];
+	var payloadparts = split2(payload);
+	var type = payloadparts[0];
+	
+	// Output variables
 	var who = "RAW";  // String
 	var lineElems = [];  // Array of DOM nodes
-	var payloadparts = split2(msg[2]);
 	var rowClass = "";
 	var quoteText = null;
-	var type = payloadparts[0];
 	
 	// Take action depending on head of payload
 	if (type == "PRIVMSG") {
@@ -188,7 +198,6 @@ function lineDataToRowElem(msg, windowName) {
 		if (mematch != null)
 			s = mematch[1];
 		
-		var flags = msg[3];
 		if ((flags & 0x1) != 0)
 			rowClass += "outgoing ";
 		if ((flags & 0x2) != 0)
@@ -242,13 +251,11 @@ function lineDataToRowElem(msg, windowName) {
 		var subparts = split2(payloadparts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
 	}
-	if (msg[0] < windowMarkedRead[windowName])
-		rowClass += "read ";
 	
 	// Make timestamp cell
 	var tr = document.createElement("tr");
 	var td = document.createElement("td");
-	td.appendChild(document.createTextNode(formatDate(msg[1])));
+	td.appendChild(document.createTextNode(formatDate(timestamp)));
 	tr.appendChild(td);
 	
 	// Make nickname cell
@@ -265,7 +272,7 @@ function lineDataToRowElem(msg, windowName) {
 	// Make message cell
 	td = document.createElement("td");
 	if (lineElems.length == 0)
-		lineElems.push(document.createTextNode(msg[2]));
+		lineElems.push(document.createTextNode(payload));
 	lineElems.forEach(function(elem) {
 		td.appendChild(elem);
 	});
@@ -277,8 +284,8 @@ function lineDataToRowElem(msg, windowName) {
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
 		}]);
 	}
-	menuItems.push(["Mark read to here", function() { markRead(msg[0] + 1); }]);
-	menuItems.push(["Clear to here", function() { clearLines(msg[0] + 1); }]);
+	menuItems.push(["Mark read to here", function() { markRead(sequence + 1); }]);
+	menuItems.push(["Clear to here", function() { clearLines(sequence + 1); }]);
 	td.oncontextmenu = function(ev) {
 		openContextMenu(ev.pageX, ev.pageY, menuItems);
 		return false;
@@ -286,6 +293,8 @@ function lineDataToRowElem(msg, windowName) {
 	tr.appendChild(td);
 	
 	// Finishing touches
+	if (sequence < windowMarkedRead[windowName])
+		rowClass += "read ";
 	if (rowClass != "")
 		tr.className = rowClass;
 	return tr;
@@ -333,21 +342,23 @@ function loadUpdates(inData) {
 				windowNames.sort();
 				redrawWindowList();
 			}
-			var msg = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
-			var messages = windowMessages[windowName];
-			messages.push(msg);
-			if (messages.length > MAX_MESSAGES_PER_WINDOW)
-				windowMessages[windowName] = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);
+			var line = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
+			var lines = windowMessages[windowName];
+			lines.push(line);
+			if (lines.length > MAX_MESSAGES_PER_WINDOW)
+				windowMessages[windowName] = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);
 			if (windowName == activeWindow[2]) {
-				messageListElem.appendChild(lineDataToRowElem(msg, windowName));
+				messageListElem.appendChild(lineDataToRowElem(line, windowName));
 				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
 		} else if (type == "MYNICK") {
-			currentNicknames[payloadparts[1]] = payloadparts[2];
-			if (activeWindow[0] == payloadparts[1]) {
-				setElementText(nicknameElem, payloadparts[2]);
+			var profile = payloadparts[1];
+			var name = payloadparts[2];
+			currentNicknames[profile] = name;
+			if (activeWindow[0] == profile) {
+				setElementText(nicknameElem, name);
 				activeWindowUpdated = true;
 			}
 		} else if (type == "OPENWIN") {
