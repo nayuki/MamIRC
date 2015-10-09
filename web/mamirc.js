@@ -26,8 +26,8 @@ var MAX_MESSAGES_PER_WINDOW = 3000;
 /*---- Major functions ----*/
 
 function init() {
-	document.getElementsByTagName("form")[0].onsubmit = authenticate;
-	document.getElementsByTagName("form")[1].onsubmit = handleInputLine;
+	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
+	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
 	document.documentElement.onmousedown = closeContextMenu;
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
@@ -74,12 +74,14 @@ function getState() {
 
 
 function loadState(inData) {
+	nextUpdateId = inData.nextUpdateId;
+	currentNicknames = {};
+	for (var profileName in inData.connections)
+		currentNicknames[profileName] = inData.connections[profileName].currentNickname;
+	
 	windowNames = [];
 	windowMessages = {};
 	windowMarkedRead = {};
-	currentNicknames = {};
-	nextUpdateId = inData.nextUpdateId;
-	
 	inData.windows.forEach(function(winTuple) {
 		var windowName = winTuple[0] + "\n" + winTuple[1];
 		if (windowNames.indexOf(windowName) != -1)
@@ -93,9 +95,7 @@ function loadState(inData) {
 		windowMarkedRead[windowName] = winState.markedReadUntil;
 	});
 	
-	for (var profileName in inData.connections)
-		currentNicknames[profileName] = inData.connections[profileName].currentNickname;
-	
+	activeWindow = null;
 	windowNames.sort();
 	redrawWindowList();
 	if (windowNames.length > 0) {
@@ -108,7 +108,7 @@ function loadState(inData) {
 function redrawWindowList() {
 	removeChildren(windowListElem);
 	windowNames.forEach(function(windowName) {
-		var li = document.createElement("li");
+		// windowName has type str, and is of the form (profile+"\n"+party)
 		var a = document.createElement("a");
 		var parts = windowName.split("\n");
 		setElementText(a, parts[1] + " (" + parts[0] + ")");
@@ -125,6 +125,8 @@ function redrawWindowList() {
 				return false;
 			};
 		})(parts[0], parts[1]);
+		
+		var li = document.createElement("li");
 		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
@@ -137,11 +139,13 @@ function setActiveWindow(name) {
 		return;
 	
 	activeWindow = name.split("\n").concat(name);
+	setElementText(nicknameElem, currentNicknames[activeWindow[0]]);
+	setElementText(channelElem, activeWindow[1]);
+	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
+	
 	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0; i < windowLis.length; i++)
 		windowLis[i].className = windowNames[i] == name ? "selected" : "";
-	
-	setElementText(nicknameElem, currentNicknames[activeWindow[0]]);
 	
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
@@ -149,8 +153,6 @@ function setActiveWindow(name) {
 		messageListElem.appendChild(lineDataToRowElem(msg, name));
 	});
 	reflowMessagesTable();
-	setElementText(channelElem, activeWindow[1]);
-	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 }
 
 
@@ -176,6 +178,7 @@ function lineDataToRowElem(msg, windowName) {
 	var quoteText = null;
 	var type = parts[0];
 	
+	// Take action depending on head of payload
 	if (type == "PRIVMSG") {
 		var subparts = split2(parts[1]);
 		who = subparts[0];
@@ -189,7 +192,7 @@ function lineDataToRowElem(msg, windowName) {
 			rowClass += "outgoing ";
 		if ((flags & 0x2) != 0)
 			rowClass += "nickflag ";
-		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");
+		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
 		while (s != "") {
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
@@ -223,10 +226,9 @@ function lineDataToRowElem(msg, windowName) {
 		var subparts = split2(parts[1]);
 		who = "(" + subparts[0] + ")";
 		lineElems.push(document.createTextNode(subparts[1]));
-		
 	} else if (type == "NICK") {
-		var subparts = split2(parts[1]);
 		who = "*";
+		var subparts = split2(parts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " changed their name to " + subparts[1]));
 	} else if (type == "JOIN") {
 		who = "*";
@@ -235,18 +237,20 @@ function lineDataToRowElem(msg, windowName) {
 		who = "*";
 		lineElems.push(document.createTextNode(parts[1] + " left the channel"));
 	} else if (type == "QUIT") {
-		var subparts = split2(parts[1]);
 		who = "*";
+		var subparts = split2(parts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
 	}
 	if (msg[0] < windowMarkedRead[windowName])
 		rowClass += "read ";
 	
+	// Make timestamp cell
 	var tr = document.createElement("tr");
 	var td = document.createElement("td");
 	td.appendChild(document.createTextNode(formatDate(msg[1])));
 	tr.appendChild(td);
 	
+	// Make nickname cell
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
 	if (who != "*" && who != "RAW") {
@@ -257,6 +261,7 @@ function lineDataToRowElem(msg, windowName) {
 	}
 	tr.appendChild(td);
 	
+	// Make message cell
 	td = document.createElement("td");
 	if (lineElems.length == 0)
 		lineElems.push(document.createTextNode(msg[2]));
@@ -279,7 +284,8 @@ function lineDataToRowElem(msg, windowName) {
 	};
 	tr.appendChild(td);
 	
-	if (rowClass != "");
+	// Finishing touches
+	if (rowClass != "")
 		tr.className = rowClass;
 	return tr;
 }
@@ -308,11 +314,11 @@ function updateState() {
 
 
 function loadUpdates(inData) {
+	nextUpdateId = inData.nextUpdateId;
+	
 	var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
 	var scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
-	
-	nextUpdateId = inData.nextUpdateId;
 	inData.updates.forEach(function(payload) {
 		var parts = payload.split("\n");
 		var type = parts[0];
@@ -349,8 +355,8 @@ function loadUpdates(inData) {
 				windowMessages[windowName] = [];
 				windowNames.sort();
 				redrawWindowList();
-				setActiveWindow(windowName);
 				inputBoxElem.value = "";
+				setActiveWindow(windowName);
 			}
 		} else if (type == "CLOSEWIN") {
 			var windowName = parts[1] + "\n" + parts[2];
@@ -396,7 +402,7 @@ function loadUpdates(inData) {
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
 			lines.splice(0, i);
 			if (windowName == activeWindow[2]) {
-				for (; i > 0; i--)
+				for (var j = 0; j < i; j++)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
