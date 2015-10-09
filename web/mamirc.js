@@ -12,7 +12,7 @@ var nicknameElem    = document.getElementById("nickname");
 var passwordElem    = document.getElementById("password");
 
 // Main state
-var activeWindowName = null;  // String
+var activeWindow     = null;  // Tuple<String, String, String>
 var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
 var windowMarkedRead = null;  // Map<String, Integer>
@@ -125,7 +125,7 @@ function redrawWindowList() {
 				return false;
 			};
 		})(parts[0], parts[1]);
-		li.className = windowName == activeWindowName ? "selected" : "";
+		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
 	});
@@ -133,15 +133,15 @@ function redrawWindowList() {
 
 
 function setActiveWindow(name) {
-	if (activeWindowName == name)
+	if (activeWindow != null && activeWindow[2] == name)
 		return;
 	
-	activeWindowName = name;
+	activeWindow = name.split("\n").concat(name);
 	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0; i < windowLis.length; i++)
 		windowLis[i].className = windowNames[i] == name ? "selected" : "";
 	
-	setElementText(nicknameElem, currentNicknames[name.split("\n")[0]]);
+	setElementText(nicknameElem, currentNicknames[activeWindow[0]]);
 	
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
@@ -156,9 +156,8 @@ function setActiveWindow(name) {
 		messageListElem.firstChild.children[0].style.width = a + "px";
 		messageListElem.firstChild.children[1].style.width = b + "px";
 	}
-	var parts = name.split("\n");
-	setElementText(channelElem, parts[1]);
-	document.title = parts[1] + " - " + parts[0] + " - MamIRC";
+	setElementText(channelElem, activeWindow[1]);
+	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 }
 
 
@@ -323,7 +322,7 @@ function loadUpdates(data) {
 			messages.push(msg);
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)
 				windowMessages[windowName] = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);
-			if (windowName == activeWindowName) {
+			if (windowName == activeWindow[2]) {
 				messageListElem.appendChild(messageToRow(msg, windowName));
 				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
 					messageListElem.removeChild(messageListElem.firstChild);
@@ -331,7 +330,7 @@ function loadUpdates(data) {
 			}
 		} else if (parts[0] == "MYNICK") {
 			currentNicknames[parts[1]] = parts[2];
-			if (activeWindowName.split("\n")[0] == parts[1]) {
+			if (activeWindow[0] == parts[1]) {
 				setElementText(nicknameElem, parts[2]);
 				activeWindowUpdated = true;
 			}
@@ -353,7 +352,7 @@ function loadUpdates(data) {
 				windowNames.splice(index, 1);
 				delete windowMessages[windowName];
 				redrawWindowList();
-				if (windowName == activeWindowName) {
+				if (windowName == activeWindow[2]) {
 					inputBoxElem.value = "";
 					if (windowNames.length > 0)
 						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
@@ -365,7 +364,7 @@ function loadUpdates(data) {
 			var windowName = parts[1] + "\n" + parts[2];
 			var seq = parseInt(parts[3], 10);
 			windowMarkedRead[windowName] = seq;
-			if (windowName == activeWindowName) {
+			if (windowName == activeWindow[2]) {
 				var msgs = windowMessages[windowName];
 				var trs = messageListElem.children;
 				for (var j = 0; j < msgs.length; j++) {
@@ -388,7 +387,7 @@ function loadUpdates(data) {
 			var j;
 			for (j = 0; j < msgs.length && msgs[j][0] < seq; j++);
 			msgs.splice(0, j);
-			if (windowName == activeWindowName) {
+			if (windowName == activeWindow[2]) {
 				for (; j > 0; j--)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
@@ -413,8 +412,7 @@ function loadUpdates(data) {
 function handleInputLine() {
 	var text = inputBoxElem.value;
 	if (text.startsWith("//")) {  // Ordinary message beginning with slash
-		var parts = activeWindowName.split("\n");
-		sendMessage(parts[0], parts[1], text.substring(1));
+		sendMessage(activeWindow[0], activeWindow[1], text.substring(1));
 		
 	} else if (text.startsWith("/")) {  // Command or special message
 		var i = text.indexOf(" ");
@@ -424,8 +422,7 @@ function handleInputLine() {
 		
 		if (cmd == "me" && text.length - i >= 2) {
 			var text = "\u0001ACTION " + text.substring(4) + "\u0001";
-			var parts = activeWindowName.split("\n");
-			sendMessage(parts[0], parts[1], text);
+			sendMessage(activeWindow[0], activeWindow[1], text);
 			
 		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(text)) {
 			openPrivateMessagingWindow(text.substring(7));
@@ -434,7 +431,7 @@ function handleInputLine() {
 			var parts = split2(text.substring(5));
 			var target = parts[0];
 			var text = parts[1];
-			var profile = activeWindowName.split("\n")[0];
+			var profile = activeWindow[0];
 			var windowName = profile + "\n" + target;
 			if (windowNames.indexOf(windowName) == -1)
 				openWindow(profile, target, function() { sendMessage(profile, target, text); });
@@ -447,15 +444,14 @@ function handleInputLine() {
 			alert("Invalid command");
 	
 	} else {  // Ordinary message
-		var parts = activeWindowName.split("\n");
-		sendMessage(parts[0], parts[1], text);
+		sendMessage(activeWindow[0], activeWindow[1], text);
 	}
 	return false;  // To prevent the form submitting
 }
 
 
 function openPrivateMessagingWindow(target) {
-	var profile = activeWindowName.split("\n")[0];
+	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
 	if (windowNames.indexOf(windowName) == -1)
 		openWindow(profile, target, null);
@@ -504,24 +500,20 @@ function closeWindow(profile, target) {
 
 
 function markRead(sequence) {
-	var profile = activeWindowName.split("\n")[0];
-	var target = activeWindowName.split("\n")[1];
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", "mark-read.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, sequence]}));
+	xhr.send(JSON.stringify({"password":password, "payload":[activeWindow[0], activeWindow[1], sequence]}));
 }
 
 
 function clearLines(sequence) {
-	var profile = activeWindowName.split("\n")[0];
-	var target = activeWindowName.split("\n")[1];
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", "clear-lines.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, sequence]}));
+	xhr.send(JSON.stringify({"password":password, "payload":[activeWindow[0], activeWindow[1], sequence]}));
 }
 
 
