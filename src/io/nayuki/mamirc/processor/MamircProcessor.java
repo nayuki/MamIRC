@@ -567,6 +567,7 @@ public final class MamircProcessor {
 				
 				Map<String,Object> outWinState = new HashMap<>();
 				outWinState.put("lines", outLines);
+				outWinState.put("markedReadUntil", inWindow.markedReadUntil);
 				outWindow.add(outWinState);
 				outWindows.add(outWindow);
 			}
@@ -613,6 +614,12 @@ public final class MamircProcessor {
 			}
 		}
 		return false;
+	}
+	
+	
+	public synchronized void markRead(String profile, String party, int sequence) {
+		windows.get(profile).get(party).markedReadUntil = sequence;
+		addUpdate("MARKREAD\n" + profile + "\n" + party + "\n" + sequence);
 	}
 	
 	

@@ -15,6 +15,7 @@ var passwordElem    = document.getElementById("password");
 var activeWindowName = null;  // String
 var windowNames      = null;  // List<String>
 var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
+var windowMarkedRead = null;  // Map<String, Integer>
 var currentNicknames = null;  // Map<String, String>
 var nextUpdateId     = null;  // Integer
 var password         = null;  // String
@@ -77,6 +78,7 @@ function getState() {
 function loadState(data) {
 	windowNames = [];
 	windowMessages = {};
+	windowMarkedRead = {};
 	currentNicknames = {};
 	nextUpdateId = data.nextUpdateId;
 	
@@ -91,6 +93,7 @@ function loadState(data) {
 		if (lines.length > MAX_MESSAGES_PER_WINDOW)
 			lines = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
 		windowMessages[windowName] = lines;
+		windowMarkedRead[windowName] = winState.markedReadUntil;
 	}
 	
 	for (var profileName in data.connections)
@@ -235,6 +238,8 @@ function messageToRow(msg, windowName) {
 		who = "*";
 		lineElems = [document.createTextNode(subparts[0] + " has quit: " + subparts[1])];
 	}
+	if (msg[0] < windowMarkedRead[windowName])
+		rowClass += "read ";
 	
 	var tr = document.createElement("tr");
 	var td = document.createElement("td");
@@ -256,16 +261,19 @@ function messageToRow(msg, windowName) {
 		lineElems = [document.createTextNode(msg[2])];
 	for (var i = 0; i < lineElems.length; i++)
 		td.appendChild(lineElems[i]);
+	var menuItems = [];
 	if (quoteText != null) {
-		td.oncontextmenu = function(ev) {
-			openContextMenu(ev.pageX, ev.pageY, [["Quote text", function() {
-				inputBoxElem.value = quoteText;
-				inputBoxElem.focus();
-				inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
-			}]]);
-			return false;
-		};
+		menuItems.push(["Quote text", function() {
+			inputBoxElem.value = quoteText;
+			inputBoxElem.focus();
+			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
+		}]);
 	}
+	menuItems.push(["Mark read to here", function() { markRead(msg[0] + 1); }]);
+	td.oncontextmenu = function(ev) {
+		openContextMenu(ev.pageX, ev.pageY, menuItems);
+		return false;
+	};
 	tr.appendChild(td);
 	
 	if (rowClass != "");
@@ -355,6 +363,25 @@ function loadUpdates(data) {
 						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
 					else
 						removeChildren(messageListElem);
+				}
+			}
+		} else if (parts[0] == "MARKREAD") {
+			var windowName = parts[1] + "\n" + parts[2];
+			var seq = parseInt(parts[3], 10);
+			windowMarkedRead[windowName] = seq;
+			if (windowName == activeWindowName) {
+				var msgs = windowMessages[windowName];
+				var trs = messageListElem.children;
+				for (var j = 0; j < msgs.length; j++) {
+					var expect = msgs[j][0] < seq;
+					var classParts = trs[j].className.split(" ");
+					var k = classParts.indexOf("read");
+					if (expect && k == -1)
+						trs[j].className += "read ";
+					else if (!expect && k != -1) {
+						classParts.splice(k, 1);
+						trs[j].className = classParts.join(" ");
+					}
 				}
 			}
 		}
@@ -462,6 +489,17 @@ function closeWindow(profile, target) {
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
+}
+
+
+function markRead(sequence) {
+	var profile = activeWindowName.split("\n")[0];
+	var target = activeWindowName.split("\n")[1];
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", "mark-read.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, sequence]}));
 }
 
 

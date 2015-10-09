@@ -8,12 +8,14 @@ final class Window {
 	
 	public List<Line> lines;
 	public int nextSequence;
+	public int markedReadUntil;  // All lines with sequence < markedReadUntil are considered to be already read
 	
 	
 	
 	public Window() {
 		lines = new ArrayList<>();
 		nextSequence = 0;
+		markedReadUntil = 0;
 	}
 	
 	
