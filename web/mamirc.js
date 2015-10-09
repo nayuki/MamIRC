@@ -82,8 +82,7 @@ function loadState(data) {
 	currentNicknames = {};
 	nextUpdateId = data.nextUpdateId;
 	
-	for (var i = 0; i < data.windows.length; i++) {
-		var winTuple = data.windows[i];
+	data.windows.forEach(function(winTuple) {
 		var windowName = winTuple[0] + "\n" + winTuple[1];
 		if (windowNames.indexOf(windowName) != -1)
 			throw "Duplicate window";
@@ -94,7 +93,7 @@ function loadState(data) {
 			lines = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
 		windowMessages[windowName] = lines;
 		windowMarkedRead[windowName] = winState.markedReadUntil;
-	}
+	});
 	
 	for (var profileName in data.connections)
 		currentNicknames[profileName] = data.connections[profileName].currentNickname;
@@ -110,10 +109,9 @@ function loadState(data) {
 
 function redrawWindowList() {
 	removeChildren(windowListElem);
-	for (var i = 0; i < windowNames.length; i++) {
+	windowNames.forEach(function(windowName) {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
-		var windowName = windowNames[i];
 		var parts = windowName.split("\n");
 		a.appendChild(document.createTextNode(parts[1] + " (" + parts[0] + ")"));
 		a.href = "#";
@@ -132,7 +130,7 @@ function redrawWindowList() {
 		li.className = windowName == activeWindowName ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
-	}
+	});
 }
 
 
@@ -150,8 +148,9 @@ function setActiveWindow(name) {
 	
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
-	for (var i = 0; i < messages.length; i++)
-		messageListElem.appendChild(messageToRow(messages[i], name));
+	messages.forEach(function(msg) {
+		messageListElem.appendChild(messageToRow(msg, name));
+	});
 	messageListElem.parentNode.style.tableLayout = "auto";
 	if (messages.length > 0) {
 		var a = messageListElem.firstChild.children[0].clientWidth;
@@ -211,8 +210,9 @@ function messageToRow(msg, windowName) {
 		}
 		if (mematch != null) {
 			var em = document.createElement("em");
-			for (var i = 0; i < lineElems.length; i++)
-				em.appendChild(lineElems[i]);
+			lineElems.forEach(function(elem) {
+				em.appendChild(elem);
+			});
 			lineElems = [em];
 			quoteText = "* " + who + " " + quoteText;
 		} else {
@@ -259,8 +259,9 @@ function messageToRow(msg, windowName) {
 	td = document.createElement("td");
 	if (lineElems == null)
 		lineElems = [document.createTextNode(msg[2])];
-	for (var i = 0; i < lineElems.length; i++)
-		td.appendChild(lineElems[i]);
+	lineElems.forEach(function(elem) {
+		td.appendChild(elem);
+	});
 	var menuItems = [];
 	if (quoteText != null) {
 		menuItems.push(["Quote text", function() {
@@ -311,9 +312,8 @@ function loadUpdates(data) {
 	var activeWindowUpdated = false;
 	
 	nextUpdateId = data.nextUpdateId;
-	var updates = data.updates;
-	for (var i = 0; i < updates.length; i++) {
-		var parts = updates[i].split("\n");
+	data.updates.forEach(function(payload) {
+		var parts = payload.split("\n");
 		if (parts[0] == "APPEND") {
 			var windowName = parts[1] + "\n" + parts[2];
 			if (windowNames.indexOf(windowName) == -1) {
@@ -399,7 +399,7 @@ function loadUpdates(data) {
 				activeWindowUpdated = true;
 			}
 		}
-	}
+	});
 	
 	if (activeWindowUpdated) {
 		messageListElem.parentNode.style.tableLayout = "auto";
@@ -539,10 +539,10 @@ function openContextMenu(x, y, items) {
 	div.style.top  = y + "px";
 	var ul = document.createElement("ul");
 	
-	for (var i = 0; i < items.length; i++) {
+	items.forEach(function(item) {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
-		a.appendChild(document.createTextNode(items[i][0]));
+		a.appendChild(document.createTextNode(item[0]));
 		a.href = "#";
 		a.onclick = (function(func) {
 			return function() {
@@ -550,10 +550,10 @@ function openContextMenu(x, y, items) {
 				closeContextMenu();
 				return false;
 			};
-		})(items[i][1]);
+		})(item[1]);
 		li.appendChild(a);
 		ul.appendChild(li);
-	}
+	});
 	
 	div.appendChild(ul);
 	div.onmousedown = function(ev) { ev.stopPropagation(); };
