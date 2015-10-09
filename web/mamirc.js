@@ -80,15 +80,17 @@ function loadState(data) {
 	currentNicknames = {};
 	nextUpdateId = data.nextUpdateId;
 	
-	for (var profileName in data.messages) {
-		for (var targetName in data.messages[profileName]) {
-			var windowName = profileName + "\n" + targetName;
-			windowNames.push(windowName);
-			var messages = data.messages[profileName][targetName];
-			if (messages.length > MAX_MESSAGES_PER_WINDOW)
-				messages = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
-			windowMessages[windowName] = messages;
-		}
+	for (var i = 0; i < data.windows.length; i++) {
+		var winTuple = data.windows[i];
+		var windowName = winTuple[0] + "\n" + winTuple[1];
+		if (windowNames.indexOf(windowName) != -1)
+			throw "Duplicate window";
+		windowNames.push(windowName);
+		var winState = winTuple[2];
+		var lines = winState.lines;
+		if (lines.length > MAX_MESSAGES_PER_WINDOW)
+			lines = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
+		windowMessages[windowName] = lines;
 	}
 	
 	for (var profileName in data.connections)

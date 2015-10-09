@@ -552,20 +552,28 @@ public final class MamircProcessor {
 		}
 		result.put("connections", outConnections);
 		
-		// Messages in current windows
-		Map<String,Map<String,List<List<Object>>>> outMessages = new HashMap<>();
+		// States of current windows
+		List<List<Object>> outWindows = new ArrayList<>();
 		for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
-			Map<String,List<List<Object>>> outSuperMsgs = new HashMap<>();
 			for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
-				List<List<Object>> outMsgs = new ArrayList<>();
-				for (Window.Line msg : targetEntry.getValue().lines)
-					outMsgs.add(Arrays.<Object>asList(msg.sequence, msg.timestamp, msg.payload, msg.flags));
-				outSuperMsgs.put(targetEntry.getKey(), outMsgs);
+				List<Object> outWindow = new ArrayList<>();
+				outWindow.add(profileEntry.getKey());
+				outWindow.add(targetEntry.getKey());
+				
+				Window inWindow = targetEntry.getValue();
+				List<List<Object>> outLines = new ArrayList<>();
+				for (Window.Line line : inWindow.lines)
+					outLines.add(Arrays.<Object>asList(line.sequence, line.timestamp, line.payload, line.flags));
+				
+				Map<String,Object> outWinState = new HashMap<>();
+				outWinState.put("lines", outLines);
+				outWindow.add(outWinState);
+				outWindows.add(outWindow);
 			}
-			outMessages.put(profileEntry.getKey(), outSuperMsgs);
 		}
-		result.put("messages", outMessages);
+		result.put("windows", outWindows);
 		
+		// Miscellaneous
 		result.put("nextUpdateId", nextUpdateId);
 		return result;
 	}
