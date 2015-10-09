@@ -111,9 +111,7 @@ function redrawWindowList() {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
 		var parts = windowName.split("\n");
-		var profile = parts[0];
-		var party = parts[1];
-		setElementText(a, party + " (" + profile + ")");
+		setElementText(a, parts[1] + " (" + parts[0] + ")");
 		a.href = "#";
 		a.onclick = (function(name) {
 			return function() {
@@ -126,7 +124,7 @@ function redrawWindowList() {
 				openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, target); }]]);
 				return false;
 			};
-		})(profile, party);
+		})(parts[0], parts[1]);
 		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
@@ -150,23 +148,28 @@ function setActiveWindow(name) {
 	messages.forEach(function(msg) {
 		messageListElem.appendChild(lineDataToRowElem(msg, name));
 	});
+	reflowMessagesTable();
+	setElementText(channelElem, activeWindow[1]);
+	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
+}
+
+
+function reflowMessagesTable() {
 	messageListElem.parentNode.style.tableLayout = "auto";
-	if (messages.length > 0) {
+	if (messageListElem.children.length > 0) {
 		var a = messageListElem.firstChild.children[0].clientWidth;
 		var b = messageListElem.firstChild.children[1].clientWidth;
 		messageListElem.parentNode.style.tableLayout = "fixed";
 		messageListElem.firstChild.children[0].style.width = a + "px";
 		messageListElem.firstChild.children[1].style.width = b + "px";
 	}
-	setElementText(channelElem, activeWindow[1]);
-	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 }
 
 
 // 'msg' is a length-2 array of int timestamp, string line.
 function lineDataToRowElem(msg, windowName) {
 	var who = "RAW";  // String
-	var lineElems = null;  // Array of DOM nodes
+	var lineElems = [];  // Array of DOM nodes
 	var parts = split2(msg[2]);
 	var rowClass = "";
 	var quoteText = null;
@@ -174,7 +177,6 @@ function lineDataToRowElem(msg, windowName) {
 	if (parts[0] == "PRIVMSG") {
 		var subparts = split2(parts[1]);
 		who = subparts[0];
-		lineElems = [];
 		var s = subparts[1];
 		var mematch = ME_INCOMING_REGEX.exec(s);
 		if (mematch != null)
@@ -218,22 +220,22 @@ function lineDataToRowElem(msg, windowName) {
 	} else if (parts[0] == "NOTICE") {
 		var subparts = split2(parts[1]);
 		who = "(" + subparts[0] + ")";
-		lineElems = [document.createTextNode(subparts[1])];
+		lineElems.push(document.createTextNode(subparts[1]));
 		
 	} else if (parts[0] == "NICK") {
 		var subparts = split2(parts[1]);
 		who = "*";
-		lineElems = [document.createTextNode(subparts[0] + " changed their name to " + subparts[1])];
+		lineElems.push(document.createTextNode(subparts[0] + " changed their name to " + subparts[1]));
 	} else if (parts[0] == "JOIN") {
 		who = "*";
-		lineElems = [document.createTextNode(parts[1] + " joined the channel")];
+		lineElems.push(document.createTextNode(parts[1] + " joined the channel"));
 	} else if (parts[0] == "PART") {
 		who = "*";
-		lineElems = [document.createTextNode(parts[1] + " left the channel")];
+		lineElems.push(document.createTextNode(parts[1] + " left the channel"));
 	} else if (parts[0] == "QUIT") {
 		var subparts = split2(parts[1]);
 		who = "*";
-		lineElems = [document.createTextNode(subparts[0] + " has quit: " + subparts[1])];
+		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
 	}
 	if (msg[0] < windowMarkedRead[windowName])
 		rowClass += "read ";
@@ -254,8 +256,8 @@ function lineDataToRowElem(msg, windowName) {
 	tr.appendChild(td);
 	
 	td = document.createElement("td");
-	if (lineElems == null)
-		lineElems = [document.createTextNode(msg[2])];
+	if (lineElems.length == 0)
+		lineElems.push(document.createTextNode(msg[2]));
 	lineElems.forEach(function(elem) {
 		td.appendChild(elem);
 	});
@@ -398,14 +400,7 @@ function loadUpdates(inData) {
 	});
 	
 	if (activeWindowUpdated) {
-		messageListElem.parentNode.style.tableLayout = "auto";
-		if (messageListElem.children.length > 0) {
-			var a = messageListElem.firstChild.children[0].clientWidth;
-			var b = messageListElem.firstChild.children[1].clientWidth;
-			messageListElem.parentNode.style.tableLayout = "fixed";
-			messageListElem.firstChild.children[0].style.width = a + "px";
-			messageListElem.firstChild.children[1].style.width = b + "px";
-		}
+		reflowMessagesTable();
 		window.scrollTo(0, scrollToBottom ? document.documentElement.scrollHeight : scrollPosition);
 	}
 }
