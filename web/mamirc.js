@@ -73,14 +73,14 @@ function getState() {
 }
 
 
-function loadState(data) {
+function loadState(inData) {
 	windowNames = [];
 	windowMessages = {};
 	windowMarkedRead = {};
 	currentNicknames = {};
-	nextUpdateId = data.nextUpdateId;
+	nextUpdateId = inData.nextUpdateId;
 	
-	data.windows.forEach(function(winTuple) {
+	inData.windows.forEach(function(winTuple) {
 		var windowName = winTuple[0] + "\n" + winTuple[1];
 		if (windowNames.indexOf(windowName) != -1)
 			throw "Duplicate window";
@@ -93,8 +93,8 @@ function loadState(data) {
 		windowMarkedRead[windowName] = winState.markedReadUntil;
 	});
 	
-	for (var profileName in data.connections)
-		currentNicknames[profileName] = data.connections[profileName].currentNickname;
+	for (var profileName in inData.connections)
+		currentNicknames[profileName] = inData.connections[profileName].currentNickname;
 	
 	windowNames.sort();
 	redrawWindowList();
@@ -111,7 +111,9 @@ function redrawWindowList() {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
 		var parts = windowName.split("\n");
-		setElementText(a, parts[1] + " (" + parts[0] + ")");
+		var profile = parts[0];
+		var party = parts[1];
+		setElementText(a, party + " (" + profile + ")");
 		a.href = "#";
 		a.onclick = (function(name) {
 			return function() {
@@ -124,7 +126,7 @@ function redrawWindowList() {
 				openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, target); }]]);
 				return false;
 			};
-		})(parts[0], parts[1]);
+		})(profile, party);
 		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
@@ -146,7 +148,7 @@ function setActiveWindow(name) {
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
 	messages.forEach(function(msg) {
-		messageListElem.appendChild(messageToRow(msg, name));
+		messageListElem.appendChild(lineDataToRowElem(msg, name));
 	});
 	messageListElem.parentNode.style.tableLayout = "auto";
 	if (messages.length > 0) {
@@ -162,7 +164,7 @@ function setActiveWindow(name) {
 
 
 // 'msg' is a length-2 array of int timestamp, string line.
-function messageToRow(msg, windowName) {
+function lineDataToRowElem(msg, windowName) {
 	var who = "RAW";  // String
 	var lineElems = null;  // Array of DOM nodes
 	var parts = split2(msg[2]);
@@ -301,13 +303,13 @@ function updateState() {
 }
 
 
-function loadUpdates(data) {
+function loadUpdates(inData) {
 	var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
 	var scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
 	
-	nextUpdateId = data.nextUpdateId;
-	data.updates.forEach(function(payload) {
+	nextUpdateId = inData.nextUpdateId;
+	inData.updates.forEach(function(payload) {
 		var parts = payload.split("\n");
 		if (parts[0] == "APPEND") {
 			var windowName = parts[1] + "\n" + parts[2];
@@ -323,7 +325,7 @@ function loadUpdates(data) {
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)
 				windowMessages[windowName] = messages.slice(messages.length - MAX_MESSAGES_PER_WINDOW);
 			if (windowName == activeWindow[2]) {
-				messageListElem.appendChild(messageToRow(msg, windowName));
+				messageListElem.appendChild(lineDataToRowElem(msg, windowName));
 				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
@@ -367,15 +369,15 @@ function loadUpdates(data) {
 			if (windowName == activeWindow[2]) {
 				var msgs = windowMessages[windowName];
 				var trs = messageListElem.children;
-				for (var j = 0; j < msgs.length; j++) {
-					var expect = msgs[j][0] < seq;
-					var classParts = trs[j].className.split(" ");
-					var k = classParts.indexOf("read");
-					if (expect && k == -1)
-						trs[j].className += "read ";
-					else if (!expect && k != -1) {
-						classParts.splice(k, 1);
-						trs[j].className = classParts.join(" ");
+				for (var i = 0; i < msgs.length; i++) {
+					var expect = msgs[i][0] < seq;
+					var classParts = trs[i].className.split(" ");
+					var j = classParts.indexOf("read");
+					if (expect && j == -1)
+						trs[i].className += "read ";
+					else if (!expect && j != -1) {
+						classParts.splice(j, 1);
+						trs[i].className = classParts.join(" ");
 					}
 				}
 				activeWindowUpdated = true;
@@ -384,11 +386,11 @@ function loadUpdates(data) {
 			var windowName = parts[1] + "\n" + parts[2];
 			var seq = parseInt(parts[3], 10);
 			var msgs = windowMessages[windowName];
-			var j;
-			for (j = 0; j < msgs.length && msgs[j][0] < seq; j++);
-			msgs.splice(0, j);
+			var i;
+			for (i = 0; i < msgs.length && msgs[i][0] < seq; i++);
+			msgs.splice(0, i);
 			if (windowName == activeWindow[2]) {
-				for (; j > 0; j--)
+				for (; i > 0; i--)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
