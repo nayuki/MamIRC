@@ -9,6 +9,7 @@ final class Window {
 	public List<Line> lines;
 	public int nextSequence;
 	public int markedReadUntil;  // All lines with sequence < markedReadUntil are considered to be already read
+	public int clearedUntil;     // All lines with sequence < clearedUntil are hidden from the web UI
 	
 	
 	
@@ -16,6 +17,7 @@ final class Window {
 		lines = new ArrayList<>();
 		nextSequence = 0;
 		markedReadUntil = 0;
+		clearedUntil = 0;
 	}
 	
 	

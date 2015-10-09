@@ -270,6 +270,7 @@ function messageToRow(msg, windowName) {
 		}]);
 	}
 	menuItems.push(["Mark read to here", function() { markRead(msg[0] + 1); }]);
+	menuItems.push(["Clear to here", function() { clearLines(msg[0] + 1); }]);
 	td.oncontextmenu = function(ev) {
 		openContextMenu(ev.pageX, ev.pageY, menuItems);
 		return false;
@@ -384,6 +385,18 @@ function loadUpdates(data) {
 					}
 				}
 			}
+		} else if (parts[0] == "CLEARLINES") {
+			var windowName = parts[1] + "\n" + parts[2];
+			var seq = parseInt(parts[3], 10);
+			var msgs = windowMessages[windowName];
+			var j;
+			for (j = 0; j < msgs.length && msgs[j][0] < seq; j++);
+			msgs.splice(0, j);
+			if (windowName == activeWindowName) {
+				for (; j > 0; j--)
+					messageListElem.removeChild(messageListElem.firstChild);
+				activeWindowUpdated = true;
+			}
 		}
 	}
 	
@@ -497,6 +510,17 @@ function markRead(sequence) {
 	var target = activeWindowName.split("\n")[1];
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", "mark-read.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, sequence]}));
+}
+
+
+function clearLines(sequence) {
+	var profile = activeWindowName.split("\n")[0];
+	var target = activeWindowName.split("\n")[1];
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", "clear-lines.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, sequence]}));

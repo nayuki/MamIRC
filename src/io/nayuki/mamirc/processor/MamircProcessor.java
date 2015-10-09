@@ -562,8 +562,10 @@ public final class MamircProcessor {
 				
 				Window inWindow = targetEntry.getValue();
 				List<List<Object>> outLines = new ArrayList<>();
-				for (Window.Line line : inWindow.lines)
-					outLines.add(Arrays.<Object>asList(line.sequence, line.timestamp, line.payload, line.flags));
+				for (Window.Line line : inWindow.lines) {
+					if (line.sequence >= inWindow.clearedUntil)
+						outLines.add(Arrays.<Object>asList(line.sequence, line.timestamp, line.payload, line.flags));
+				}
 				
 				Map<String,Object> outWinState = new HashMap<>();
 				outWinState.put("lines", outLines);
@@ -620,6 +622,12 @@ public final class MamircProcessor {
 	public synchronized void markRead(String profile, String party, int sequence) {
 		windows.get(profile).get(party).markedReadUntil = sequence;
 		addUpdate("MARKREAD\n" + profile + "\n" + party + "\n" + sequence);
+	}
+	
+	
+	public synchronized void clearLines(String profile, String party, int sequence) {
+		windows.get(profile).get(party).clearedUntil = sequence;
+		addUpdate("CLEARLINES\n" + profile + "\n" + party + "\n" + sequence);
 	}
 	
 	

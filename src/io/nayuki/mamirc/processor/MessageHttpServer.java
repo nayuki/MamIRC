@@ -119,6 +119,15 @@ final class MessageHttpServer {
 						break;
 					}
 					
+					case "/clear-lines.json": {
+						String profile = Json.getString(reqData, "payload", 0);
+						String target = Json.getString(reqData, "payload", 1);
+						int sequence = Json.getInt(reqData, "payload", 2);
+						master.clearLines(profile, target, sequence);
+						writeJsonResponse(he, true);
+						break;
+					}
+					
 					case "/open-window.json": {
 						String profile = Json.getString(reqData, "payload", 0);
 						String target = Json.getString(reqData, "payload", 1);
@@ -144,6 +153,7 @@ final class MessageHttpServer {
 		server.createContext("/get-updates.json", apiHandler);
 		server.createContext("/send-message.json", apiHandler);
 		server.createContext("/mark-read.json", apiHandler);
+		server.createContext("/clear-lines.json", apiHandler);
 		server.createContext("/open-window.json", apiHandler);
 		server.createContext("/close-window.json", apiHandler);
 		
