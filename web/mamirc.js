@@ -52,9 +52,7 @@ function getState() {
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
 		if (typeof data == "string") {
-			var elem = document.getElementById("login-status");
-			removeChildren(elem);
-			elem.appendChild(document.createTextNode(data));
+			setElementText(document.getElementById("login-status"), data);
 		} else {
 			passwordElem.blur();
 			document.getElementById("login").style.display = "none";
@@ -65,7 +63,7 @@ function getState() {
 	};
 	xhr.ontimeout = xhr.onerror = function() {
 		var li = document.createElement("li");
-		li.appendChild(document.createTextNode("(Unable to connect to data provider)"));
+		setElementText(li, "(Unable to connect to data provider)");
 		windowListElem.appendChild(li);
 	};
 	xhr.open("POST", "get-state.json", true);
@@ -113,7 +111,7 @@ function redrawWindowList() {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
 		var parts = windowName.split("\n");
-		a.appendChild(document.createTextNode(parts[1] + " (" + parts[0] + ")"));
+		setElementText(a, parts[1] + " (" + parts[0] + ")");
 		a.href = "#";
 		a.onclick = (function(name) {
 			return function() {
@@ -143,8 +141,7 @@ function setActiveWindow(name) {
 	for (var i = 0; i < windowLis.length; i++)
 		windowLis[i].className = windowNames[i] == name ? "selected" : "";
 	
-	removeChildren(nicknameElem);
-	nicknameElem.appendChild(document.createTextNode(currentNicknames[name.split("\n")[0]]));
+	setElementText(nicknameElem, currentNicknames[name.split("\n")[0]]);
 	
 	removeChildren(messageListElem);
 	var messages = windowMessages[name];
@@ -160,8 +157,7 @@ function setActiveWindow(name) {
 		messageListElem.firstChild.children[1].style.width = b + "px";
 	}
 	var parts = name.split("\n");
-	removeChildren(channelElem);
-	channelElem.appendChild(document.createTextNode(parts[1]));
+	setElementText(channelElem, parts[1]);
 	document.title = parts[1] + " - " + parts[0] + " - MamIRC";
 }
 
@@ -336,8 +332,7 @@ function loadUpdates(data) {
 		} else if (parts[0] == "MYNICK") {
 			currentNicknames[parts[1]] = parts[2];
 			if (activeWindowName.split("\n")[0] == parts[1]) {
-				removeChildren(nicknameElem);
-				nicknameElem.appendChild(document.createTextNode(parts[2]));
+				setElementText(nicknameElem, parts[2]);
 				activeWindowUpdated = true;
 			}
 		} else if (parts[0] == "OPENWIN") {
@@ -542,7 +537,7 @@ function openContextMenu(x, y, items) {
 	items.forEach(function(item) {
 		var li = document.createElement("li");
 		var a = document.createElement("a");
-		a.appendChild(document.createTextNode(item[0]));
+		setElementText(a, item[0]);
 		a.href = "#";
 		a.onclick = (function(func) {
 			return function() {
@@ -590,6 +585,12 @@ function twoDigits(n) {
 function removeChildren(elem) {
 	while (elem.firstChild != null)
 		elem.removeChild(elem.firstChild);
+}
+
+
+function setElementText(elem, str) {
+	removeChildren(elem);
+	elem.appendChild(document.createTextNode(str));
 }
 
 
