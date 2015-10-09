@@ -76,18 +76,19 @@ function getState() {
 function loadState(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	currentNicknames = {};
-	for (var profileName in inData.connections)
-		currentNicknames[profileName] = inData.connections[profileName].currentNickname;
+	for (var profile in inData.connections)
+		currentNicknames[profile] = inData.connections[profile].currentNickname;
 	
 	windowNames = [];
 	windowMessages = {};
 	windowMarkedRead = {};
-	inData.windows.forEach(function(winTuple) {
-		var windowName = winTuple[0] + "\n" + winTuple[1];
+	inData.windows.forEach(function(inWindow) {
+		// 'inWindow' has type tuple<str profile, str party, window state>
+		var windowName = inWindow[0] + "\n" + inWindow[1];
 		if (windowNames.indexOf(windowName) != -1)
 			throw "Duplicate window";
 		windowNames.push(windowName);
-		var winState = winTuple[2];
+		var winState = inWindow[2];
 		var lines = winState.lines;
 		if (lines.length > MAX_MESSAGES_PER_WINDOW)
 			lines = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
@@ -173,14 +174,14 @@ function reflowMessagesTable() {
 function lineDataToRowElem(msg, windowName) {
 	var who = "RAW";  // String
 	var lineElems = [];  // Array of DOM nodes
-	var parts = split2(msg[2]);
+	var payloadparts = split2(msg[2]);
 	var rowClass = "";
 	var quoteText = null;
-	var type = parts[0];
+	var type = payloadparts[0];
 	
 	// Take action depending on head of payload
 	if (type == "PRIVMSG") {
-		var subparts = split2(parts[1]);
+		var subparts = split2(payloadparts[1]);
 		who = subparts[0];
 		var s = subparts[1];
 		var mematch = ME_INCOMING_REGEX.exec(s);
@@ -223,22 +224,22 @@ function lineDataToRowElem(msg, windowName) {
 			quoteText = "<" + who + "> " + quoteText;
 		}
 	} else if (type == "NOTICE") {
-		var subparts = split2(parts[1]);
+		var subparts = split2(payloadparts[1]);
 		who = "(" + subparts[0] + ")";
 		lineElems.push(document.createTextNode(subparts[1]));
 	} else if (type == "NICK") {
 		who = "*";
-		var subparts = split2(parts[1]);
+		var subparts = split2(payloadparts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " changed their name to " + subparts[1]));
 	} else if (type == "JOIN") {
 		who = "*";
-		lineElems.push(document.createTextNode(parts[1] + " joined the channel"));
+		lineElems.push(document.createTextNode(payloadparts[1] + " joined the channel"));
 	} else if (type == "PART") {
 		who = "*";
-		lineElems.push(document.createTextNode(parts[1] + " left the channel"));
+		lineElems.push(document.createTextNode(payloadparts[1] + " left the channel"));
 	} else if (type == "QUIT") {
 		who = "*";
-		var subparts = split2(parts[1]);
+		var subparts = split2(payloadparts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
 	}
 	if (msg[0] < windowMarkedRead[windowName])
@@ -320,17 +321,19 @@ function loadUpdates(inData) {
 	var scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
-		var parts = payload.split("\n");
-		var type = parts[0];
+		// 'payload' has type str, and has a variable number of parts delimited by '\n'
+		var payloadparts = payload.split("\n");
+		var type = payloadparts[0];
+		
 		if (type == "APPEND") {
-			var windowName = parts[1] + "\n" + parts[2];
+			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			if (windowNames.indexOf(windowName) == -1) {
 				windowMessages[windowName] = [];
 				windowNames.push(windowName);
 				windowNames.sort();
 				redrawWindowList();
 			}
-			var msg = [parseInt(parts[3], 10), parseInt(parts[4], 10), parts[5], parseInt(parts[6])];
+			var msg = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
 			var messages = windowMessages[windowName];
 			messages.push(msg);
 			if (messages.length > MAX_MESSAGES_PER_WINDOW)
@@ -342,13 +345,13 @@ function loadUpdates(inData) {
 				activeWindowUpdated = true;
 			}
 		} else if (type == "MYNICK") {
-			currentNicknames[parts[1]] = parts[2];
-			if (activeWindow[0] == parts[1]) {
-				setElementText(nicknameElem, parts[2]);
+			currentNicknames[payloadparts[1]] = payloadparts[2];
+			if (activeWindow[0] == payloadparts[1]) {
+				setElementText(nicknameElem, payloadparts[2]);
 				activeWindowUpdated = true;
 			}
 		} else if (type == "OPENWIN") {
-			var windowName = parts[1] + "\n" + parts[2];
+			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			var index = windowNames.indexOf(windowName);
 			if (index == -1) {
 				windowNames.push(windowName);
@@ -359,7 +362,7 @@ function loadUpdates(inData) {
 				setActiveWindow(windowName);
 			}
 		} else if (type == "CLOSEWIN") {
-			var windowName = parts[1] + "\n" + parts[2];
+			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			var index = windowNames.indexOf(windowName);
 			if (index != -1) {
 				windowNames.splice(index, 1);
@@ -374,8 +377,8 @@ function loadUpdates(inData) {
 				}
 			}
 		} else if (type == "MARKREAD") {
-			var windowName = parts[1] + "\n" + parts[2];
-			var seq = parseInt(parts[3], 10);
+			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var seq = parseInt(payloadparts[3], 10);
 			windowMarkedRead[windowName] = seq;
 			if (windowName == activeWindow[2]) {
 				var lines = windowMessages[windowName];
@@ -395,8 +398,8 @@ function loadUpdates(inData) {
 				activeWindowUpdated = true;
 			}
 		} else if (type == "CLEARLINES") {
-			var windowName = parts[1] + "\n" + parts[2];
-			var seq = parseInt(parts[3], 10);
+			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var seq = parseInt(payloadparts[3], 10);
 			var lines = windowMessages[windowName];
 			var i;
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
