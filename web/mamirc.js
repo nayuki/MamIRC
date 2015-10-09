@@ -384,6 +384,7 @@ function loadUpdates(data) {
 						trs[j].className = classParts.join(" ");
 					}
 				}
+				activeWindowUpdated = true;
 			}
 		} else if (parts[0] == "CLEARLINES") {
 			var windowName = parts[1] + "\n" + parts[2];
@@ -402,11 +403,13 @@ function loadUpdates(data) {
 	
 	if (activeWindowUpdated) {
 		messageListElem.parentNode.style.tableLayout = "auto";
-		var a = messageListElem.firstChild.children[0].clientWidth;
-		var b = messageListElem.firstChild.children[1].clientWidth;
-		messageListElem.parentNode.style.tableLayout = "fixed";
-		messageListElem.firstChild.children[0].style.width = a + "px";
-		messageListElem.firstChild.children[1].style.width = b + "px";
+		if (messageListElem.children.length > 0) {
+			var a = messageListElem.firstChild.children[0].clientWidth;
+			var b = messageListElem.firstChild.children[1].clientWidth;
+			messageListElem.parentNode.style.tableLayout = "fixed";
+			messageListElem.firstChild.children[0].style.width = a + "px";
+			messageListElem.firstChild.children[1].style.width = b + "px";
+		}
 		window.scrollTo(0, scrollToBottom ? document.documentElement.scrollHeight : scrollPosition);
 	}
 }
