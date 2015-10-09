@@ -185,9 +185,9 @@ function messageToRow(msg, windowName) {
 			s = mematch[1];
 		
 		var flags = msg[3];
-		if ((flags & 0x4) != 0)
+		if ((flags & 0x1) != 0)
 			rowClass += "outgoing ";
-		if ((flags & 0x8) != 0)
+		if ((flags & 0x2) != 0)
 			rowClass += "nickflag ";
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");
 		

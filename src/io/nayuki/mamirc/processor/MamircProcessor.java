@@ -211,7 +211,7 @@ public final class MamircProcessor {
 				String line = msg.command + " " + who + " " + text;
 				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
-					flags |= 1 << 3;
+					flags |= 1 << 1;
 				addMessage(profile.name, target, ev.timestamp, line, flags);
 				break;
 			}
@@ -348,7 +348,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, ev.timestamp, line, 1 << 2);
+				addMessage(profile.name, party, ev.timestamp, line, 1 << 0);
 				break;
 			}
 			
@@ -626,7 +626,9 @@ public final class MamircProcessor {
 	
 	
 	public synchronized void clearLines(String profile, String party, int sequence) {
-		windows.get(profile).get(party).clearedUntil = sequence;
+		Window win = windows.get(profile).get(party);
+		win.clearedUntil = sequence;
+		win.markedReadUntil = Math.max(win.markedReadUntil, sequence);
 		addUpdate("CLEARLINES\n" + profile + "\n" + party + "\n" + sequence);
 	}
 	

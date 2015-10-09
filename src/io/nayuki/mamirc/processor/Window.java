@@ -36,8 +36,8 @@ final class Window {
 		public final String payload;
 		
 		/* 
-		 * Bit 2: Outgoing PRIVMSG/NOTICE from me
-		 * Bit 3: Incoming PRIVMSG/NOTICE containing my nickname
+		 * Bit 0: Outgoing PRIVMSG/NOTICE from me
+		 * Bit 1: Incoming PRIVMSG/NOTICE containing my nickname
 		 */
 		public final int flags;
 		
