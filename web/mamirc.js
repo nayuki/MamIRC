@@ -155,13 +155,14 @@ function setActiveWindow(name) {
 
 
 function reflowMessagesTable() {
-	messageListElem.parentNode.style.tableLayout = "auto";
+	var tableElem = messageListElem.parentNode;
+	tableElem.style.tableLayout = "auto";
 	if (messageListElem.children.length > 0) {
-		var a = messageListElem.firstChild.children[0].clientWidth;
-		var b = messageListElem.firstChild.children[1].clientWidth;
-		messageListElem.parentNode.style.tableLayout = "fixed";
-		messageListElem.firstChild.children[0].style.width = a + "px";
-		messageListElem.firstChild.children[1].style.width = b + "px";
+		var cols = messageListElem.firstChild.children;
+		var widths = [cols[0].clientWidth, cols[1].clientWidth];
+		tableElem.style.tableLayout = "fixed";
+		cols[0].style.width = widths[0] + "px";
+		cols[1].style.width = widths[1] + "px";
 	}
 }
 
@@ -173,8 +174,9 @@ function lineDataToRowElem(msg, windowName) {
 	var parts = split2(msg[2]);
 	var rowClass = "";
 	var quoteText = null;
+	var type = parts[0];
 	
-	if (parts[0] == "PRIVMSG") {
+	if (type == "PRIVMSG") {
 		var subparts = split2(parts[1]);
 		who = subparts[0];
 		var s = subparts[1];
@@ -217,22 +219,22 @@ function lineDataToRowElem(msg, windowName) {
 		} else {
 			quoteText = "<" + who + "> " + quoteText;
 		}
-	} else if (parts[0] == "NOTICE") {
+	} else if (type == "NOTICE") {
 		var subparts = split2(parts[1]);
 		who = "(" + subparts[0] + ")";
 		lineElems.push(document.createTextNode(subparts[1]));
 		
-	} else if (parts[0] == "NICK") {
+	} else if (type == "NICK") {
 		var subparts = split2(parts[1]);
 		who = "*";
 		lineElems.push(document.createTextNode(subparts[0] + " changed their name to " + subparts[1]));
-	} else if (parts[0] == "JOIN") {
+	} else if (type == "JOIN") {
 		who = "*";
 		lineElems.push(document.createTextNode(parts[1] + " joined the channel"));
-	} else if (parts[0] == "PART") {
+	} else if (type == "PART") {
 		who = "*";
 		lineElems.push(document.createTextNode(parts[1] + " left the channel"));
-	} else if (parts[0] == "QUIT") {
+	} else if (type == "QUIT") {
 		var subparts = split2(parts[1]);
 		who = "*";
 		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
@@ -313,7 +315,8 @@ function loadUpdates(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	inData.updates.forEach(function(payload) {
 		var parts = payload.split("\n");
-		if (parts[0] == "APPEND") {
+		var type = parts[0];
+		if (type == "APPEND") {
 			var windowName = parts[1] + "\n" + parts[2];
 			if (windowNames.indexOf(windowName) == -1) {
 				windowMessages[windowName] = [];
@@ -332,13 +335,13 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
-		} else if (parts[0] == "MYNICK") {
+		} else if (type == "MYNICK") {
 			currentNicknames[parts[1]] = parts[2];
 			if (activeWindow[0] == parts[1]) {
 				setElementText(nicknameElem, parts[2]);
 				activeWindowUpdated = true;
 			}
-		} else if (parts[0] == "OPENWIN") {
+		} else if (type == "OPENWIN") {
 			var windowName = parts[1] + "\n" + parts[2];
 			var index = windowNames.indexOf(windowName);
 			if (index == -1) {
@@ -349,7 +352,7 @@ function loadUpdates(inData) {
 				setActiveWindow(windowName);
 				inputBoxElem.value = "";
 			}
-		} else if (parts[0] == "CLOSEWIN") {
+		} else if (type == "CLOSEWIN") {
 			var windowName = parts[1] + "\n" + parts[2];
 			var index = windowNames.indexOf(windowName);
 			if (index != -1) {
@@ -364,33 +367,34 @@ function loadUpdates(inData) {
 						removeChildren(messageListElem);
 				}
 			}
-		} else if (parts[0] == "MARKREAD") {
+		} else if (type == "MARKREAD") {
 			var windowName = parts[1] + "\n" + parts[2];
 			var seq = parseInt(parts[3], 10);
 			windowMarkedRead[windowName] = seq;
 			if (windowName == activeWindow[2]) {
-				var msgs = windowMessages[windowName];
-				var trs = messageListElem.children;
-				for (var i = 0; i < msgs.length; i++) {
-					var expect = msgs[i][0] < seq;
-					var classParts = trs[i].className.split(" ");
+				var lines = windowMessages[windowName];
+				var rows = messageListElem.children;
+				for (var i = 0; i < lines.length; i++) {
+					var row = rows[i];
+					var markread = lines[i][0] < seq;
+					var classParts = row.className.split(" ");
 					var j = classParts.indexOf("read");
-					if (expect && j == -1)
-						trs[i].className += "read ";
-					else if (!expect && j != -1) {
+					if (markread && j == -1)
+						row.className += "read ";
+					else if (!markread && j != -1) {
 						classParts.splice(j, 1);
-						trs[i].className = classParts.join(" ");
+						row.className = classParts.join(" ");
 					}
 				}
 				activeWindowUpdated = true;
 			}
-		} else if (parts[0] == "CLEARLINES") {
+		} else if (type == "CLEARLINES") {
 			var windowName = parts[1] + "\n" + parts[2];
 			var seq = parseInt(parts[3], 10);
-			var msgs = windowMessages[windowName];
+			var lines = windowMessages[windowName];
 			var i;
-			for (i = 0; i < msgs.length && msgs[i][0] < seq; i++);
-			msgs.splice(0, i);
+			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
+			lines.splice(0, i);
 			if (windowName == activeWindow[2]) {
 				for (; i > 0; i--)
 					messageListElem.removeChild(messageListElem.firstChild);
