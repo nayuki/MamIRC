@@ -4,12 +4,12 @@
 /*---- Global variables ----*/
 
 // Document nodes (elements)
-var windowListElem  = document.getElementById("window-list");
-var messageListElem = document.getElementById("message-list");
-var inputBoxElem    = document.getElementById("input-box");
-var channelElem     = document.getElementById("channel");
-var nicknameElem    = document.getElementById("nickname");
-var passwordElem    = document.getElementById("password");
+const windowListElem  = document.getElementById("window-list");
+const messageListElem = document.getElementById("message-list");
+const inputBoxElem    = document.getElementById("input-box");
+const channelElem     = document.getElementById("channel");
+const nicknameElem    = document.getElementById("nickname");
+const passwordElem    = document.getElementById("password");
 
 /* Main state */
 
@@ -36,7 +36,7 @@ var nextUpdateId = null;
 // Type str. Gets set by submitting the login form, and remains unchanged after a successful getState().
 var password = null;
 
-var MAX_MESSAGES_PER_WINDOW = 3000;
+const MAX_MESSAGES_PER_WINDOW = 3000;
 
 
 /*---- Major functions ----*/
@@ -194,12 +194,12 @@ function reflowMessagesTable() {
 // 'line' is a tuple; this returns a <tr> element.
 function lineDataToRowElem(line) {
 	// Input variables
-	var sequence = line[0];
-	var timestamp = line[1];
-	var payload = line[2];
-	var flags = line[3];
-	var payloadparts = split2(payload);
-	var type = payloadparts[0];
+	const sequence = line[0];
+	const timestamp = line[1];
+	const payload = line[2];
+	const flags = line[3];
+	const payloadparts = split2(payload);
+	const type = payloadparts[0];
 	
 	// Output variables
 	var who = "RAW";
@@ -339,8 +339,8 @@ function updateState() {
 function loadUpdates(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	
-	var scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
-	var scrollPosition = document.documentElement.scrollTop;
+	const scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
+	const scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
 		// 'payload' has type str, and has a variable number of parts delimited by '\n'
