@@ -136,18 +136,14 @@ function redrawWindowList() {
 		var a = document.createElement("a");
 		setElementText(a, party + " (" + profile + ")");
 		a.href = "#";
-		a.onclick = (function(name) {
-			return function() {
-				setActiveWindow(name);
-				return false;
-			};
-		})(windowName);
-		a.oncontextmenu = (function(profile, target) {
-			return function(ev) {
-				openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, target); }]]);
-				return false;
-			};
-		})(profile, party);
+		a.onclick = function() {
+			setActiveWindow(windowName);
+			return false;
+		};
+		a.oncontextmenu = function(ev) {
+			openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, party); }]]);
+			return false;
+		};
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -582,13 +578,11 @@ function openContextMenu(x, y, items) {
 		} else {
 			child = document.createElement("a");
 			child.href = "#";
-			child.onclick = (function(func) {
-				return function() {
-					func();
-					closeContextMenu();
-					return false;
-				};
-			})(item[1]);
+			child.onclick = function() {
+				item[1]();
+				closeContextMenu();
+				return false;
+			};
 		}
 		setElementText(child, item[0]);
 		li.appendChild(child);
