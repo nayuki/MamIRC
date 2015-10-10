@@ -140,10 +140,7 @@ function redrawWindowList() {
 			setActiveWindow(windowName);
 			return false;
 		};
-		a.oncontextmenu = function(ev) {
-			openContextMenu(ev.pageX, ev.pageY, [["Close window", function() { closeWindow(profile, party); }]]);
-			return false;
-		};
+		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { closeWindow(profile, party); }]]);
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -284,12 +281,8 @@ function lineDataToRowElem(line) {
 	// Make nickname cell
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
-	if (who != "*" && who != "RAW") {
-		td.oncontextmenu = function(ev) {
-			openContextMenu(ev.pageX, ev.pageY, [["Open PM window", function() { openPrivateMessagingWindow(who); }]]);
-			return false;
-		};
-	}
+	if (who != "*" && who != "RAW")
+		td.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(who); }]]);
 	tr.appendChild(td);
 	
 	// Make message cell
@@ -309,10 +302,7 @@ function lineDataToRowElem(line) {
 	}
 	menuItems.push(["Mark read to here", function() { markRead(sequence + 1); }]);
 	menuItems.push(["Clear to here", function() { clearLines(sequence + 1); }]);
-	td.oncontextmenu = function(ev) {
-		openContextMenu(ev.pageX, ev.pageY, menuItems);
-		return false;
-	};
+	td.oncontextmenu = makeContextMenuOpener(menuItems);
 	tr.appendChild(td);
 	
 	// Finishing touches
@@ -560,38 +550,41 @@ function clearLines(sequence) {
 }
 
 
-// x and y are numbers, items is a list of pairs {text string, onclick function}.
-function openContextMenu(x, y, items) {
-	closeContextMenu();
-	var div = document.createElement("div");
-	div.id = "menu";
-	div.style.left = x + "px";
-	div.style.top  = y + "px";
-	var ul = document.createElement("ul");
-	
-	items.forEach(function(item) {
-		var li = document.createElement("li");
-		var child;
-		if (item[1] == null) {
-			child = document.createElement("span");
-			child.className = "disabled";
-		} else {
-			child = document.createElement("a");
-			child.href = "#";
-			child.onclick = function() {
-				item[1]();
-				closeContextMenu();
-				return false;
-			};
-		}
-		setElementText(child, item[0]);
-		li.appendChild(child);
-		ul.appendChild(li);
-	});
-	
-	div.appendChild(ul);
-	div.onmousedown = function(ev) { ev.stopPropagation(); };
-	document.getElementsByTagName("body")[0].appendChild(div);
+// 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
+function makeContextMenuOpener(items) {
+	return function(ev) {
+		closeContextMenu();
+		var div = document.createElement("div");
+		div.id = "menu";
+		div.style.left = ev.pageX + "px";
+		div.style.top  = ev.pageY + "px";
+		var ul = document.createElement("ul");
+		
+		items.forEach(function(item) {
+			var li = document.createElement("li");
+			var child;
+			if (item[1] == null) {
+				child = document.createElement("span");
+				child.className = "disabled";
+			} else {
+				child = document.createElement("a");
+				child.href = "#";
+				child.onclick = function() {
+					item[1]();
+					closeContextMenu();
+					return false;
+				};
+			}
+			setElementText(child, item[0]);
+			li.appendChild(child);
+			ul.appendChild(li);
+		});
+		
+		div.appendChild(ul);
+		div.onmousedown = function(evt) { evt.stopPropagation(); };
+		document.getElementsByTagName("body")[0].appendChild(div);
+		return false;
+	};
 }
 
 
