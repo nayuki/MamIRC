@@ -49,6 +49,7 @@ function init() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
 	};
+	inputBoxElem.value = "";
 	passwordElem.oninput = function() {
 		removeChildren(document.getElementById("login-status"));
 	};
@@ -228,6 +229,8 @@ function lineDataToRowElem(line) {
 			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
+		if (s == "")
+			lineElems.push(document.createTextNode(s));
 		while (s != "") {
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
 			if (linkmatch == null)
