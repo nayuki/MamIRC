@@ -300,13 +300,13 @@ function lineDataToRowElem(line) {
 	lineElems.forEach(function(elem) {
 		td.appendChild(elem);
 	});
-	var menuItems = [];
+	var menuItems = [["Quote text", null]];
 	if (quoteText != null) {
-		menuItems.push(["Quote text", function() {
+		menuItems[0][1] = function() {
 			inputBoxElem.value = quoteText;
 			inputBoxElem.focus();
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
-		}]);
+		};
 	}
 	menuItems.push(["Mark read to here", function() { markRead(sequence + 1); }]);
 	menuItems.push(["Clear to here", function() { clearLines(sequence + 1); }]);
@@ -572,17 +572,23 @@ function openContextMenu(x, y, items) {
 	
 	items.forEach(function(item) {
 		var li = document.createElement("li");
-		var a = document.createElement("a");
-		setElementText(a, item[0]);
-		a.href = "#";
-		a.onclick = (function(func) {
-			return function() {
-				func();
-				closeContextMenu();
-				return false;
-			};
-		})(item[1]);
-		li.appendChild(a);
+		var child;
+		if (item[1] == null) {
+			child = document.createElement("span");
+			child.className = "disabled";
+		} else {
+			child = document.createElement("a");
+			child.href = "#";
+			child.onclick = (function(func) {
+				return function() {
+					func();
+					closeContextMenu();
+					return false;
+				};
+			})(item[1]);
+		}
+		setElementText(child, item[0]);
+		li.appendChild(child);
 		ul.appendChild(li);
 	});
 	

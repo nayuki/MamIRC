@@ -147,9 +147,16 @@ input.is-command {
 	list-style-type: none;
 }
 
-#menu a {
+#menu li > a, #menu li > span.disabled {
 	display: block;
 	padding: 0.3em 0.9em;
+}
+
+#menu li > span.disabled {
+	color: #B0B0B0;
+}
+
+#menu a {
 	text-decoration: none;
 	color: inherit;
 }
