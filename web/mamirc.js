@@ -10,6 +10,9 @@ const inputBoxElem    = document.getElementById("input-box");
 const channelElem     = document.getElementById("channel");
 const nicknameElem    = document.getElementById("nickname");
 const passwordElem    = document.getElementById("password");
+const htmlElem        = document.documentElement;
+
+var backgroundImageCss;  // Assigned only once at init()
 
 /* Main state */
 
@@ -44,7 +47,8 @@ const MAX_MESSAGES_PER_WINDOW = 3000;
 function init() {
 	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
-	document.documentElement.onmousedown = closeContextMenu;
+	htmlElem.onmousedown = closeContextMenu;
+	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
@@ -74,6 +78,7 @@ function getState() {
 			passwordElem.blur();
 			document.getElementById("login").style.display = "none";
 			document.getElementById("main").style.removeProperty("display");
+			htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
 			loadState(data);
 			updateState();
 		}
