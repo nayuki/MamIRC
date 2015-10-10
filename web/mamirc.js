@@ -140,7 +140,7 @@ function redrawWindowList() {
 			setActiveWindow(windowName);
 			return false;
 		};
-		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { closeWindow(profile, party); }]]);
+		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { sendAction("close-window.json", [profile, party], null, null); }]]);
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -300,8 +300,8 @@ function lineDataToRowElem(line) {
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
 		};
 	}
-	menuItems.push(["Mark read to here", function() { markRead(sequence + 1); }]);
-	menuItems.push(["Clear to here", function() { clearLines(sequence + 1); }]);
+	menuItems.push(["Mark read to here", function() { sendAction("mark-read.json"  , [activeWindow[0], activeWindow[1], sequence + 1], null, null); }]);
+	menuItems.push(["Clear to here"    , function() { sendAction("clear-lines.json", [activeWindow[0], activeWindow[1], sequence + 1], null, null); }]);
 	td.oncontextmenu = makeContextMenuOpener(menuItems);
 	tr.appendChild(td);
 	
@@ -467,7 +467,7 @@ function handleInputLine() {
 			var profile = activeWindow[0];
 			var windowName = profile + "\n" + target;
 			if (windowNames.indexOf(windowName) == -1)
-				openWindow(profile, target, function() { sendMessage(profile, target, text); });
+				sendAction("open-window.json", [profile, target], function() { sendMessage(profile, target, text); }, null);
 			else {
 				setActiveWindow(windowName);
 				sendMessage(profile, target, text);
@@ -487,7 +487,7 @@ function openPrivateMessagingWindow(target) {
 	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
 	if (windowNames.indexOf(windowName) == -1)
-		openWindow(profile, target, null);
+		sendAction("open-window.json", [profile, target], null, null);
 	else {
 		setActiveWindow(windowName);
 		inputBoxElem.value = "";
@@ -495,58 +495,30 @@ function openPrivateMessagingWindow(target) {
 }
 
 
+// Type signature: str path, jsonobject payload, func onload/null, func ontimeout/null. Returns nothing.
+function sendAction(path, payload, onload, ontimeout) {
+	var xhr = new XMLHttpRequest();
+	if (onload != null)
+		xhr.onload = onload;
+	if (ontimeout != null)
+		xhr.ontimeout = ontimeout;
+	xhr.open("POST", path, true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":payload}));
+}
+
+
 function sendMessage(profile, target, text) {
 	inputBoxElem.disabled = true;
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		inputBoxElem.value = "";
-		inputBoxElem.disabled = false;
-	};
-	xhr.ontimeout = xhr.onerror = function() {
-		inputBoxElem.disabled = false;
-	};
-	xhr.open("POST", "send-message.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[profile, target, text]}));
-}
-
-
-function openWindow(profile, target, callback) {
-	var xhr = new XMLHttpRequest();
-	if (callback != null)
-		xhr.onload = callback;
-	xhr.open("POST", "open-window.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
-}
-
-
-function closeWindow(profile, target) {
-	var xhr = new XMLHttpRequest();
-	xhr.open("POST", "close-window.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[profile, target]}));
-}
-
-
-function markRead(sequence) {
-	var xhr = new XMLHttpRequest();
-	xhr.open("POST", "mark-read.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[activeWindow[0], activeWindow[1], sequence]}));
-}
-
-
-function clearLines(sequence) {
-	var xhr = new XMLHttpRequest();
-	xhr.open("POST", "clear-lines.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":[activeWindow[0], activeWindow[1], sequence]}));
+	sendAction("send-message.json", [profile, target, text],
+		function() {
+			inputBoxElem.value = "";
+			inputBoxElem.disabled = false;
+		},
+		function() {
+			inputBoxElem.disabled = false;
+		});
 }
 
 
