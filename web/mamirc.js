@@ -210,8 +210,8 @@ function lineDataToRowElem(line) {
 	// Output variables
 	var who = "RAW";
 	var lineElems = [];  // list<domnode>
-	var rowClass = "";
 	var quoteText = null;
+	var tr = document.createElement("tr");
 	
 	// Take action depending on head of payload
 	if (type == "PRIVMSG") {
@@ -223,9 +223,9 @@ function lineDataToRowElem(line) {
 			s = mematch[1];
 		
 		if ((flags & 0x1) != 0)
-			rowClass += "outgoing ";
+			tr.classList.add("outgoing");
 		if ((flags & 0x2) != 0)
-			rowClass += "nickflag ";
+			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
 		while (s != "") {
@@ -278,7 +278,6 @@ function lineDataToRowElem(line) {
 	}
 	
 	// Make timestamp cell
-	var tr = document.createElement("tr");
 	var td = document.createElement("td");
 	td.appendChild(document.createTextNode(formatDate(timestamp)));
 	tr.appendChild(td);
@@ -319,9 +318,9 @@ function lineDataToRowElem(line) {
 	
 	// Finishing touches
 	if (sequence < windowData[activeWindow[2]].markedReadUntil)
-		rowClass += "read ";
-	if (rowClass != "")
-		tr.className = rowClass;
+		tr.classList.add("read");
+	else
+		tr.classList.add("unread");
 	return tr;
 }
 
@@ -421,14 +420,13 @@ function loadUpdates(inData) {
 				var rows = messageListElem.children;
 				for (var i = 0; i < lines.length; i++) {
 					var row = rows[i];
-					var markread = lines[i][0] < seq;
-					var classParts = row.className.split(" ");
-					var j = classParts.indexOf("read");
-					if (markread && j == -1)
-						row.className += "read ";
-					else if (!markread && j != -1) {
-						classParts.splice(j, 1);
-						row.className = classParts.join(" ");
+					var cl = row.classList;
+					if (lines[i][0] < seq) {
+						cl.add("read");
+						cl.remove("unread");
+					} else {
+						cl.add("unread");
+						cl.remove("read");
 					}
 				}
 				activeWindowUpdated = true;
