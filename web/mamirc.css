@@ -58,13 +58,30 @@ thead {
 
 #window-list li {
 	display: inline-block;
-	margin-right: 0.4em;
+	margin-right: 0.5em;
 	list-style-type: none;
 }
 
-#window-list a {
+#window-list li.profile, #window-list li > a {
 	display: inline-block;
-	padding: 0.8em 0.4em;
+	padding: 0.5em 1.0em;
+}
+
+#window-list li.profile {
+	padding-right: 0em;
+}
+
+#window-list li.profile::after {
+	content: ":"
+}
+
+#window-list li + li.profile {
+	margin-left: 1.5em;
+	padding-left: 2.0em;
+	border-left: 1px solid #909090;
+}
+
+#window-list a {
 	border: 1px solid #909090;
 	border-radius: 0.8em;
 	color: inherit;

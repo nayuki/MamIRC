@@ -127,14 +127,23 @@ function loadState(inData) {
 
 function redrawWindowList() {
 	removeChildren(windowListElem);
+	var prevProfile = null;
 	windowNames.forEach(function(windowName) {
 		// windowName has type str, and is of the form (profile+"\n"+party)
 		var parts = windowName.split("\n");
 		var profile = parts[0];
 		var party = parts[1];
 		
+		if (prevProfile == null || profile != prevProfile) {
+			var extrali = document.createElement("li");
+			setElementText(extrali, profile);
+			extrali.className = "profile";
+			windowListElem.appendChild(extrali);
+			prevProfile = profile;
+		}
+		
 		var a = document.createElement("a");
-		setElementText(a, party + " (" + profile + ")");
+		setElementText(a, party);
 		a.href = "#";
 		a.onclick = function() {
 			setActiveWindow(windowName);
@@ -152,8 +161,12 @@ function redrawWindowList() {
 
 function refreshWindowSelection() {
 	var windowLis = windowListElem.getElementsByTagName("li");
-	for (var i = 0; i < windowLis.length; i++)
-		windowLis[i].className = (activeWindow != null && windowNames[i] == activeWindow[2]) ? "selected" : "";
+	for (var i = 0, j = 0; i < windowLis.length; i++) {
+		if (windowLis[i].className != "profile") {
+			windowLis[i].className = (activeWindow != null && windowNames[j] == activeWindow[2]) ? "selected" : "";
+			j++;
+		}
+	}
 }
 
 
