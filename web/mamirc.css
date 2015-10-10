@@ -51,8 +51,6 @@ body {
 
 #main > section:nth-child(2) {
 	height: 99%;
-	padding-bottom: 1.0em;
-	box-sizing: border-box;
 }
 
 #main > section:nth-child(2) > div {
@@ -63,39 +61,54 @@ body {
 
 /*---- Small elements ----*/
 
+#login h1 {
+	margin-bottom: 0.5em;
+	font-size: 200%;
+	font-weight: normal;
+}
+
 #login form {
 	display: table-cell;
 	text-align: center;
 	vertical-align: middle;
 }
 
-#window-list li {
-	display: inline-block;
-	margin-right: 0.5em;
+#main h1, #main h2 {
+	display: none;
 }
 
-#window-list li.profile, #window-list li > a {
+#window-list {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	background-color: #FFFFFF;
+}
+
+#window-list li {
 	display: inline-block;
-	padding: 0.5em 1.0em;
+	padding-left: 0.5em;  /* For non-profile */
 }
 
 #window-list li.profile {
-	padding-right: 0em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	padding-left: 0em;
 }
 
 #window-list li.profile::after {
-	content: ":"
+	content: ":";
 }
 
 #window-list li + li.profile {
-	margin-left: 1.5em;
+	margin-left: 2.0em;
 	padding-left: 2.0em;
 	border-left: 1px solid #909090;
 }
 
 #window-list a {
+	display: inline-block;
 	border: 1px solid #909090;
-	border-radius: 0.8em;
+	padding: 0.5em 1.0em;
+	border-radius: 0.5em;
 	color: inherit;
 	text-decoration: none;
 }
@@ -119,7 +132,7 @@ thead {
 }
 
 tr:hover {
-	background-color: #F0F0F0;
+	background-color: #F6F6F6;
 }
 
 td {
