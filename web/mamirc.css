@@ -1,3 +1,5 @@
+/*---- Major elements ----*/
+
 html {
 	max-width: 80em;
 	height: 100%;
@@ -19,12 +21,6 @@ body {
 	display: table;
 	width: 100%;
 	height: 100%;
-}
-
-#login form {
-	display: table-cell;
-	text-align: center;
-	vertical-align: middle;
 }
 
 #main {
@@ -52,8 +48,13 @@ body {
 	vertical-align: bottom;
 }
 
-thead {
-	display: none;
+
+/*---- Small elements ----*/
+
+#login form {
+	display: table-cell;
+	text-align: center;
+	vertical-align: middle;
 }
 
 #window-list li {
@@ -96,16 +97,15 @@ thead {
 	background-color: #F8F8F8;
 }
 
-input[type="text"] {
-	width: 100%;
-	font-size: inherit;
-}
-
 table {
 	margin: 0em 0em 0.5em;
 	padding: 0em;
 	width: 100%;
 	border-collapse: collapse;
+}
+
+thead {
+	display: none;
 }
 
 tr:hover {
@@ -124,7 +124,6 @@ td:nth-child(1) {
 	color: #A0A0A0;
 }
 
-
 td:nth-child(2) {
 	width: 1%;
 	text-align: right;
@@ -141,8 +140,26 @@ tfoot td {
 	vertical-align: middle;
 }
 
+.outgoing td:nth-child(2), .outgoing td:nth-child(3) {
+	background: #e8e8ff;
+}
+
+.nickflag {
+	background: #ffe0d0;
+}
+
+.read {
+	background: #F4F4F4;
+	color: #B0B0B0;
+}
+
 input {
 	font-family: inherit;
+}
+
+input[type="text"] {
+	width: 100%;
+	font-size: inherit;
 }
 
 input.is-command {
@@ -180,17 +197,4 @@ input.is-command {
 
 #menu a:hover {
 	background-color: #E0E0E0;
-}
-
-.outgoing td:nth-child(2), .outgoing td:nth-child(3) {
-	background: #e8e8ff;
-}
-
-.nickflag {
-	background: #ffe0d0;
-}
-
-.read {
-	background: #F4F4F4;
-	color: #B0B0B0;
 }
