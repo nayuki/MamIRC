@@ -131,30 +131,35 @@ function redrawWindowList() {
 		})(profile, party);
 		
 		var li = document.createElement("li");
-		li.className = (activeWindow != null && windowName == activeWindow[2]) ? "selected" : "";
 		li.appendChild(a);
 		windowListElem.appendChild(li);
 	});
+	refreshWindowSelection();
+}
+
+
+function refreshWindowSelection() {
+	var windowLis = windowListElem.getElementsByTagName("li");
+	for (var i = 0; i < windowLis.length; i++)
+		windowLis[i].className = (activeWindow != null && windowNames[i] == activeWindow[2]) ? "selected" : "";
 }
 
 
 function setActiveWindow(name) {
-	if (activeWindow != null && activeWindow[2] == name)
-		return;
+	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1)
+		return;  // Do not redraw or scroll
 	
+	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
 	setElementText(nicknameElem, currentNicknames[activeWindow[0]]);
 	setElementText(channelElem, activeWindow[1]);
 	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
-	
-	var windowLis = windowListElem.getElementsByTagName("li");
-	for (var i = 0; i < windowLis.length; i++)
-		windowLis[i].className = windowNames[i] == name ? "selected" : "";
+	refreshWindowSelection();
 	
 	removeChildren(messageListElem);
 	windowMessages[name].forEach(function(line) {
 		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
-		messageListElem.appendChild(lineDataToRowElem(line, name));
+		messageListElem.appendChild(lineDataToRowElem(line));
 	});
 	reflowMessagesTable();
 }
@@ -174,7 +179,7 @@ function reflowMessagesTable() {
 
 
 // 'line' is a tuple; this returns a <tr> element.
-function lineDataToRowElem(line, windowName) {
+function lineDataToRowElem(line) {
 	// Input variables
 	var sequence = line[0];
 	var timestamp = line[1];
@@ -293,7 +298,7 @@ function lineDataToRowElem(line, windowName) {
 	tr.appendChild(td);
 	
 	// Finishing touches
-	if (sequence < windowMarkedRead[windowName])
+	if (sequence < windowMarkedRead[activeWindow[2]])
 		rowClass += "read ";
 	if (rowClass != "")
 		tr.className = rowClass;
@@ -345,11 +350,11 @@ function loadUpdates(inData) {
 			var line = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
 			var lines = windowMessages[windowName];
 			lines.push(line);
-			if (lines.length > MAX_MESSAGES_PER_WINDOW)
-				windowMessages[windowName] = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);
+			var numPrefixDel = Math.max(lines.length - MAX_MESSAGES_PER_WINDOW, 0);
+			lines.splice(0, numPrefixDel);
 			if (windowName == activeWindow[2]) {
-				messageListElem.appendChild(lineDataToRowElem(line, windowName));
-				while (messageListElem.childNodes.length > MAX_MESSAGES_PER_WINDOW)
+				messageListElem.appendChild(lineDataToRowElem(line));
+				for (var i = 0; i < numPrefixDel; i++)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
