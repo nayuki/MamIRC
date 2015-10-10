@@ -11,14 +11,30 @@ var channelElem     = document.getElementById("channel");
 var nicknameElem    = document.getElementById("nickname");
 var passwordElem    = document.getElementById("password");
 
-// Main state
-var activeWindow     = null;  // Tuple<String, String, String>
-var windowNames      = null;  // List<String>
-var windowMessages   = null;  // Map<String, List<Tuple<Integer, String>>>
-var windowMarkedRead = null;  // Map<String, Integer>
-var currentNicknames = null;  // Map<String, String>
-var nextUpdateId     = null;  // Integer
-var password         = null;  // String
+/* Main state */
+
+// All variables must be null before getState() returns successfully. Thereafter, most of them are non-null.
+
+// Type tuple<str profile, str party, str concatenated>.
+// Is null if windowNames is empty, otherwise this[2] equals an entry in windowNames.
+var activeWindow = null;
+
+// Type list<str>. Length 0 or more. Each element is of the form (profile+"\n"+party).
+// Elements can be in any order, and it determines the order rendered on screen.
+var windowNames = null;
+
+// Type map<str,window>. Key is an entry in windowNames. Each window has the properties
+// "lines" as list<tuple<int seq, int timestamp, str line, int flags>>, "markedReadUntil" as int.
+var windowData = null;
+
+// Type map<str,str>. Key is the network profile name.
+var currentNicknames = null;
+
+// Type int. At least 0.
+var nextUpdateId = null;
+
+// Type str. Gets set by submitting the login form, and remains unchanged after a successful getState().
+var password = null;
 
 var MAX_MESSAGES_PER_WINDOW = 3000;
 
@@ -80,20 +96,22 @@ function loadState(inData) {
 		currentNicknames[profile] = inData.connections[profile].currentNickname;
 	
 	windowNames = [];
-	windowMessages = {};
-	windowMarkedRead = {};
+	windowData = {};
 	inData.windows.forEach(function(inWindow) {
 		// 'inWindow' has type tuple<str profile, str party, window state>
 		var windowName = inWindow[0] + "\n" + inWindow[1];
 		if (windowNames.indexOf(windowName) != -1)
 			throw "Duplicate window";
 		windowNames.push(windowName);
-		var winState = inWindow[2];
-		var lines = winState.lines;
-		if (lines.length > MAX_MESSAGES_PER_WINDOW)
-			lines = lines.slice(lines.length - MAX_MESSAGES_PER_WINDOW);  // Take suffix
-		windowMessages[windowName] = lines;
-		windowMarkedRead[windowName] = winState.markedReadUntil;
+		var inState = inWindow[2];
+		var outState = {
+			lines: inState.lines,
+			markedReadUntil: inState.markedReadUntil,
+		};
+		var numPrefixDel = outState.lines.length - MAX_MESSAGES_PER_WINDOW;
+		if (numPrefixDel > 0)
+			outState.lines.splice(0, numPrefixDel);
+		windowData[windowName] = outState;
 	});
 	
 	activeWindow = null;
@@ -156,8 +174,9 @@ function setActiveWindow(name) {
 	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 	refreshWindowSelection();
 	
+	// Redraw all message lines in this window
 	removeChildren(messageListElem);
-	windowMessages[name].forEach(function(line) {
+	windowData[name].lines.forEach(function(line) {
 		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
 		messageListElem.appendChild(lineDataToRowElem(line));
 	});
@@ -189,8 +208,8 @@ function lineDataToRowElem(line) {
 	var type = payloadparts[0];
 	
 	// Output variables
-	var who = "RAW";  // String
-	var lineElems = [];  // Array of DOM nodes
+	var who = "RAW";
+	var lineElems = [];  // list<domnode>
 	var rowClass = "";
 	var quoteText = null;
 	
@@ -237,6 +256,7 @@ function lineDataToRowElem(line) {
 		} else {
 			quoteText = "<" + who + "> " + quoteText;
 		}
+		
 	} else if (type == "NOTICE") {
 		var subparts = split2(payloadparts[1]);
 		who = "(" + subparts[0] + ")";
@@ -298,7 +318,7 @@ function lineDataToRowElem(line) {
 	tr.appendChild(td);
 	
 	// Finishing touches
-	if (sequence < windowMarkedRead[activeWindow[2]])
+	if (sequence < windowData[activeWindow[2]].markedReadUntil)
 		rowClass += "read ";
 	if (rowClass != "")
 		tr.className = rowClass;
@@ -342,13 +362,13 @@ function loadUpdates(inData) {
 		if (type == "APPEND") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			if (windowNames.indexOf(windowName) == -1) {
-				windowMessages[windowName] = [];
 				windowNames.push(windowName);
 				windowNames.sort();
+				windowData[windowName] = {lines:[], markedReadUntil:0};
 				redrawWindowList();
 			}
 			var line = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
-			var lines = windowMessages[windowName];
+			var lines = windowData[windowName].lines;
 			lines.push(line);
 			var numPrefixDel = Math.max(lines.length - MAX_MESSAGES_PER_WINDOW, 0);
 			lines.splice(0, numPrefixDel);
@@ -371,8 +391,8 @@ function loadUpdates(inData) {
 			var index = windowNames.indexOf(windowName);
 			if (index == -1) {
 				windowNames.push(windowName);
-				windowMessages[windowName] = [];
 				windowNames.sort();
+				windowData[windowName] = {lines:[], markedReadUntil:0};
 				redrawWindowList();
 				inputBoxElem.value = "";
 				setActiveWindow(windowName);
@@ -382,7 +402,7 @@ function loadUpdates(inData) {
 			var index = windowNames.indexOf(windowName);
 			if (index != -1) {
 				windowNames.splice(index, 1);
-				delete windowMessages[windowName];
+				delete windowData[windowName];
 				redrawWindowList();
 				if (windowName == activeWindow[2]) {
 					inputBoxElem.value = "";
@@ -395,9 +415,9 @@ function loadUpdates(inData) {
 		} else if (type == "MARKREAD") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			var seq = parseInt(payloadparts[3], 10);
-			windowMarkedRead[windowName] = seq;
+			windowData[windowName].markedReadUntil = seq;
 			if (windowName == activeWindow[2]) {
-				var lines = windowMessages[windowName];
+				var lines = windowData[windowName].lines;
 				var rows = messageListElem.children;
 				for (var i = 0; i < lines.length; i++) {
 					var row = rows[i];
@@ -416,7 +436,7 @@ function loadUpdates(inData) {
 		} else if (type == "CLEARLINES") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
 			var seq = parseInt(payloadparts[3], 10);
-			var lines = windowMessages[windowName];
+			var lines = windowData[windowName].lines;
 			var i;
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
 			lines.splice(0, i);
