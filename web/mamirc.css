@@ -26,6 +26,12 @@ html {
 	color: #000000;
 }
 
+@media (min-height: 734px) {
+	html {
+		background-image: url("tomoe-mami-2x.png");
+	}
+}
+
 body {
 	max-width: 80em;
 	height: 100%;

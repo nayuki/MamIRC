@@ -161,6 +161,7 @@ final class MessageHttpServer {
 		{"mamirc.css", "text/css"},
 		{"mamirc.js", "application/javascript"},
 		{"tomoe-mami.png", "image/png"},
+		{"tomoe-mami-2x.png", "image/png"},
 	};
 	
 	
