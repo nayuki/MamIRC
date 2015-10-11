@@ -327,7 +327,10 @@ function lineDataToRowElem(line) {
 		};
 	}
 	menuItems.push(["Mark read to here", function() { sendAction([["mark-read"  , activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
-	menuItems.push(["Clear to here"    , function() { sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
+	menuItems.push(["Clear to here"    , function() {
+		if (confirm("Do you want to clear text?"))
+			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null);
+	}]);
 	td.oncontextmenu = makeContextMenuOpener(menuItems);
 	tr.appendChild(td);
 	
