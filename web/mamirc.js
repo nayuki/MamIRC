@@ -30,8 +30,8 @@ var windowNames = null;
 // "lines" as list<tuple<int seq, int timestamp, str line, int flags>>, "markedReadUntil" as int.
 var windowData = null;
 
-// Type map<str,str>. Key is the network profile name.
-var currentNicknames = null;
+// Type map<str,object>. Key is the network profile name.
+var connectionData = null;
 
 // Type int. At least 0.
 var nextUpdateId = null;
@@ -97,9 +97,9 @@ function getState() {
 
 function loadState(inData) {
 	nextUpdateId = inData.nextUpdateId;
-	currentNicknames = {};
+	connectionData = {};
 	for (var profile in inData.connections)
-		currentNicknames[profile] = inData.connections[profile].currentNickname;
+		connectionData[profile] = {currentNickname: inData.connections[profile].currentNickname};
 	
 	windowNames = [];
 	windowData = {};
@@ -181,7 +181,7 @@ function setActiveWindow(name) {
 	
 	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
-	setElementText(nicknameElem, currentNicknames[activeWindow[0]]);
+	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
 	setElementText(channelElem, activeWindow[1]);
 	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 	refreshWindowSelection();
@@ -387,7 +387,7 @@ function loadUpdates(inData) {
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];
 			var name = payloadparts[2];
-			currentNicknames[profile] = name;
+			connectionData[profile].currentNickname = name;
 			if (activeWindow[0] == profile) {
 				setElementText(nicknameElem, name);
 				activeWindowUpdated = true;
