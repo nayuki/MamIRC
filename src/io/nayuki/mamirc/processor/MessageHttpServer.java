@@ -111,8 +111,9 @@ final class MessageHttpServer {
 							String party = Json.getString(tuple, 2);
 							
 							switch (Json.getString(tuple, 0)) {
-								case "send-message": {
-									result &= master.sendMessage(profile, party, Json.getString(tuple, 3));
+								case "send-line": {
+									// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
+									result &= master.sendLine(profile, party);
 									break;
 								}
 								case "mark-read": {

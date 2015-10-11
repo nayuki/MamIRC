@@ -493,7 +493,7 @@ function handleInputLine() {
 			var profile = activeWindow[0];
 			var windowName = profile + "\n" + target;
 			if (windowNames.indexOf(windowName) == -1) {
-				sendAction([["open-window", profile, target], ["send-message", profile, target, text]],
+				sendAction([["open-window", profile, target], ["send-line", profile, "PRIVMSG " + target + " :" + text]],
 					function() {
 						inputBoxElem.value = "";
 						inputBoxElem.disabled = false;
@@ -544,7 +544,7 @@ function sendAction(payload, onload, ontimeout) {
 
 function sendMessage(profile, target, text) {
 	inputBoxElem.disabled = true;
-	sendAction([["send-message", profile, target, text]],
+	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]],
 		function() {
 			inputBoxElem.value = "";
 			inputBoxElem.disabled = false;

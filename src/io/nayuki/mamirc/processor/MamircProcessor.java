@@ -606,10 +606,10 @@ public final class MamircProcessor {
 	}
 	
 	
-	public synchronized boolean sendMessage(String profile, String party, String line) {
+	public synchronized boolean sendLine(String profile, String line) {
 		for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
 			if (entry.getValue().profile.name.equals(profile)) {
-				sendIrcLine(entry.getKey(), "PRIVMSG", party, line);
+				writer.postWrite("send " + entry.getKey() + " " + line);
 				return true;
 			}
 		}
