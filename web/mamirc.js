@@ -506,6 +506,12 @@ function handleInputLine() {
 				sendMessage(profile, target, text);
 			}
 			
+		} else if (cmd == "part" && text.length == 5) {
+			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], clearAndEnableInput, enableInput);
+			
+		} else if ((cmd == "nick" || cmd == "join" || cmd == "part") && /^\/[a-z]+ [^ ]+$/i.test(text)) {
+			sendAction([["send-line", activeWindow[0], text.substr(1, 5).toUpperCase() + text.substring(6)]], clearAndEnableInput, enableInput);
+			
 		} else
 			alert("Invalid command");
 	
@@ -525,6 +531,16 @@ function openPrivateMessagingWindow(target) {
 		setActiveWindow(windowName);
 		inputBoxElem.value = "";
 	}
+}
+
+
+function clearAndEnableInput() {
+	inputBoxElem.value = "";
+	enableInput();
+}
+
+function enableInput() {
+	inputBoxElem.disabled = false;
 }
 
 
