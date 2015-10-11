@@ -6,6 +6,7 @@
 // Document nodes (elements)
 const windowListElem  = document.getElementById("window-list");
 const messageListElem = document.getElementById("message-list");
+const memberListElem  = document.getElementById("member-list");
 const inputBoxElem    = document.getElementById("input-box");
 const channelElem     = document.getElementById("channel");
 const nicknameElem    = document.getElementById("nickname");
@@ -97,9 +98,7 @@ function getState() {
 
 function loadState(inData) {
 	nextUpdateId = inData.nextUpdateId;
-	connectionData = {};
-	for (var profile in inData.connections)
-		connectionData[profile] = {currentNickname: inData.connections[profile].currentNickname};
+	connectionData = inData.connections;
 	
 	windowNames = [];
 	windowData = {};
@@ -185,6 +184,15 @@ function setActiveWindow(name) {
 	setElementText(channelElem, activeWindow[1]);
 	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 	refreshWindowSelection();
+	
+	// Set or clear text showing members in channel
+	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
+		var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
+		members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
+			return s.toLowerCase().localeCompare(t.toLowerCase()); });
+		setElementText(memberListElem, "Channel members: " + members.join(", "));
+	} else
+		setElementText(memberListElem, "");
 	
 	// Redraw all message lines in this window
 	removeChildren(messageListElem);
