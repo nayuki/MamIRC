@@ -3,7 +3,7 @@ package io.nayuki.mamirc.connector;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -138,20 +138,18 @@ public final class MamircConnector {
 			System.err.println("Warning: Connection " + conId + " does not exist");
 		else {
 			postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("disconnect"));
-			try {
-				info.socket.close();  // Asynchronous termination
-			} catch (IOException e) {}
+			info.reader.terminate();
 		}
 	}
 	
 	
 	// Should only be called from ServerReaderThread.
-	public synchronized void connectionOpened(int conId, Socket sock, OutputWriterThread writer) {
+	public synchronized void connectionOpened(int conId, InetAddress addr, ServerReaderThread reader, OutputWriterThread writer) {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("opened " + sock.getInetAddress().getHostAddress()));
-		info.socket = sock;
+		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("opened " + addr.getHostAddress()));
+		info.reader = reader;
 		info.writer = writer;
 	}
 	
@@ -186,20 +184,37 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread.
-	public synchronized void terminateConnector(ProcessorReaderThread reader) {
+	public void terminateConnector(ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
-		System.err.println("Connector terminating");
 		
-		for (int conId : serverConnections.keySet())
-			disconnectServer(conId, processorReader);
-		
-		if (processorReader != null)
-			processorReader.terminate();
+		Thread[] toWait;
+		synchronized(this) {
+			System.err.println("Connector terminating");
+			
+			toWait = new ServerReaderThread[serverConnections.size()];
+			int i = 0;
+			for (int conId : serverConnections.keySet()) {
+				toWait[i] = serverConnections.get(conId).reader;
+				disconnectServer(conId, processorReader);
+				i++;
+			}
+			
+			if (processorReader != null) {
+				processorReader.terminate();
+				processorReader = null;
+				processorWriter = null;
+			}
+			
+			try {
+				processorListener.serverSocket.close();
+			} catch (IOException e) {}
+		}
 		
 		try {
-			processorListener.serverSocket.close();
-		} catch (IOException e) {}
+			for (Thread th : toWait)
+				th.join();
+		} catch (InterruptedException e) {}
 		databaseLogger.terminate();
 	}
 	
@@ -251,13 +266,13 @@ public final class MamircConnector {
 	private static final class ConnectionInfo {
 		
 		public int nextSequence;
-		public Socket socket;
+		public ServerReaderThread reader;
 		public OutputWriterThread writer;
 		
 		
 		public ConnectionInfo() {
 			nextSequence = 0;
-			socket = null;
+			reader = null;
 			writer = null;
 		}
 		

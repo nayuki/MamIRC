@@ -26,6 +26,7 @@ final class ServerReaderThread extends Thread {
 	private final String hostname;
 	private final int port;
 	private final boolean useSsl;
+	private Socket socket;
 	
 	
 	/*---- Constructor ----*/
@@ -43,29 +44,29 @@ final class ServerReaderThread extends Thread {
 		this.hostname = hostname;
 		this.port = port;
 		this.useSsl = useSsl;
+		socket = null;
 	}
 	
 	
 	/*---- Methods ----*/
 	
 	public void run() {
-		Socket sock = null;
 		OutputWriterThread writer = null;
 		try {
 			// Create socket
 			if (useSsl)
-				sock = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
+				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
 			else
-				sock = new Socket(hostname, port);
+				socket = new Socket(hostname, port);
 			
 			// Initialize stuff
-			writer = new OutputWriterThread(sock.getOutputStream(), new byte[]{'\r','\n'});
+			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
 			writer.setName("OutputWriterThread : " + getName());
 			writer.start();
-			master.connectionOpened(connectionId, sock, writer);
+			master.connectionOpened(connectionId, socket.getInetAddress(), this, writer);
 			
 			// Read and forward lines
-			LineReader reader = new LineReader(sock.getInputStream());
+			LineReader reader = new LineReader(socket.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();
 				if (line == LineReader.BLANK_EOF || line == null)
@@ -80,15 +81,20 @@ final class ServerReaderThread extends Thread {
 		// Clean up
 		} catch (IOException e) {}
 		finally {
-			if (sock != null) {
-				try {
-					sock.close();
-				} catch (IOException e) {}
-				if (writer != null)
-					writer.terminate();  // This reader is exclusively responsible for terminating the writer
-			}
+			terminate();
+			if (writer != null)
+				writer.terminate();  // This reader is exclusively responsible for terminating the writer
 			master.connectionClosed(connectionId);
 		}
+	}
+	
+	
+	// Can be called from any thread.
+	public void terminate() {
+		try {
+			if (socket != null)
+				socket.close();
+		} catch (IOException e) {}
 	}
 	
 	
