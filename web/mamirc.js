@@ -153,7 +153,7 @@ function redrawWindowList() {
 			setActiveWindow(windowName);
 			return false;
 		};
-		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { sendAction("close-window.json", [profile, party], null, null); }]]);
+		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]]);
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -326,8 +326,8 @@ function lineDataToRowElem(line) {
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
 		};
 	}
-	menuItems.push(["Mark read to here", function() { sendAction("mark-read.json"  , [activeWindow[0], activeWindow[1], sequence + 1], null, null); }]);
-	menuItems.push(["Clear to here"    , function() { sendAction("clear-lines.json", [activeWindow[0], activeWindow[1], sequence + 1], null, null); }]);
+	menuItems.push(["Mark read to here", function() { sendAction([["mark-read"  , activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
+	menuItems.push(["Clear to here"    , function() { sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
 	td.oncontextmenu = makeContextMenuOpener(menuItems);
 	tr.appendChild(td);
 	
@@ -492,9 +492,16 @@ function handleInputLine() {
 			var text = parts[1];
 			var profile = activeWindow[0];
 			var windowName = profile + "\n" + target;
-			if (windowNames.indexOf(windowName) == -1)
-				sendAction("open-window.json", [profile, target], function() { sendMessage(profile, target, text); }, null);
-			else {
+			if (windowNames.indexOf(windowName) == -1) {
+				sendAction([["open-window", profile, target], ["send-message", profile, target, text]],
+					function() {
+						inputBoxElem.value = "";
+						inputBoxElem.disabled = false;
+					},
+					function() {
+						inputBoxElem.disabled = false;
+					});
+			} else {
 				setActiveWindow(windowName);
 				sendMessage(profile, target, text);
 			}
@@ -513,7 +520,7 @@ function openPrivateMessagingWindow(target) {
 	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
 	if (windowNames.indexOf(windowName) == -1)
-		sendAction("open-window.json", [profile, target], null, null);
+		sendAction([["open-window", profile, target]], null, null);
 	else {
 		setActiveWindow(windowName);
 		inputBoxElem.value = "";
@@ -521,14 +528,14 @@ function openPrivateMessagingWindow(target) {
 }
 
 
-// Type signature: str path, jsonobject payload, func onload/null, func ontimeout/null. Returns nothing.
-function sendAction(path, payload, onload, ontimeout) {
+// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
+function sendAction(payload, onload, ontimeout) {
 	var xhr = new XMLHttpRequest();
 	if (onload != null)
 		xhr.onload = onload;
 	if (ontimeout != null)
 		xhr.ontimeout = ontimeout;
-	xhr.open("POST", path, true);
+	xhr.open("POST", "do-actions.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
 	xhr.send(JSON.stringify({"password":password, "payload":payload}));
@@ -537,7 +544,7 @@ function sendAction(path, payload, onload, ontimeout) {
 
 function sendMessage(profile, target, text) {
 	inputBoxElem.disabled = true;
-	sendAction("send-message.json", [profile, target, text],
+	sendAction([["send-message", profile, target, text]],
 		function() {
 			inputBoxElem.value = "";
 			inputBoxElem.disabled = false;

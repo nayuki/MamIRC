@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -102,49 +103,42 @@ final class MessageHttpServer {
 						break;
 					}
 					
-					case "/send-message.json": {
-						String profile = Json.getString(reqData, "payload", 0);
-						String target = Json.getString(reqData, "payload", 1);
-						String line = Json.getString(reqData, "payload", 2);
-						Boolean status = master.sendMessage(profile, target, line);
-						writeJsonResponse(he, status);
+					case "/do-actions.json": {
+						boolean result = true;
+						for (Object row : Json.getList(reqData, "payload")) {
+							List<Object> tuple = Json.getList(row);
+							String profile = Json.getString(tuple, 1);
+							String party = Json.getString(tuple, 2);
+							
+							switch (Json.getString(tuple, 0)) {
+								case "send-message": {
+									result &= master.sendMessage(profile, party, Json.getString(tuple, 3));
+									break;
+								}
+								case "mark-read": {
+									master.markRead(profile, party, Json.getInt(tuple, 3));
+									break;
+								}
+								case "clear-lines": {
+									master.clearLines(profile, party, Json.getInt(tuple, 3));
+									break;
+								}
+								case "open-window": {
+									master.openWindow(profile, party);
+									break;
+								}
+								case "close-window": {
+									master.closeWindow(profile, party);
+									break;
+								}
+								default:
+									throw new AssertionError();
+							}
+						}
+						writeJsonResponse(he, result);
 						break;
 					}
-					
-					case "/mark-read.json": {
-						String profile = Json.getString(reqData, "payload", 0);
-						String target = Json.getString(reqData, "payload", 1);
-						int sequence = Json.getInt(reqData, "payload", 2);
-						master.markRead(profile, target, sequence);
-						writeJsonResponse(he, true);
-						break;
-					}
-					
-					case "/clear-lines.json": {
-						String profile = Json.getString(reqData, "payload", 0);
-						String target = Json.getString(reqData, "payload", 1);
-						int sequence = Json.getInt(reqData, "payload", 2);
-						master.clearLines(profile, target, sequence);
-						writeJsonResponse(he, true);
-						break;
-					}
-					
-					case "/open-window.json": {
-						String profile = Json.getString(reqData, "payload", 0);
-						String target = Json.getString(reqData, "payload", 1);
-						master.openWindow(profile, target);
-						writeJsonResponse(he, true);
-						break;
-					}
-					
-					case "/close-window.json": {
-						String profile = Json.getString(reqData, "payload", 0);
-						String target = Json.getString(reqData, "payload", 1);
-						master.closeWindow(profile, target);
-						writeJsonResponse(he, true);
-						break;
-					}
-					
+						
 					default:
 						throw new AssertionError();
 				}
@@ -152,11 +146,7 @@ final class MessageHttpServer {
 		};
 		server.createContext("/get-state.json", apiHandler);
 		server.createContext("/get-updates.json", apiHandler);
-		server.createContext("/send-message.json", apiHandler);
-		server.createContext("/mark-read.json", apiHandler);
-		server.createContext("/clear-lines.json", apiHandler);
-		server.createContext("/open-window.json", apiHandler);
-		server.createContext("/close-window.json", apiHandler);
+		server.createContext("/do-actions.json", apiHandler);
 		
 		// Start the server
 		executor = Executors.newFixedThreadPool(4);
