@@ -43,6 +43,7 @@ final class DatabaseLoggerThread extends Thread {
 	
 	// 'file' must be an existing file or a non-existent path, but not a directory.
 	public DatabaseLoggerThread(File file) {
+		super("DatabaseLoggerThread");
 		if (file == null)
 			throw new NullPointerException();
 		databaseFile = file;

@@ -22,6 +22,7 @@ final class ProcessorReaderThread extends Thread {
 	
 	// Should only be called from ProcessorListenerThread.
 	public ProcessorReaderThread(MamircConnector master, Socket sock, byte[] password) {
+		super("ProcessorReaderThread " + (System.nanoTime() % 997));
 		if (master == null || sock == null || password == null)
 			throw new NullPointerException();
 		this.master = master;
@@ -48,6 +49,7 @@ final class ProcessorReaderThread extends Thread {
 			
 			// Launch writer thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
+			writer.setName("OutputWriterThread : " + getName());
 			writer.start();
 			master.attachProcessor(this, writer);
 			

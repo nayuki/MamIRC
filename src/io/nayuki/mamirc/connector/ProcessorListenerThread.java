@@ -20,6 +20,7 @@ final class ProcessorListenerThread extends Thread {
 	/*---- Constructor ----*/
 	
 	public ProcessorListenerThread(MamircConnector master, int port, byte[] password) throws IOException {
+		super("ProcessorListenerThread");
 		if (master == null || password == null)
 			throw new NullPointerException();
 		if ((port & 0xFFFF) != port)

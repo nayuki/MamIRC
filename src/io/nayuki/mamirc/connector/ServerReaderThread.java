@@ -32,6 +32,7 @@ final class ServerReaderThread extends Thread {
 	
 	// Note: The socket is created on the new thread, not on the caller's thread.
 	public ServerReaderThread(MamircConnector master, int conId, String hostname, int port, boolean useSsl) {
+		super("ServerReaderThread " + conId);
 		if (master == null || hostname == null)
 			throw new NullPointerException();
 		if ((port & 0xFFFF) != port)
@@ -59,6 +60,7 @@ final class ServerReaderThread extends Thread {
 			
 			// Initialize stuff
 			writer = new OutputWriterThread(sock.getOutputStream(), new byte[]{'\r','\n'});
+			writer.setName("OutputWriterThread : " + getName());
 			writer.start();
 			master.connectionOpened(connectionId, sock, writer);
 			
