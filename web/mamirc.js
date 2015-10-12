@@ -42,6 +42,11 @@ var password = null;
 
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
+const Flags = {
+	OUTGOING: 0x1,
+	NICKFLAG: 0x2,
+};
+
 
 /*---- Major functions ----*/
 
@@ -163,6 +168,12 @@ function redrawWindowList() {
 		windowListElem.appendChild(li);
 	});
 	refreshWindowSelection();
+	
+	var totalNewMsg = 0;
+	for (var key in windowData)
+		totalNewMsg += windowData[key].numNewMessages;
+	if (activeWindow != null)
+		document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 }
 
 
@@ -188,7 +199,6 @@ function setActiveWindow(name) {
 	activeWindow = name.split("\n").concat(name);
 	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
 	setElementText(channelElem, activeWindow[1]);
-	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
 	redrawWindowList();
 	
 	// Set or clear text showing members in channel
@@ -249,9 +259,9 @@ function lineDataToRowElem(line) {
 		if (mematch != null)
 			s = mematch[1];
 		
-		if ((flags & 0x1) != 0)
+		if ((flags & Flags.OUTGOING) != 0)
 			tr.classList.add("outgoing");
-		if ((flags & 0x2) != 0)
+		if ((flags & Flags.NICKFLAG) != 0)
 			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
@@ -335,6 +345,7 @@ function lineDataToRowElem(line) {
 	}
 	menuItems.push(["Mark read to here", function() { sendAction([["mark-read"  , activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
 	menuItems.push(["Clear to here"    , function() {
+		closeContextMenu();
 		if (confirm("Do you want to clear text?"))
 			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null);
 	}]);
@@ -403,7 +414,10 @@ function loadUpdates(inData) {
 				activeWindowUpdated = true;
 			}
 			if (split2(line[2])[0] == "PRIVMSG") {
-				windowData[windowName].numNewMessages++;
+				if (windowName == activeWindow[2] && (line[3] & Flags.OUTGOING) != 0)
+					windowData[windowName].numNewMessages = 0;
+				else
+					windowData[windowName].numNewMessages++;
 				redrawWindowList();
 			}
 		} else if (type == "MYNICK") {
