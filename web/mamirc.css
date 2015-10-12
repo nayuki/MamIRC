@@ -57,16 +57,16 @@ body {
 }
 
 #main > section:nth-child(1) {
-	height: 1%;
-}
-
-#main > section:nth-child(2) {
 	height: 99%;
 }
 
-#main > section:nth-child(2) > div {
+#main > section:nth-child(1) > div {
 	display: table-cell;
 	vertical-align: bottom;
+}
+
+#main > section:nth-child(2) {
+	height: 1%;
 }
 
 
@@ -133,12 +133,15 @@ body {
 }
 
 #member-list {
-	margin-bottom: 0.59em;
+	margin: 0.4em 0em;
+	padding: 0.4em 0em;
+	border-top: 1px solid #D0D0D0;
+	border-bottom: 1px solid #D0D0D0;
 	font-size: 85%;
 }
 
 table {
-	margin-bottom: 0.5em;
+	margin-top: 0.5em;
 	width: 100%;
 	border-collapse: collapse;
 }

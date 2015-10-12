@@ -123,10 +123,8 @@ function loadState(inData) {
 	activeWindow = null;
 	windowNames.sort();
 	redrawWindowList();
-	if (windowNames.length > 0) {
+	if (windowNames.length > 0)
 		setActiveWindow(windowNames[0]);
-		window.scrollTo(0, document.documentElement.scrollHeight);
-	}
 }
 
 
@@ -209,6 +207,7 @@ function setActiveWindow(name) {
 		messageListElem.appendChild(lineDataToRowElem(line));
 	});
 	reflowMessagesTable();
+	window.scrollTo(0, document.documentElement.scrollHeight);
 }
 
 
