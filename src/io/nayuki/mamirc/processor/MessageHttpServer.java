@@ -47,14 +47,15 @@ final class MessageHttpServer {
 						if (!filePath.equals("mamirc-web-ui.html"))
 							uriPath += filePath;
 						if (uriPath.equals(reqPath)) {
-							he.getResponseHeaders().set("Content-Type", entry[1]);
-							he.sendResponseHeaders(200, 0);
-							InputStream in = new FileInputStream(new File("web", entry[0]));
+							File file = new File("web", entry[0]);
+							ByteArrayOutputStream bout = new ByteArrayOutputStream((int)file.length());
+							InputStream in = new FileInputStream(file);
 							try {
-								copyStream(in, he.getResponseBody());
+								copyStream(in, bout);
 							} finally {
 								in.close();
 							}
+							writeResponse(bout.toByteArray(), entry[1], !entry[0].endsWith(".png"), he);
 							return;
 						}
 					}
@@ -76,14 +77,14 @@ final class MessageHttpServer {
 				
 				// Check password field
 				if (!checkPassword(Json.getString(reqData, "password"))) {
-					writeJsonResponse(he, "Authentication error");
+					writeJsonResponse("Authentication error", he);
 					return;
 				}
 				
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
 					case "/get-state.json": {
-						writeJsonResponse(he, master.getState());
+						writeJsonResponse(master.getState(), he);
 						break;
 					}
 					
@@ -98,7 +99,7 @@ final class MessageHttpServer {
 								} catch (InterruptedException e) {}
 								data = master.getUpdates(startId);
 							}
-							writeJsonResponse(he, data);
+							writeJsonResponse(data, he);
 						}
 						break;
 					}
@@ -136,7 +137,7 @@ final class MessageHttpServer {
 									throw new AssertionError();
 							}
 						}
-						writeJsonResponse(he, result);
+						writeJsonResponse(result, he);
 						break;
 					}
 						
@@ -194,22 +195,26 @@ final class MessageHttpServer {
 	}
 	
 	
-	private static void writeJsonResponse(HttpExchange he, Object data) throws IOException {
+	private static void writeJsonResponse(Object data, HttpExchange he) throws IOException {
+		writeResponse(Utils.toUtf8(Json.serialize(data)), "application/json; charset=UTF-8", true, he);
+	}
+	
+	
+	private static void writeResponse(byte[] data, String type, boolean compressible, HttpExchange he) throws IOException {
 		Headers head = he.getResponseHeaders();
-		head.set("Content-Type", "application/json; charset=UTF-8");
+		head.set("Content-Type", type);
 		head.set("Cache-Control", "no-cache");
 		
-		byte[] b = Utils.toUtf8(Json.serialize(data));
-		if (b.length > 3000) {  // Try to use compression
+		if (compressible && data.length > 3000) {  // Try to use compression
 			String accepted = he.getRequestHeaders().getFirst("Accept-Encoding");
 			if (accepted != null) {
 				for (String acc : accepted.split("\\s*,\\s*")) {
 					if (acc.equalsIgnoreCase("deflate")) {
 						ByteArrayOutputStream bout = new ByteArrayOutputStream();
 						DeflaterOutputStream dout = new DeflaterOutputStream(bout);
-						dout.write(b);
+						dout.write(data);
 						dout.close();
-						b = bout.toByteArray();
+						data = bout.toByteArray();
 						head.set("Content-Encoding", "deflate");
 						break;
 					}
@@ -217,8 +222,8 @@ final class MessageHttpServer {
 			}
 		}
 		
-		he.sendResponseHeaders(200, b.length);
-		he.getResponseBody().write(b);
+		he.sendResponseHeaders(200, data.length);
+		he.getResponseBody().write(data);
 		he.close();
 	}
 	
