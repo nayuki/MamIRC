@@ -28,7 +28,7 @@ var activeWindow = null;
 var windowNames = null;
 
 // Type map<str,window>. Key is an entry in windowNames. Each window has the properties
-// "lines" as list<tuple<int seq, int timestamp, str line, int flags>>, "markedReadUntil" as int.
+// "lines" as list<tuple<int seq, int timestamp, str line, int flags>>, "markedReadUntil" as int, "numNewMessages" as int.
 var windowData = null;
 
 // Type map<str,object>. Key is the network profile name.
@@ -112,6 +112,7 @@ function loadState(inData) {
 		var outState = {
 			lines: inState.lines,
 			markedReadUntil: inState.markedReadUntil,
+			numNewMessages: 0,
 		};
 		var numPrefixDel = outState.lines.length - MAX_MESSAGES_PER_WINDOW;
 		if (numPrefixDel > 0)
@@ -147,7 +148,11 @@ function redrawWindowList() {
 		}
 		
 		var a = document.createElement("a");
-		setElementText(a, party);
+		var s = party;
+		var n = windowData[windowName].numNewMessages;
+		if (n > 0)
+			s += " (" + n + ")";
+		setElementText(a, s);
 		a.href = "#";
 		a.onclick = function() {
 			setActiveWindow(windowName);
@@ -175,15 +180,18 @@ function refreshWindowSelection() {
 
 
 function setActiveWindow(name) {
-	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1)
-		return;  // Do not redraw or scroll
+	windowData[name].numNewMessages = 0;
+	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1) {
+		redrawWindowList();
+		return;
+	}
 	
 	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
 	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
 	setElementText(channelElem, activeWindow[1]);
 	document.title = activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
-	refreshWindowSelection();
+	redrawWindowList();
 	
 	// Set or clear text showing members in channel
 	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
@@ -395,6 +403,10 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
+			if (split2(line[2])[0] == "PRIVMSG") {
+				windowData[windowName].numNewMessages++;
+				redrawWindowList();
+			}
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];
 			var name = payloadparts[2];
@@ -409,7 +421,11 @@ function loadUpdates(inData) {
 			if (index == -1) {
 				windowNames.push(windowName);
 				windowNames.sort();
-				windowData[windowName] = {lines:[], markedReadUntil:0};
+				windowData[windowName] = {
+					lines: [],
+					markedReadUntil: 0,
+					numNewMessages: 0,
+				};
 				redrawWindowList();
 				inputBoxElem.value = "";
 				setActiveWindow(windowName);
