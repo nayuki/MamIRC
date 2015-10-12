@@ -279,7 +279,7 @@ public final class MamircProcessor {
 						chanstate.processingNamesReply = true;
 					}
 					for (String name : msg.getParameter(3).split(" ")) {
-						if (name.startsWith("@") || name.startsWith("+"))
+						if (name.startsWith("@") || name.startsWith("+") || name.startsWith("!") || name.startsWith("%"))
 							name = name.substring(1);
 						chanstate.members.add(name);
 					}
