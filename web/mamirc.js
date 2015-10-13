@@ -456,27 +456,23 @@ function loadUpdates(inData) {
 					new Notification(payloadparts[2] + " <" + temp[0] + "> " + temp[1]);
 				}
 			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "KICK" || subtype == "NICK") {
-				var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
+				var members = connectionData[payloadparts[1]].channels[payloadparts[2]].members;
 				var name = split2(line[2])[1];
-				if (windowName == activeWindow[2]) {
-					if (subtype == "JOIN" && members.indexOf(name) == -1) {
-						members.push(name);
-						redrawChannelMembers();
-					} else if (subtype == "PART" && members.indexOf(name) != -1) {
-						members.splice(members.indexOf(name), 1);
-						redrawChannelMembers();
-					} else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(split2(name)[0]) != -1) {
-						members.splice(members.indexOf(split2(name)[0]), 1);
-						redrawChannelMembers();
-					} else if (subtype == "NICK") {
-						name = split2(name);
-						if (members.indexOf(name[0]) != -1)
-							members.splice(members.indexOf(name[0]), 1);
-						if (members.indexOf(name[1]) == -1)
-							members.push(name[1]);
-						redrawChannelMembers();
-					}
+				if (subtype == "JOIN" && members.indexOf(name) == -1)
+					members.push(name);
+				else if (subtype == "PART" && members.indexOf(name) != -1)
+					members.splice(members.indexOf(name), 1);
+				else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(split2(name)[0]) != -1)
+					members.splice(members.indexOf(split2(name)[0]), 1);
+				else if (subtype == "NICK") {
+					name = split2(name);
+					if (members.indexOf(name[0]) != -1)
+						members.splice(members.indexOf(name[0]), 1);
+					if (members.indexOf(name[1]) == -1)
+						members.push(name[1]);
 				}
+				if (windowName == activeWindow[2])
+					redrawChannelMembers();
 			}
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];
