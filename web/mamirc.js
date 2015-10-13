@@ -191,6 +191,17 @@ function refreshWindowSelection() {
 }
 
 
+function redrawChannelMembers() {
+	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
+		var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
+		members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
+			return s.toLowerCase().localeCompare(t.toLowerCase()); });
+		setElementText(memberListElem, "Channel members: " + members.join(", "));
+	} else
+		setElementText(memberListElem, "");
+}
+
+
 function setActiveWindow(name) {
 	windowData[name].numNewMessages = 0;
 	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1) {
@@ -203,15 +214,7 @@ function setActiveWindow(name) {
 	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
 	setElementText(channelElem, activeWindow[1]);
 	redrawWindowList();
-	
-	// Set or clear text showing members in channel
-	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
-		var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
-		members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
-			return s.toLowerCase().localeCompare(t.toLowerCase()); });
-		setElementText(memberListElem, "Channel members: " + members.join(", "));
-	} else
-		setElementText(memberListElem, "");
+	redrawChannelMembers();
 	
 	// Redraw all message lines in this window
 	removeChildren(messageListElem);
@@ -430,12 +433,35 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
-			if (split2(line[2])[0] == "PRIVMSG") {
+			var subtype = split2(line[2])[0];
+			if (subtype == "PRIVMSG") {
 				if (windowName == activeWindow[2] && (line[3] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
 				else
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
+			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "NICK") {
+				var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
+				var name = split2(line[2])[1];
+				if (windowName == activeWindow[2]) {
+					if (subtype == "JOIN" && members.indexOf(name) == -1) {
+						members.push(name);
+						redrawChannelMembers();
+					} else if (subtype == "PART" && members.indexOf(name) != -1) {
+						members.splice(members.indexOf(name), 1);
+						redrawChannelMembers();
+					} else if (subtype == "QUIT" && members.indexOf(split2(name)[0]) != -1) {
+						members.splice(members.indexOf(split2(name)[0]), 1);
+						redrawChannelMembers();
+					} else if (subtype == "NICK") {
+						name = split2(name);
+						if (members.indexOf(name[0]) != -1)
+							members.splice(members.indexOf(name[0]), 1);
+						if (members.indexOf(name[1]) == -1)
+							members.push(name[1]);
+						redrawChannelMembers();
+					}
+				}
 			}
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];
