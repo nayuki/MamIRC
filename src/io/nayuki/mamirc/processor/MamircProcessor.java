@@ -283,13 +283,7 @@ public final class MamircProcessor {
 							name = name.substring(1);
 						chanstate.members.add(name);
 					}
-					StringBuilder sb = new StringBuilder();
-					for (String name : chanstate.members) {
-						if (sb.length() > 0)
-							sb.append(" ");
-						sb.append(name);
-					}
-					addUpdate("SETCHANNELMEMBERS", profile.name, sb.toString());
+					addUpdate("SETCHANNELMEMBERS", profile.name, chan, new ArrayList<>(chanstate.members));
 				}
 				break;
 			}

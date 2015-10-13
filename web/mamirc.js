@@ -369,7 +369,11 @@ function updateState() {
 		if (xhr.status != 200)
 			xhr.onerror();
 		else {
-			loadUpdates(JSON.parse(xhr.response));
+			var data = JSON.parse(xhr.response);
+			if (data != null)
+				loadUpdates(data);
+			else  // Lost synchronization or fell behind too much; do full update and re-render text
+				getState();
 			updateState();
 		}
 	};
@@ -399,7 +403,11 @@ function loadUpdates(inData) {
 			if (windowNames.indexOf(windowName) == -1) {
 				windowNames.push(windowName);
 				windowNames.sort();
-				windowData[windowName] = {lines:[], markedReadUntil:0};
+				windowData[windowName] = {
+					lines: [],
+					markedReadUntil: 0,
+					numNewMessages: 0,
+				};
 				redrawWindowList();
 			}
 			var line = payloadparts.slice(3);
