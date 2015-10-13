@@ -58,6 +58,7 @@ function init() {
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
 	htmlElem.onmousedown = closeContextMenu;
 	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
+	Notification.requestPermission();
 	inputBoxElem.oninput = function() {
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
@@ -412,6 +413,7 @@ function loadUpdates(inData) {
 		
 		if (type == "APPEND") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var newWindow = false;
 			if (windowNames.indexOf(windowName) == -1) {
 				windowNames.push(windowName);
 				windowNames.sort();
@@ -421,6 +423,7 @@ function loadUpdates(inData) {
 					numNewMessages: 0,
 				};
 				redrawWindowList();
+				newWindow = true;
 			}
 			var line = payloadparts.slice(3);
 			var lines = windowData[windowName].lines;
@@ -440,6 +443,14 @@ function loadUpdates(inData) {
 				else
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
+				if (newWindow && !payloadparts[2].startsWith("#") && !payloadparts[2].startsWith("&") && split2(line[2])[0]) {
+					// Is a private message instead of a channel
+					var temp = split2(split2(line[2])[1]);
+					new Notification("<" + temp[0] + "> " + temp[1]);
+				} else if ((line[3] & Flags.NICKFLAG) != 0) {
+					var temp = split2(split2(line[2])[1]);
+					new Notification(payloadparts[2] + " <" + temp[0] + "> " + temp[1]);
+				}
 			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "NICK") {
 				var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
 				var name = split2(line[2])[1];
