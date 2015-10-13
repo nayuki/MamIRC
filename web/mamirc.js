@@ -40,6 +40,9 @@ var nextUpdateId = null;
 // Type str. Gets set by submitting the login form, and remains unchanged after a successful getState().
 var password = null;
 
+// In milliseconds.
+var retryTimeout = 1000;
+
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
 const Flags = {
@@ -370,15 +373,21 @@ function updateState() {
 			xhr.onerror();
 		else {
 			var data = JSON.parse(xhr.response);
-			if (data != null)
+			if (data != null) {  // Success
 				loadUpdates(data);
-			else  // Lost synchronization or fell behind too much; do full update and re-render text
-				getState();
-			updateState();
+				retryTimeout = 1000;
+				updateState();
+			} else {  // Lost synchronization or fell behind too much; do full update and re-render text
+				setTimeout(getState, retryTimeout);
+				if (retryTimeout < 300000)
+					retryTimeout *= 2;
+			}
 		}
 	};
 	xhr.ontimeout = xhr.onerror = function() {
-		setTimeout(updateState, 60000);
+		setTimeout(updateState, retryTimeout);
+		if (retryTimeout < 300000)
+			retryTimeout *= 2;
 	};
 	xhr.open("POST", "get-updates.json", true);
 	xhr.responseType = "text";
