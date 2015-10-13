@@ -321,6 +321,10 @@ function lineDataToRowElem(line) {
 		who = "*";
 		var subparts = split2(payloadparts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
+	} else if (type == "KICK") {
+		who = "*";
+		var subparts = split2(payloadparts[1]);
+		lineElems.push(document.createTextNode(subparts[0] + " was kicked: " + subparts[1]));
 	}
 	
 	// Make timestamp cell
@@ -451,7 +455,7 @@ function loadUpdates(inData) {
 					var temp = split2(split2(line[2])[1]);
 					new Notification(payloadparts[2] + " <" + temp[0] + "> " + temp[1]);
 				}
-			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "NICK") {
+			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "KICK" || subtype == "NICK") {
 				var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
 				var name = split2(line[2])[1];
 				if (windowName == activeWindow[2]) {
@@ -461,7 +465,7 @@ function loadUpdates(inData) {
 					} else if (subtype == "PART" && members.indexOf(name) != -1) {
 						members.splice(members.indexOf(name), 1);
 						redrawChannelMembers();
-					} else if (subtype == "QUIT" && members.indexOf(split2(name)[0]) != -1) {
+					} else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(split2(name)[0]) != -1) {
 						members.splice(members.indexOf(split2(name)[0]), 1);
 						redrawChannelMembers();
 					} else if (subtype == "NICK") {

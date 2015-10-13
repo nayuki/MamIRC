@@ -202,6 +202,23 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "KICK": {
+				String reason = msg.getParameter(2);
+				for (String chan : msg.getParameter(0).split(",")) {
+					for (String target : msg.getParameter(1).split(",")) {
+						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target)) {
+							String line = msg.command + " " + target + " " + reason;
+							addMessage(profile.name, chan, ev.timestamp, line, 0);
+						}
+						if (target.equals(state.getCurrentNickname())) {
+							curchans.remove(chan);
+							addUpdate("KICKED", state.profile.name, chan, reason);
+						}
+					}
+				}
+				break;
+			}
+			
 			case "PRIVMSG": {
 				String who = msg.prefixName;
 				String target = msg.getParameter(0);
