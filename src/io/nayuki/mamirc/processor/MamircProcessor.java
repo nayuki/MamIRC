@@ -54,7 +54,7 @@ public final class MamircProcessor {
 	private final Map<Integer,IrcSession> ircSessions;
 	private final Map<String,Map<String,Window>> windows;
 	private final Map<String,String> windowCaseMap;
-	private final List<Object[]> recentUpdates;  // Payload is {int id, String update}
+	private final List<Object[]> recentUpdates;  // Payload is {int id, List<Object> update}
 	private int nextUpdateId;
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	
@@ -128,7 +128,7 @@ public final class MamircProcessor {
 			state.setRegistrationState(RegState.OPENED);
 			if (realtime)
 				sendIrcLine(conId, "NICK", state.profile.nicknames.get(0));
-			addUpdate("CONNECTED\n" + state.profile.name);
+			addUpdate("CONNECTED", state.profile.name);
 			
 		} else if (line.equals("disconnect") || line.equals("closed")) {
 			ircSessions.remove(conId);
@@ -151,7 +151,7 @@ public final class MamircProcessor {
 				String toname = msg.getParameter(0);
 				if (fromname.equals(state.getCurrentNickname())) {
 					state.setNickname(toname);
-					addUpdate("MYNICK\n" + state.profile.name + "\n" + toname);
+					addUpdate("MYNICK", state.profile.name, toname);
 				}
 				for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 					Set<String> members = entry.getValue().members;
@@ -169,7 +169,7 @@ public final class MamircProcessor {
 				String chan = msg.getParameter(0);
 				if (who.equals(state.getCurrentNickname()) && !curchans.containsKey(chan)) {
 					curchans.put(chan, new IrcSession.ChannelState());
-					addUpdate("JOINED\n" + state.profile.name + "\n" + chan);
+					addUpdate("JOINED", state.profile.name, chan);
 				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
 					String line = msg.command + " " + who;
@@ -197,7 +197,7 @@ public final class MamircProcessor {
 				}
 				if (who.equals(state.getCurrentNickname())) {
 					curchans.remove(chan);
-					addUpdate("PARTED\n" + state.profile.name + "\n" + chan);
+					addUpdate("PARTED", state.profile.name, chan);
 				}
 				break;
 			}
@@ -226,7 +226,7 @@ public final class MamircProcessor {
 						}
 					}
 				} else {
-					addUpdate("QUITTED\n" + state.profile.name);
+					addUpdate("QUITTED", state.profile.name);
 				}
 				break;
 			}
@@ -264,7 +264,7 @@ public final class MamircProcessor {
 						for (String chan : profile.channels)
 							sendIrcLine(conId, "JOIN", chan);
 					}
-					addUpdate("MYNICK\n" + profile.name + "\n" + state.getCurrentNickname());
+					addUpdate("MYNICK", profile.name, state.getCurrentNickname());
 					connectionAttemptState.remove(state.profile);
 				}
 				break;
@@ -289,7 +289,7 @@ public final class MamircProcessor {
 							sb.append(" ");
 						sb.append(name);
 					}
-					addUpdate("SETCHANNELMEMBERS\n" + profile.name + "\n" + sb.toString());
+					addUpdate("SETCHANNELMEMBERS", profile.name, sb.toString());
 				}
 				break;
 			}
@@ -484,12 +484,12 @@ public final class MamircProcessor {
 	
 	
 	// Must be called from one of the synchronized methods.
-	private void addUpdate(String update) {
+	private void addUpdate(Object... update) {
 		if (update == null)
 			throw new NullPointerException();
 		
 		// Store the update
-		recentUpdates.add(new Object[]{nextUpdateId, update});
+		recentUpdates.add(new Object[]{nextUpdateId, Arrays.asList(update)});
 		nextUpdateId++;
 		
 		// Clean up the list if it gets too big
@@ -521,7 +521,7 @@ public final class MamircProcessor {
 		List<Window.Line> list = win.lines;
 		if (list.size() - 100 >= 10000)
 			list.subList(0, 100).clear();
-		addUpdate("APPEND\n" + profile + "\n" + target + "\n" + sequence + "\n" + timestamp + "\n" + line + "\n" + flags);
+		addUpdate("APPEND", profile, target, sequence, timestamp, line, flags);
 	}
 	
 	
@@ -582,6 +582,7 @@ public final class MamircProcessor {
 	
 	// Returns a JSON object containing updates with id >= startId (the list might be empty),
 	// or null to indicate that the request is invalid and the client must request the full state.
+	@SuppressWarnings("unchecked")
 	public synchronized Map<String,Object> getUpdates(int startId) {
 		if (startId < 0 || startId > nextUpdateId)
 			return null;
@@ -594,9 +595,9 @@ public final class MamircProcessor {
 			return null;  // No overlap
 		else {
 			Map<String,Object> result = new HashMap<>();
-			List<String> updates = new ArrayList<>();
+			List<List<Object>> updates = new ArrayList<>();
 			while (i < recentUpdates.size()) {
-				updates.add((String)recentUpdates.get(i)[1]);
+				updates.add((List<Object>)recentUpdates.get(i)[1]);
 				i++;
 			}
 			result.put("updates", updates);
@@ -619,13 +620,13 @@ public final class MamircProcessor {
 	
 	public synchronized void markRead(String profile, String party, int sequence) {
 		windows.get(profile).get(party).markedReadUntil = sequence;
-		addUpdate("MARKREAD\n" + profile + "\n" + party + "\n" + sequence);
+		addUpdate("MARKREAD", profile, party, sequence);
 	}
 	
 	
 	public synchronized void clearLines(String profile, String party, int sequence) {
 		windows.get(profile).get(party).clearUntil(sequence);
-		addUpdate("CLEARLINES\n" + profile + "\n" + party + "\n" + sequence);
+		addUpdate("CLEARLINES", profile, party, sequence);
 	}
 	
 	
@@ -638,14 +639,14 @@ public final class MamircProcessor {
 		Map<String,Window> inner = windows.get(profile);
 		inner.put(party, new Window());
 		windowCaseMap.put(lower, profile + "\n" + party);
-		addUpdate("OPENWIN\n" + profile + "\n" + party);
+		addUpdate("OPENWIN", profile, party);
 	}
 	
 	
 	public synchronized void closeWindow(String profile, String party) {
 		Map<String,Window> inner = windows.get(profile);
 		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
-			addUpdate("CLOSEWIN\n" + profile + "\n" + party);
+			addUpdate("CLOSEWIN", profile, party);
 	}
 	
 }

@@ -391,7 +391,7 @@ function loadUpdates(inData) {
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
 		// 'payload' has type str, and has a variable number of parts delimited by '\n'
-		var payloadparts = payload.split("\n");
+		var payloadparts = payload;
 		var type = payloadparts[0];
 		
 		if (type == "APPEND") {
@@ -402,7 +402,7 @@ function loadUpdates(inData) {
 				windowData[windowName] = {lines:[], markedReadUntil:0};
 				redrawWindowList();
 			}
-			var line = [parseInt(payloadparts[3], 10), parseInt(payloadparts[4], 10), payloadparts[5], parseInt(payloadparts[6])];
+			var line = payloadparts.slice(3);
 			var lines = windowData[windowName].lines;
 			lines.push(line);
 			var numPrefixDel = Math.max(lines.length - MAX_MESSAGES_PER_WINDOW, 0);
@@ -460,7 +460,7 @@ function loadUpdates(inData) {
 			}
 		} else if (type == "MARKREAD") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
-			var seq = parseInt(payloadparts[3], 10);
+			var seq = payloadparts[3];
 			windowData[windowName].markedReadUntil = seq;
 			if (windowName == activeWindow[2]) {
 				var lines = windowData[windowName].lines;
@@ -480,7 +480,7 @@ function loadUpdates(inData) {
 			}
 		} else if (type == "CLEARLINES") {
 			var windowName = payloadparts[1] + "\n" + payloadparts[2];
-			var seq = parseInt(payloadparts[3], 10);
+			var seq = payloadparts[3];
 			var lines = windowData[windowName].lines;
 			var i;
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
