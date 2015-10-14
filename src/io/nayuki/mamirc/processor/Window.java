@@ -20,6 +20,7 @@ final class Window {
 	
 	
 	
+	// Timestamp is in seconds instead of milliseconds.
 	public void addLine(int flags, long timestamp, String... payload) {
 		lines.add(new Line(nextSequence, flags, timestamp, payload));
 		nextSequence++;
@@ -39,7 +40,7 @@ final class Window {
 	public static final class Line {
 		public final int sequence;
 		public final int flags;
-		public final long timestamp;
+		public final long timestamp;  // In seconds, not milliseconds
 		public final String[] payload;
 		
 		

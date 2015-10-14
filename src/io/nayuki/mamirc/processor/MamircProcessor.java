@@ -541,6 +541,7 @@ public final class MamircProcessor {
 				windowCaseMap.put(lower, profile + "\n" + target);
 			}
 		}
+		timestamp = divideAndFloor(timestamp, 1000);
 		Window win = innerMap.get(target);
 		int sequence = win.nextSequence;
 		win.addLine(flags, timestamp, payload);
@@ -598,11 +599,13 @@ public final class MamircProcessor {
 				
 				Window inWindow = targetEntry.getValue();
 				List<List<Object>> outLines = new ArrayList<>();
+				long prevTimestamp = 0;
 				for (Window.Line line : inWindow.lines) {
 					List<Object> lst = new ArrayList<>();
 					lst.add(line.sequence);
 					lst.add(line.flags);
-					lst.add(line.timestamp);
+					lst.add(line.timestamp - prevTimestamp);  // Delta encoding
+					prevTimestamp = line.timestamp;
 					Collections.addAll(lst, line.payload);
 					outLines.add(lst);
 				}
@@ -693,6 +696,14 @@ public final class MamircProcessor {
 		Map<String,Window> inner = windows.get(profile);
 		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
 			addUpdate("CLOSEWIN", profile, party);
+	}
+	
+	
+	private static long divideAndFloor(long x, long y) {
+		long z = x / y;
+		if (((x >= 0) ^ (y >= 0)) && z * y != x)
+			z--;
+		return z;
 	}
 	
 }

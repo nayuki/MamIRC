@@ -116,6 +116,11 @@ function loadState(inData) {
 			throw "Duplicate window";
 		windowNames.push(windowName);
 		var inState = inWindow[2];
+		var prevTimestamp = 0;
+		inState.lines.forEach(function(line) {
+			line[2] += prevTimestamp;  // Delta decoding
+			prevTimestamp = line[2];
+		});
 		var outState = {
 			lines: inState.lines,
 			markedReadUntil: inState.markedReadUntil,
@@ -330,7 +335,7 @@ function lineDataToRowElem(line) {
 	
 	// Make timestamp cell
 	var td = document.createElement("td");
-	td.appendChild(document.createTextNode(formatDate(timestamp)));
+	td.appendChild(document.createTextNode(formatDate(timestamp * 1000)));
 	tr.appendChild(td);
 	
 	// Make nickname cell
