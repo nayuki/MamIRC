@@ -65,9 +65,10 @@ var Flags = null;
 function init() {
 	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
-	htmlElem.onmousedown = closeContextMenu;
 	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
 	Notification.requestPermission();
+	
+	htmlElem.onmousedown = closeContextMenu;
 	inputBoxElem.oninput = function() {
 		// Change style of text box based if a '/command' is being typed
 		var text = inputBoxElem.value;
@@ -108,24 +109,28 @@ function loadState(inData) {
 		
 		// Preprocess the window's lines
 		var inState = inWindow[2];
+		var lines = inState.lines;
 		var prevTimestamp = 0;
-		inState.lines.forEach(function(line) {
+		lines.forEach(function(line) {
 			line[2] += prevTimestamp;  // Delta decoding
 			prevTimestamp = line[2];
 		});
-		var outState = {
-			lines: inState.lines,
+		if (lines.length > MAX_MESSAGES_PER_WINDOW)
+			lines.splice(0, lines.length - MAX_MESSAGES_PER_WINDOW);
+		windowData[windowName] = {
+			lines: lines,
 			markedReadUntil: inState.markedReadUntil,
 			numNewMessages: 0,
 		};
-		var numPrefixDel = outState.lines.length - MAX_MESSAGES_PER_WINDOW;
-		if (numPrefixDel > 0)
-			outState.lines.splice(0, numPrefixDel);
-		windowData[windowName] = outState;
 	});
-	
 	activeWindow = null;
 	windowNames.sort();
+	
+	// Update UI elements
+	passwordElem.blur();
+	document.getElementById("login").style.display = "none";
+	document.getElementById("main").style.removeProperty("display");
+	htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
 	redrawWindowList();
 	if (windowNames.length > 0)
 		setActiveWindow(windowNames[0]);
@@ -183,10 +188,12 @@ function redrawWindowList() {
 // Refreshes the selection class of each window <li> element based on the states of windowNames and activeWindow.
 // This assumes that the list of HTML elements is already synchronized with windowNames.
 function refreshWindowSelection() {
+	if (activeWindow == null)
+		return;
 	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0, j = 0; i < windowLis.length; i++) {
 		if (windowLis[i].className != "profile") {
-			windowLis[i].className = (activeWindow != null && windowNames[j] == activeWindow[2]) ? "selected" : "";
+			windowLis[i].className = windowNames[j] == activeWindow[2] ? "selected" : "";
 			j++;
 		}
 	}
@@ -196,13 +203,16 @@ function refreshWindowSelection() {
 // Refreshes the channel members text element based on the states of
 // connectionData[profileName].channels[channelName].members and activeWindow.
 function redrawChannelMembers() {
-	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
-		var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
+	var profile = activeWindow[0], party = activeWindow[1];
+	var str = "";
+	if (profile in connectionData && party in connectionData[profile].channels) {
+		var members = connectionData[profile].channels[party].members;
 		members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
-			return s.toLowerCase().localeCompare(t.toLowerCase()); });
-		setElementText(memberListElem, "Channel members: " + members.join(", "));
-	} else
-		setElementText(memberListElem, "");
+			return s.toLowerCase().localeCompare(t.toLowerCase());
+		});
+		str = "Channel members: " + members.join(", ");
+	}
+	setElementText(memberListElem, str);
 }
 
 
@@ -210,8 +220,9 @@ function redrawChannelMembers() {
 // Note that for efficiency, switching to the already active window does not re-render the table of lines.
 // Thus all other logic must update the active window's lines incrementally whenever new updates arrive.
 function setActiveWindow(name) {
+	// activeWindow may be null at the start of this method, but will be non-null afterward
 	windowData[name].numNewMessages = 0;
-	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1) {
+	if (activeWindow != null && activeWindow[2] == name) {
 		redrawWindowList();
 		return;
 	}
@@ -669,12 +680,8 @@ function getState() {
 		if (typeof data == "string") {  // Error message
 			setElementText(document.getElementById("login-status"), data);
 		} else {  // Good data
-			passwordElem.blur();
-			document.getElementById("login").style.display = "none";
-			document.getElementById("main").style.removeProperty("display");
-			htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
-			loadState(data);
-			updateState();
+			loadState(data);  // Process data and update UI
+			updateState();  // Start polling
 		}
 	};
 	xhr.ontimeout = xhr.onerror = function() {
@@ -761,10 +768,7 @@ var DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Converts an integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
 function twoDigits(n) {
-	if (n < 10)
-		return "0" + n;
-	else
-		return "" + n;
+	return (n < 10 ? "0" : "") + n;
 }
 
 
