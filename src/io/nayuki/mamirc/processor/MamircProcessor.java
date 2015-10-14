@@ -248,6 +248,16 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "TOPIC": {
+				String who = msg.prefixName;
+				String chan = msg.getParameter(0);
+				String text = msg.getParameter(1);
+				if (state.getCurrentChannels().containsKey(chan))
+					state.getCurrentChannels().get(chan).topic = text;
+				addMessage(profile.name, chan, ev.timestamp, "TOPIC " + who + " " + text, 0);
+				break;
+			}
+			
 			case "433": {  // ERR_NICKNAMEINUSE
 				if (state.getRegistrationState() != RegState.REGISTERED) {
 					state.moveNicknameToRejected();
@@ -284,6 +294,23 @@ public final class MamircProcessor {
 					addUpdate("MYNICK", profile.name, state.getCurrentNickname());
 					connectionAttemptState.remove(state.profile);
 				}
+				break;
+			}
+			
+			case "331": {  // RPL_NOTOPIC
+				String chan = msg.getParameter(1);
+				if (state.getCurrentChannels().containsKey(chan))
+					state.getCurrentChannels().get(chan).topic = null;
+				addMessage(profile.name, chan, ev.timestamp, "INITNOTOPIC", 0);
+				break;
+			}
+			
+			case "332": {  // RPL_TOPIC
+				String chan = msg.getParameter(1);
+				String text = msg.getParameter(2);
+				if (state.getCurrentChannels().containsKey(chan))
+					state.getCurrentChannels().get(chan).topic = text;
+				addMessage(profile.name, chan, ev.timestamp, "INITTOPIC " + text, 0);
 				break;
 			}
 			
@@ -555,6 +582,7 @@ public final class MamircProcessor {
 			for (Map.Entry<String,IrcSession.ChannelState> chanEntry : inChannels.entrySet()) {
 				Map<String,Object> outChanState = new HashMap<>();
 				outChanState.put("members", new ArrayList<>(chanEntry.getValue().members));
+				outChanState.put("topic", chanEntry.getValue().topic);
 				outChannels.put(chanEntry.getKey(), outChanState);
 			}
 			outConState.put("channels", outChannels);

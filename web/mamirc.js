@@ -325,6 +325,16 @@ function lineDataToRowElem(line) {
 		who = "*";
 		var subparts = split2(payloadparts[1]);
 		lineElems.push(document.createTextNode(subparts[0] + " was kicked: " + subparts[1]));
+	} else if (type == "TOPIC") {
+		var subparts = split2(payloadparts[1]);
+		who = subparts[1];
+		lineElems.push(document.createTextNode("set the channel topic to: " + subparts[1]));
+	} else if (type == "INITNOTOPIC") {
+		who = "*";
+		lineElems.push(document.createTextNode("No channel topic is set"));
+	} else if (type == "INITTOPIC") {
+		who = "*";
+		lineElems.push(document.createTextNode("The channel topic is: " + payloadparts[1]));
 	}
 	
 	// Make timestamp cell
@@ -473,6 +483,12 @@ function loadUpdates(inData) {
 				}
 				if (windowName == activeWindow[2])
 					redrawChannelMembers();
+			} else if (subtype == "TOPIC") {
+				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(split2(line[2])[1])[1];
+			} else if (subtype == "INITNOTOPIC") {
+				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = null;
+			} else if (subtype == "INITTOPIC") {
+				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(line[2])[1];
 			}
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];

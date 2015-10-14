@@ -157,6 +157,7 @@ final class IrcSession {
 	public static final class ChannelState {
 		public final Set<String> members;  // Not null, size at least 0
 		public boolean processingNamesReply;
+		public String topic;  // Null initially and when explicitly known to be empty, otherwise non-null
 		
 		public ChannelState() {
 			members = new TreeSet<>();
