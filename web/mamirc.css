@@ -190,6 +190,10 @@ tfoot td {
 	background: #ffe0d0;
 }
 
+.me-action {
+	font-style: italic;
+}
+
 .read {
 	background: #F4F4F4;
 	color: #B0B0B0;

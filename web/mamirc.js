@@ -258,7 +258,9 @@ function reflowMessagesTable() {
 }
 
 
-// 'line' is a tuple; this returns a <tr> element.
+// Converts a window line (which is a tuple of str/int) into a <tr> element for the main messages table.
+// The window line comes from windowData[windowName].lines[i] (which can be from loadState() or loadUpdates()).
+// This function can only be called for lines in the active window; it must not be used for off-screen windows.
 function lineDataToRowElem(line) {
 	// Input variables
 	const sequence = line[0];
@@ -268,9 +270,9 @@ function lineDataToRowElem(line) {
 	const type = flags & Flags.TYPE_MASK;
 	
 	// Output variables
-	var who = "*";
-	var lineElems = [];  // list<domnode>
-	var quoteText = null;
+	var who = "*";         // Type str
+	var lineElems = [];    // Type list<domnode>
+	var quoteText = null;  // Type str or null
 	var tr = document.createElement("tr");
 	
 	// Take action depending on head of payload
@@ -287,14 +289,18 @@ function lineDataToRowElem(line) {
 			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
+		// Split the string into regular text and URL links
 		do {
+			// Try to grab the next URL
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
 			if (linkmatch == null)
 				linkmatch = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
 			if (linkmatch == null) {
+				// No URL found
 				lineElems.push(document.createTextNode(s));
 				break;
 			} else {
+				// URL found
 				if (linkmatch[1].length > 0)
 					lineElems.push(document.createTextNode(linkmatch[1]));
 				var a = document.createElement("a");
@@ -306,11 +312,7 @@ function lineDataToRowElem(line) {
 			}
 		} while (s != "");
 		if (mematch != null) {
-			var em = document.createElement("em");
-			lineElems.forEach(function(elem) {
-				em.appendChild(elem);
-			});
-			lineElems = [em];
+			tr.classList.add("me-action");
 			quoteText = "* " + who + " " + quoteText;
 		} else {
 			quoteText = "<" + who + "> " + quoteText;
@@ -330,15 +332,14 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.KICK) {
 		lineElems.push(document.createTextNode(payload[0] + " was kicked: " + payload[1]));
 	} else if (type == Flags.TOPIC) {
-		who = payload[0];
-		lineElems.push(document.createTextNode("set the channel topic to: " + payload[1]));
+		lineElems.push(document.createTextNode(payload[0] + " set the channel topic to: " + payload[1]));
 	} else if (type == Flags.INITNOTOPIC) {
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == Flags.INITTOPIC) {
 		lineElems.push(document.createTextNode("The channel topic is: " + payload[0]));
 	} else {
 		who = "RAW";
-		lineElems.push(document.createTextNode(payload.join(" ")));
+		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));
 	}
 	
 	// Make timestamp cell
