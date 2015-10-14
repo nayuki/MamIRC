@@ -8,7 +8,6 @@ const windowListElem  = document.getElementById("window-list");
 const messageListElem = document.getElementById("message-list");
 const memberListElem  = document.getElementById("member-list");
 const inputBoxElem    = document.getElementById("input-box");
-const channelElem     = document.getElementById("channel");
 const nicknameElem    = document.getElementById("nickname");
 const passwordElem    = document.getElementById("password");
 const htmlElem        = document.documentElement;
@@ -240,7 +239,6 @@ function setActiveWindow(name) {
 	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
 	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
-	setElementText(channelElem, activeWindow[1]);
 	redrawWindowList();
 	redrawChannelMembers();
 	
