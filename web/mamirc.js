@@ -117,11 +117,10 @@ function loadState(inData) {
 		});
 		if (lines.length > MAX_MESSAGES_PER_WINDOW)
 			lines.splice(0, lines.length - MAX_MESSAGES_PER_WINDOW);
-		windowData[windowName] = {
-			lines: lines,
-			markedReadUntil: inState.markedReadUntil,
-			numNewMessages: 0,
-		};
+		var outState = createBlankWindow();
+		for (var key in inState)
+			outState[key] = inState[key];
+		windowData[windowName] = outState;
 	});
 	activeWindow = null;
 	windowNames.sort();
@@ -402,11 +401,7 @@ function loadUpdates(inData) {
 			if (windowNames.indexOf(windowName) == -1) {
 				windowNames.push(windowName);
 				windowNames.sort();
-				windowData[windowName] = {
-					lines: [],
-					markedReadUntil: 0,
-					numNewMessages: 0,
-				};
+				windowData[windowName] = createBlankWindow();
 				redrawWindowList();
 				newWindow = true;
 			}
@@ -472,11 +467,7 @@ function loadUpdates(inData) {
 			if (index == -1) {
 				windowNames.push(windowName);
 				windowNames.sort();
-				windowData[windowName] = {
-					lines: [],
-					markedReadUntil: 0,
-					numNewMessages: 0,
-				};
+				windowData[windowName] = createBlankWindow();
 				redrawWindowList();
 				inputBoxElem.value = "";
 				setActiveWindow(windowName);
@@ -726,6 +717,15 @@ function sendMessage(profile, target, text) {
 
 
 /*---- Simple utility functions ----*/
+
+function createBlankWindow() {
+	return {
+		lines: [],
+		markedReadUntil: 0,
+		numNewMessages: 0,
+	};
+}
+
 
 // Converts a Unix millisecond timestamp to a string, in the preferred format for lineDataToRowElem().
 function formatDate(timestamp) {
