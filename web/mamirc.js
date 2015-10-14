@@ -243,9 +243,9 @@ function reflowMessagesTable() {
 function lineDataToRowElem(line) {
 	// Input variables
 	const sequence = line[0];
-	const timestamp = line[1];
-	const payload = line[2];
-	const flags = line[3];
+	const flags = line[1];
+	const timestamp = line[2];
+	const payload = line[3];
 	const payloadparts = split2(payload);
 	const type = payloadparts[0];
 	
@@ -448,24 +448,24 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
-			var subtype = split2(line[2])[0];
+			var subtype = split2(line[3])[0];
 			if (subtype == "PRIVMSG") {
-				if (windowName == activeWindow[2] && (line[3] & Flags.OUTGOING) != 0)
+				if (windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
 				else
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
-				if (newWindow && !payloadparts[2].startsWith("#") && !payloadparts[2].startsWith("&") && split2(line[2])[0]) {
+				if (newWindow && !payloadparts[2].startsWith("#") && !payloadparts[2].startsWith("&") && split2(line[3])[0]) {
 					// Is a private message instead of a channel
-					var temp = split2(split2(line[2])[1]);
+					var temp = split2(split2(line[3])[1]);
 					new Notification("<" + temp[0] + "> " + temp[1]);
-				} else if ((line[3] & Flags.NICKFLAG) != 0) {
-					var temp = split2(split2(line[2])[1]);
+				} else if ((line[1] & Flags.NICKFLAG) != 0) {
+					var temp = split2(split2(line[3])[1]);
 					new Notification(payloadparts[2] + " <" + temp[0] + "> " + temp[1]);
 				}
 			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "KICK" || subtype == "NICK") {
 				var members = connectionData[payloadparts[1]].channels[payloadparts[2]].members;
-				var name = split2(line[2])[1];
+				var name = split2(line[3])[1];
 				if (subtype == "JOIN" && members.indexOf(name) == -1)
 					members.push(name);
 				else if (subtype == "PART" && members.indexOf(name) != -1)
@@ -482,11 +482,11 @@ function loadUpdates(inData) {
 				if (windowName == activeWindow[2])
 					redrawChannelMembers();
 			} else if (subtype == "TOPIC") {
-				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(split2(line[2])[1])[1];
+				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(split2(line[3])[1])[1];
 			} else if (subtype == "INITNOTOPIC") {
 				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = null;
 			} else if (subtype == "INITTOPIC") {
-				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(line[2])[1];
+				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(line[3])[1];
 			}
 		} else if (type == "MYNICK") {
 			var profile = payloadparts[1];

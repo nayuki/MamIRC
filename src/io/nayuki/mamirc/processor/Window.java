@@ -20,8 +20,8 @@ final class Window {
 	
 	
 	
-	public void addLine(long timestamp, String payload, int flags) {
-		lines.add(new Line(nextSequence, timestamp, payload, flags));
+	public void addLine(int flags, long timestamp, String payload) {
+		lines.add(new Line(nextSequence, flags, timestamp, payload));
 		nextSequence++;
 	}
 	
@@ -37,27 +37,20 @@ final class Window {
 	
 	
 	public static final class Line {
-		
 		public final int sequence;
+		public final int flags;
 		public final long timestamp;
 		public final String payload;
 		
-		/* 
-		 * Bit 0: Outgoing PRIVMSG/NOTICE from me
-		 * Bit 1: Incoming PRIVMSG/NOTICE containing my nickname
-		 */
-		public final int flags;
 		
-		
-		public Line(int sequence, long timestamp, String payload, int flags) {
+		public Line(int sequence, int flags, long timestamp, String payload) {
 			if (payload == null)
 				throw new NullPointerException();
 			this.sequence = sequence;
+			this.flags = flags;
 			this.timestamp = timestamp;
 			this.payload = payload;
-			this.flags = flags;
 		}
-		
 	}
 	
 	
