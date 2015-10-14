@@ -251,7 +251,7 @@ function lineDataToRowElem(line) {
 	const flags = line[1];
 	const timestamp = line[2];
 	const payload = line.slice(3);
-	const type = payload[0];
+	const type = flags & Flags.TYPE_MASK;
 	
 	// Output variables
 	var who = "RAW";
@@ -260,9 +260,9 @@ function lineDataToRowElem(line) {
 	var tr = document.createElement("tr");
 	
 	// Take action depending on head of payload
-	if (type == "PRIVMSG") {
-		who = payload[1];
-		var s = payload[2];
+	if (type == Flags.PRIVMSG) {
+		who = payload[0];
+		var s = payload[1];
 		var mematch = ME_INCOMING_REGEX.exec(s);
 		if (mematch != null)
 			s = mematch[1];
@@ -304,33 +304,33 @@ function lineDataToRowElem(line) {
 			quoteText = "<" + who + "> " + quoteText;
 		}
 		
-	} else if (type == "NOTICE") {
-		who = "(" + payload[1] + ")";
-		lineElems.push(document.createTextNode(payload[2]));
-	} else if (type == "NICK") {
+	} else if (type == Flags.NOTICE) {
+		who = "(" + payload[0] + ")";
+		lineElems.push(document.createTextNode(payload[1]));
+	} else if (type == Flags.NICK) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1] + " changed their name to " + payload[2]));
-	} else if (type == "JOIN") {
+		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
+	} else if (type == Flags.JOIN) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1] + " joined the channel"));
-	} else if (type == "PART") {
+		lineElems.push(document.createTextNode(payload[0] + " joined the channel"));
+	} else if (type == Flags.PART) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1] + " left the channel"));
-	} else if (type == "QUIT") {
+		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
+	} else if (type == Flags.QUIT) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1] + " has quit: " + payload[2]));
-	} else if (type == "KICK") {
+		lineElems.push(document.createTextNode(payload[0] + " has quit: " + payload[1]));
+	} else if (type == Flags.KICK) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1] + " was kicked: " + payload[2]));
-	} else if (type == "TOPIC") {
-		who = payload[1];
-		lineElems.push(document.createTextNode("set the channel topic to: " + payload[2]));
-	} else if (type == "INITNOTOPIC") {
+		lineElems.push(document.createTextNode(payload[0] + " was kicked: " + payload[1]));
+	} else if (type == Flags.TOPIC) {
+		who = payload[0];
+		lineElems.push(document.createTextNode("set the channel topic to: " + payload[1]));
+	} else if (type == Flags.INITNOTOPIC) {
 		who = "*";
 		lineElems.push(document.createTextNode("No channel topic is set"));
-	} else if (type == "INITTOPIC") {
+	} else if (type == Flags.INITTOPIC) {
 		who = "*";
-		lineElems.push(document.createTextNode("The channel topic is: " + payload[1]));
+		lineElems.push(document.createTextNode("The channel topic is: " + payload[0]));
 	}
 	
 	// Make timestamp cell
@@ -444,8 +444,8 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
-			var subtype = line[3];
-			if (subtype == "PRIVMSG") {
+			var subtype = line[1] & Flags.TYPE_MASK;
+			if (subtype == Flags.PRIVMSG) {
 				if (windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
 				else
@@ -453,33 +453,33 @@ function loadUpdates(inData) {
 				redrawWindowList();
 				if (newWindow && !payload[2].startsWith("#") && !payload[2].startsWith("&")) {
 					// Is a private message instead of a channel
-					new Notification("<" + line[4] + "> " + line[5]);
+					new Notification("<" + line[3] + "> " + line[4]);
 				} else if ((line[1] & Flags.NICKFLAG) != 0) {
-					new Notification(payload[2] + " <" + line[4] + "> " + line[5]);
+					new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
 				}
-			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "KICK" || subtype == "NICK") {
+			} else if (subtype == Flags.JOIN || subtype == Flags.PART || subtype == Flags.QUIT || subtype == Flags.KICK || subtype == Flags.NICK) {
 				var members = connectionData[payload[1]].channels[payload[2]].members;
-				var name = line[4];
-				if (subtype == "JOIN" && members.indexOf(name) == -1)
+				var name = line[3];
+				if (subtype == Flags.JOIN && members.indexOf(name) == -1)
 					members.push(name);
-				else if (subtype == "PART" && members.indexOf(name) != -1)
+				else if (subtype == Flags.PART && members.indexOf(name) != -1)
 					members.splice(members.indexOf(name), 1);
-				else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(name) != -1)
+				else if ((subtype == Flags.QUIT || subtype == Flags.KICK) && members.indexOf(name) != -1)
 					members.splice(members.indexOf(name), 1);
-				else if (subtype == "NICK") {
+				else if (subtype == Flags.NICK) {
 					if (members.indexOf(name) != -1)
 						members.splice(members.indexOf(name), 1);
-					if (members.indexOf(line[5]) == -1)
-						members.push(line[5]);
+					if (members.indexOf(line[4]) == -1)
+						members.push(line[4]);
 				}
 				if (windowName == activeWindow[2])
 					redrawChannelMembers();
-			} else if (subtype == "TOPIC") {
-				connectionData[payload[1]].channels[payload[2]].topic = line[5];
-			} else if (subtype == "INITNOTOPIC") {
-				connectionData[payload[1]].channels[payload[2]].topic = null;
-			} else if (subtype == "INITTOPIC") {
+			} else if (subtype == Flags.TOPIC) {
 				connectionData[payload[1]].channels[payload[2]].topic = line[4];
+			} else if (subtype == Flags.INITNOTOPIC) {
+				connectionData[payload[1]].channels[payload[2]].topic = null;
+			} else if (subtype == Flags.INITTOPIC) {
+				connectionData[payload[1]].channels[payload[2]].topic = line[3];
 			}
 		} else if (type == "MYNICK") {
 			var profile = payload[1];
