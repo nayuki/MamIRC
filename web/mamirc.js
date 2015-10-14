@@ -18,43 +18,50 @@ var backgroundImageCss;  // Assigned only once at init()
 
 /* Main state */
 
-// All variables must be null before getState() returns successfully. Thereafter, most of them are non-null.
+// Most variables are null before getState() returns successfully. Thereafter, most of them are non-null.
 
 // Type tuple<str profile, str party, str concatenated>.
-// Is null if windowNames is empty, otherwise this[2] equals an entry in windowNames.
+// Is null if windowNames is null or zero-length, otherwise this[2] equals an entry in windowNames.
 var activeWindow = null;
 
 // Type list<str>. Length 0 or more. Each element is of the form (profile+"\n"+party).
 // Elements can be in any order, and it determines the order rendered on screen.
 var windowNames = null;
 
-// Type map<str,window>. Key is an entry in windowNames. Each window has the properties
-// "lines" as list<tuple<int seq, int timestamp, str line, int flags>>, "markedReadUntil" as int, "numNewMessages" as int.
+// Type map<str,window>. Key is an entry in windowNames. Each window has these properties:
+// - list<list<int seq, int flags, int timestamp, str... payload>> lines
+// - int markedReadUntil
+// - int numNewMessages
 var windowData = null;
 
-// Type map<str,object>. Key is the network profile name.
+// Type map<str,object>. Key is the network profile name. Each object has these properties:
+// - str currentNickname
+// - map<str,object> channels, with values having {"members" -> list<str>, "topic" -> str or null}
 var connectionData = null;
 
 // Type int. At least 0.
 var nextUpdateId = null;
 
-// Type str. Gets set by submitting the login form, and remains unchanged after a successful getState().
+// Type str. Value is set by submitting the login form, and remains unchanged after a successful getState().
 var password = null;
 
-// In milliseconds.
+// In milliseconds. This value changes during execution depending on successful/failed requests.
 var retryTimeout = 1000;
 
 
 /* Miscellaneous values */
 
+// Configurable parameter.
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
-var Flags = null;  // Object of integer constants
+// Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
+var Flags = null;
 
 
 
 /*---- User interface functions ----*/
 
+// Called once after the script and page are loaded.
 function init() {
 	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
@@ -62,6 +69,7 @@ function init() {
 	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
 	Notification.requestPermission();
 	inputBoxElem.oninput = function() {
+		// Change style of text box based if a '/command' is being typed
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
 	};
@@ -73,6 +81,7 @@ function init() {
 }
 
 
+// Called only by submitting the login form.
 function authenticate() {
 	password = passwordElem.value;
 	getState();
@@ -80,11 +89,14 @@ function authenticate() {
 }
 
 
+// Called only by getState(). inData is a object parsed from JSON text.
 function loadState(inData) {
+	// Set simple fields
 	nextUpdateId = inData.nextUpdateId;
 	connectionData = inData.connections;
 	Flags = inData.flagsConstants;
 	
+	// Handle the windows
 	windowNames = [];
 	windowData = {};
 	inData.windows.forEach(function(inWindow) {
@@ -93,6 +105,8 @@ function loadState(inData) {
 		if (windowNames.indexOf(windowName) != -1)
 			throw "Duplicate window";
 		windowNames.push(windowName);
+		
+		// Preprocess the window's lines
 		var inState = inWindow[2];
 		var prevTimestamp = 0;
 		inState.lines.forEach(function(line) {
@@ -118,6 +132,8 @@ function loadState(inData) {
 }
 
 
+// Clears the window list HTML container element and rebuilds it from scratch based on
+// the current states of windowNames, windowData[windowName].newMessages, and activeWindow.
 function redrawWindowList() {
 	removeChildren(windowListElem);
 	var prevProfile = null;
@@ -127,6 +143,7 @@ function redrawWindowList() {
 		var profile = parts[0];
 		var party = parts[1];
 		
+		// Add <li class="profile"> at the start of each new profile
 		if (prevProfile == null || profile != prevProfile) {
 			var extrali = document.createElement("li");
 			setElementText(extrali, profile);
@@ -135,6 +152,7 @@ function redrawWindowList() {
 			prevProfile = profile;
 		}
 		
+		// Create the anchor element
 		var a = document.createElement("a");
 		var s = party;
 		var n = windowData[windowName].numNewMessages;
@@ -162,6 +180,8 @@ function redrawWindowList() {
 }
 
 
+// Refreshes the selection class of each window <li> element based on the states of windowNames and activeWindow.
+// This assumes that the list of HTML elements is already synchronized with windowNames.
 function refreshWindowSelection() {
 	var windowLis = windowListElem.getElementsByTagName("li");
 	for (var i = 0, j = 0; i < windowLis.length; i++) {
@@ -173,6 +193,8 @@ function refreshWindowSelection() {
 }
 
 
+// Refreshes the channel members text element based on the states of
+// connectionData[profileName].channels[channelName].members and activeWindow.
 function redrawChannelMembers() {
 	if (activeWindow[1] in connectionData[activeWindow[0]].channels) {
 		var members = connectionData[activeWindow[0]].channels[activeWindow[1]].members;
@@ -184,6 +206,9 @@ function redrawChannelMembers() {
 }
 
 
+// Changes activeWindow and redraws the user interface. 'name' must exist in the array windowNames.
+// Note that for efficiency, switching to the already active window does not re-render the table of lines.
+// Thus all other logic must update the active window's lines incrementally whenever new updates arrive.
 function setActiveWindow(name) {
 	windowData[name].numNewMessages = 0;
 	if ((activeWindow != null && activeWindow[2] == name) || windowNames.indexOf(name) == -1) {
@@ -323,7 +348,7 @@ function lineDataToRowElem(line) {
 		td.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(who); }]]);
 	tr.appendChild(td);
 	
-	// Make message cell
+	// Make message cell and its sophisticated context menu
 	td = document.createElement("td");
 	if (lineElems.length == 0)
 		lineElems.push(document.createTextNode(payload.join(" ")));
@@ -509,6 +534,7 @@ function loadUpdates(inData) {
 }
 
 
+// Called only by submitting the input line text box.
 function handleInputLine() {
 	var text = inputBoxElem.value;
 	if (text.startsWith("//")) {  // Ordinary message beginning with slash
@@ -623,6 +649,7 @@ function makeContextMenuOpener(items) {
 }
 
 
+// Deletes the context menu <div> element, if one is present.
 function closeContextMenu() {
 	var elem = document.getElementById("menu");
 	if (elem != null)
@@ -633,13 +660,15 @@ function closeContextMenu() {
 
 /*---- Networking functions ----*/
 
+// Called after login (from authenticate()) and after a severe state desynchronization (indirectly from updateState()).
+// This performs an Ajax request, changes the page layout, and renders the data on screen.
 function getState() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
-		if (typeof data == "string") {
+		if (typeof data == "string") {  // Error message
 			setElementText(document.getElementById("login-status"), data);
-		} else {
+		} else {  // Good data
 			passwordElem.blur();
 			document.getElementById("login").style.display = "none";
 			document.getElementById("main").style.removeProperty("display");
@@ -704,6 +733,7 @@ function sendAction(payload, onload, ontimeout) {
 }
 
 
+// Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
 function sendMessage(profile, target, text) {
 	inputBoxElem.disabled = true;
 	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]],
@@ -719,6 +749,7 @@ function sendMessage(profile, target, text) {
 
 /*---- Simple utility functions ----*/
 
+// Converts a Unix millisecond timestamp to a string, in the preferred format for lineDataToRowElem().
 function formatDate(timestamp) {
 	var d = new Date(timestamp);
 	return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + "\u00A0" +
@@ -728,6 +759,7 @@ function formatDate(timestamp) {
 var DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 
+// Converts an integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
 function twoDigits(n) {
 	if (n < 10)
 		return "0" + n;
@@ -736,18 +768,22 @@ function twoDigits(n) {
 }
 
 
+// Removes all children of the given DOM node.
 function removeChildren(elem) {
 	while (elem.firstChild != null)
 		elem.removeChild(elem.firstChild);
 }
 
 
+// Removes all children of the given DOM node and adds a single text element containing the specified text.
 function setElementText(elem, str) {
 	removeChildren(elem);
 	elem.appendChild(document.createTextNode(str));
 }
 
 
+// Splits a string by the first space into an array of two strings, or throws
+// an exception if not possible. For example, split2("a b c") -> ["a", "b c"].
 function split2(str) {
 	var i = str.indexOf(" ");
 	if (i == -1)
