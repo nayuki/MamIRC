@@ -168,7 +168,18 @@ function redrawWindowList() {
 			setActiveWindow(windowName);
 			return false;
 		};
-		a.oncontextmenu = makeContextMenuOpener([["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]]);
+		var menuItems = [];
+		if (windowData[windowName].isMuted)
+			menuItems.push(["Unmute window", function() { windowData[windowName].isMuted = false; }]);
+		else {
+			menuItems.push(["Mute window", function() {
+				windowData[windowName].isMuted = true;
+				windowData[windowName].numNewMessages = 0;
+				redrawWindowList();
+			}]);
+		}
+		menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]);
+		a.oncontextmenu = makeContextMenuOpener(menuItems);
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -420,7 +431,7 @@ function loadUpdates(inData) {
 			if (subtype == Flags.PRIVMSG) {
 				if (windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
-				else
+				else if (!windowData[windowName].isMuted)
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
 				if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
@@ -723,6 +734,7 @@ function createBlankWindow() {
 		lines: [],
 		markedReadUntil: 0,
 		numNewMessages: 0,
+		isMuted: false,
 	};
 }
 
