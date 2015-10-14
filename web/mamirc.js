@@ -451,7 +451,7 @@ function loadUpdates(inData) {
 				else
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
-				if (newWindow && !payload[2].startsWith("#") && !payload[2].startsWith("&")) {
+				if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 					// Is a private message instead of a channel
 					new Notification("<" + line[3] + "> " + line[4]);
 				} else if ((line[1] & Flags.NICKFLAG) != 0) {
