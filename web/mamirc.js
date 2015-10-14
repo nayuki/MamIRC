@@ -541,46 +541,38 @@ function loadUpdates(inData) {
 // Called only by submitting the input line text box.
 function handleInputLine() {
 	var inputStr = inputBoxElem.value;
-	if (inputStr.startsWith("//")) {  // Ordinary message beginning with slash
-		sendMessage(activeWindow[0], activeWindow[1], inputStr.substring(1));
+	if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
+		if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
+			inputStr = inputStr.substring(1);
+		sendMessage(activeWindow[0], activeWindow[1], inputStr);
 		
-	} else if (inputStr.startsWith("/")) {  // Command or special message
-		var i = inputStr.indexOf(" ");
-		if (i == -1)
-			i = inputStr.length;
-		var cmd = inputStr.substring(1, i).toLowerCase();
+	} else {  // Command or special message
+		// The user input command is case-insensitive. The command sent to the server will be in uppercase.
+		var parts = inputStr.split(" ");
+		var cmd = parts[0].toLowerCase();
 		
-		if (cmd == "me" && inputStr.length - i >= 2) {
-			var text = "\u0001ACTION " + inputStr.substring(4) + "\u0001";
-			sendMessage(activeWindow[0], activeWindow[1], text);
-			
-		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(inputStr)) {
-			openPrivateMessagingWindow(inputStr.substring(7));
-			
-		} else if (cmd == "msg" && inputStr.split(" ").length >= 3) {
-			var parts = split2(inputStr.substring(5));
-			var target = parts[0];
-			var text = parts[1];
+		if (cmd == "/msg" && parts.length >= 3) {
 			var profile = activeWindow[0];
-			var windowName = profile + "\n" + target;
+			var party = parts[1];
+			var windowName = profile + "\n" + party;
+			var text = nthRemainingPart(inputStr, 2);
 			if (windowNames.indexOf(windowName) == -1) {
-				sendAction([["open-window", profile, target], ["send-line", profile, "PRIVMSG " + target + " :" + text]], clearAndEnableInput, enableInput);
+				sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], clearAndEnableInput, enableInput);
 			} else {
 				setActiveWindow(windowName);
-				sendMessage(profile, target, text);
+				sendMessage(profile, party, text);
 			}
-			
-		} else if (cmd == "part" && inputStr.length == 5) {
+		} else if (cmd == "/me" && parts.length >= 2) {
+			sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001");
+		} else if (cmd == "/part" && parts.length == 1) {
 			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], clearAndEnableInput, enableInput);
-			
-		} else if ((cmd == "nick" || cmd == "join" || cmd == "part") && /^\/[a-z]+ [^ ]+$/i.test(inputStr)) {
-			sendAction([["send-line", activeWindow[0], inputStr.substr(1, 5).toUpperCase() + inputStr.substring(6)]], clearAndEnableInput, enableInput);
-			
-		} else
+		} else if (cmd == "/query" && parts.length == 2) {
+			openPrivateMessagingWindow(parts[1]);
+		} else if ((cmd == "/join" || cmd == "/nick" || cmd == "/part") && parts.length == 2) {
+			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts[1]]], clearAndEnableInput, enableInput);
+		} else {
 			alert("Invalid command");
-	
-	} else {  // Ordinary message
-		sendMessage(activeWindow[0], activeWindow[1], inputStr);
+		}
 	}
 	return false;  // To prevent the form submitting
 }
@@ -765,13 +757,17 @@ function setElementText(elem, str) {
 }
 
 
-// Splits a string by the first space into an array of two strings, or throws
-// an exception if not possible. For example, split2("a b c") -> ["a", "b c"].
-function split2(str) {
-	var i = str.indexOf(" ");
-	if (i == -1)
-		throw "Cannot split";
-	return [str.substr(0, i), str.substring(i + 1)];
+// Finds the first n spaces in the string and returns the rest of the string after the last space found.
+// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
+function nthRemainingPart(s, n) {
+	var j = 0;
+	for (var i = 0; i < n; i++) {
+		j = s.indexOf(" ", j);
+		if (j == -1)
+			throw "Space not found";
+		j++;
+	}
+	return s.substring(j);
 }
 
 
