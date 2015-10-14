@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -157,8 +158,7 @@ public final class MamircProcessor {
 					Set<String> members = entry.getValue().members;
 					if (members.remove(fromname)) {
 						members.add(toname);
-						String line = msg.command + " " + fromname + " " + toname;
-						addMessage(profile.name, entry.getKey(), 0, ev.timestamp, line);
+						addMessage(profile.name, entry.getKey(), 0, ev.timestamp, msg.command, fromname, toname);
 					}
 				}
 				break;
@@ -171,10 +171,8 @@ public final class MamircProcessor {
 					curchans.put(chan, new IrcSession.ChannelState());
 					addUpdate("JOINED", state.profile.name, chan);
 				}
-				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who)) {
-					String line = msg.command + " " + who;
-					addMessage(profile.name, msg.getParameter(0), 0, ev.timestamp, line);
-				}
+				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who))
+					addMessage(profile.name, msg.getParameter(0), 0, ev.timestamp, msg.command, who);
 				break;
 			}
 			
@@ -183,18 +181,15 @@ public final class MamircProcessor {
 				String target = msg.getParameter(0);
 				if (target.equals(state.getCurrentNickname()))
 					target = who;
-				String line = msg.command + " " + who + " " + msg.getParameter(1);
-				addMessage(profile.name, target, 0, ev.timestamp, line);
+				addMessage(profile.name, target, 0, ev.timestamp, msg.command, who, msg.getParameter(1));
 				break;
 			}
 			
 			case "PART": {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
-				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who)) {
-					String line = msg.command + " " + who;
-					addMessage(profile.name, chan, 0, ev.timestamp, line);
-				}
+				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who))
+					addMessage(profile.name, chan, 0, ev.timestamp, msg.command, who);
 				if (who.equals(state.getCurrentNickname())) {
 					curchans.remove(chan);
 					addUpdate("PARTED", state.profile.name, chan);
@@ -206,10 +201,8 @@ public final class MamircProcessor {
 				String reason = msg.getParameter(2);
 				for (String chan : msg.getParameter(0).split(",")) {
 					for (String target : msg.getParameter(1).split(",")) {
-						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target)) {
-							String line = msg.command + " " + target + " " + reason;
-							addMessage(profile.name, chan, 0, ev.timestamp, line);
-						}
+						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target))
+							addMessage(profile.name, chan, 0, ev.timestamp, msg.command, target, reason);
 						if (target.equals(state.getCurrentNickname())) {
 							curchans.remove(chan);
 							addUpdate("KICKED", state.profile.name, chan, reason);
@@ -225,11 +218,10 @@ public final class MamircProcessor {
 				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
 					target = who;
 				String text = msg.getParameter(1);
-				String line = msg.command + " " + who + " " + text;
 				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
 					flags |= Window.Flags.NICKFLAG.value;
-				addMessage(profile.name, target, flags, ev.timestamp, line);
+				addMessage(profile.name, target, flags, ev.timestamp, msg.command, who, text);
 				break;
 			}
 			
@@ -237,10 +229,8 @@ public final class MamircProcessor {
 				String who = msg.prefixName;
 				if (!who.equals(state.getCurrentNickname())) {
 					for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
-						if (entry.getValue().members.remove(who)) {
-							String line = msg.command + " " + who + " " + msg.getParameter(0);
-							addMessage(profile.name, entry.getKey(), 0, ev.timestamp, line);
-						}
+						if (entry.getValue().members.remove(who))
+							addMessage(profile.name, entry.getKey(), 0, ev.timestamp, msg.command, who, msg.getParameter(0));
 					}
 				} else {
 					addUpdate("QUITTED", state.profile.name);
@@ -254,7 +244,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(1);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addMessage(profile.name, chan, 0, ev.timestamp, "TOPIC " + who + " " + text);
+				addMessage(profile.name, chan, 0, ev.timestamp, msg.command, who, text);
 				break;
 			}
 			
@@ -310,7 +300,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(2);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addMessage(profile.name, chan, 0, ev.timestamp, "INITTOPIC " + text);
+				addMessage(profile.name, chan, 0, ev.timestamp, "INITTOPIC", text);
 				break;
 			}
 			
@@ -374,8 +364,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, 0, ev.timestamp, line);
+				addMessage(profile.name, party, 0, ev.timestamp, msg.command, src, text);
 				break;
 			}
 			
@@ -385,8 +374,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, line);
+				addMessage(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, msg.command, src, text);
 				break;
 			}
 			
@@ -540,7 +528,7 @@ public final class MamircProcessor {
 	
 	
 	// Must be called from one of the synchronized methods above.
-	private void addMessage(String profile, String target, int flags, long timestamp, String line) {
+	private void addMessage(String profile, String target, int flags, long timestamp, String... payload) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
 		Map<String,Window> innerMap = windows.get(profile);
@@ -555,11 +543,20 @@ public final class MamircProcessor {
 		}
 		Window win = innerMap.get(target);
 		int sequence = win.nextSequence;
-		win.addLine(flags, timestamp, line);
+		win.addLine(flags, timestamp, payload);
 		List<Window.Line> list = win.lines;
 		if (list.size() - 100 >= 10000)
 			list.subList(0, 100).clear();
-		addUpdate("APPEND", profile, target, sequence, flags, timestamp, line);
+		
+		Object[] temp = new Object[6 + payload.length];
+		temp[0] = "APPEND";
+		temp[1] = profile;
+		temp[2] = target;
+		temp[3] = sequence;
+		temp[4] = flags;
+		temp[5] = timestamp;
+		System.arraycopy(payload, 0, temp, 6, payload.length);
+		addUpdate(temp);
 	}
 	
 	
@@ -601,8 +598,14 @@ public final class MamircProcessor {
 				
 				Window inWindow = targetEntry.getValue();
 				List<List<Object>> outLines = new ArrayList<>();
-				for (Window.Line line : inWindow.lines)
-					outLines.add(Arrays.<Object>asList(line.sequence, line.flags, line.timestamp, line.payload));
+				for (Window.Line line : inWindow.lines) {
+					List<Object> lst = new ArrayList<>();
+					lst.add(line.sequence);
+					lst.add(line.flags);
+					lst.add(line.timestamp);
+					Collections.addAll(lst, line.payload);
+					outLines.add(lst);
+				}
 				
 				Map<String,Object> outWinState = new HashMap<>();
 				outWinState.put("lines", outLines);

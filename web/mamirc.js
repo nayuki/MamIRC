@@ -245,9 +245,8 @@ function lineDataToRowElem(line) {
 	const sequence = line[0];
 	const flags = line[1];
 	const timestamp = line[2];
-	const payload = line[3];
-	const payloadparts = split2(payload);
-	const type = payloadparts[0];
+	const payload = line.slice(3);
+	const type = payload[0];
 	
 	// Output variables
 	var who = "RAW";
@@ -257,9 +256,8 @@ function lineDataToRowElem(line) {
 	
 	// Take action depending on head of payload
 	if (type == "PRIVMSG") {
-		var subparts = split2(payloadparts[1]);
-		who = subparts[0];
-		var s = subparts[1];
+		who = payload[1];
+		var s = payload[2];
 		var mematch = ME_INCOMING_REGEX.exec(s);
 		if (mematch != null)
 			s = mematch[1];
@@ -302,37 +300,32 @@ function lineDataToRowElem(line) {
 		}
 		
 	} else if (type == "NOTICE") {
-		var subparts = split2(payloadparts[1]);
-		who = "(" + subparts[0] + ")";
-		lineElems.push(document.createTextNode(subparts[1]));
+		who = "(" + payload[1] + ")";
+		lineElems.push(document.createTextNode(payload[2]));
 	} else if (type == "NICK") {
 		who = "*";
-		var subparts = split2(payloadparts[1]);
-		lineElems.push(document.createTextNode(subparts[0] + " changed their name to " + subparts[1]));
+		lineElems.push(document.createTextNode(payload[1] + " changed their name to " + payload[2]));
 	} else if (type == "JOIN") {
 		who = "*";
-		lineElems.push(document.createTextNode(payloadparts[1] + " joined the channel"));
+		lineElems.push(document.createTextNode(payload[1] + " joined the channel"));
 	} else if (type == "PART") {
 		who = "*";
-		lineElems.push(document.createTextNode(payloadparts[1] + " left the channel"));
+		lineElems.push(document.createTextNode(payload[1] + " left the channel"));
 	} else if (type == "QUIT") {
 		who = "*";
-		var subparts = split2(payloadparts[1]);
-		lineElems.push(document.createTextNode(subparts[0] + " has quit: " + subparts[1]));
+		lineElems.push(document.createTextNode(payload[1] + " has quit: " + payload[2]));
 	} else if (type == "KICK") {
 		who = "*";
-		var subparts = split2(payloadparts[1]);
-		lineElems.push(document.createTextNode(subparts[0] + " was kicked: " + subparts[1]));
+		lineElems.push(document.createTextNode(payload[1] + " was kicked: " + payload[2]));
 	} else if (type == "TOPIC") {
-		var subparts = split2(payloadparts[1]);
-		who = subparts[1];
-		lineElems.push(document.createTextNode("set the channel topic to: " + subparts[1]));
+		who = payload[1];
+		lineElems.push(document.createTextNode("set the channel topic to: " + payload[2]));
 	} else if (type == "INITNOTOPIC") {
 		who = "*";
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == "INITTOPIC") {
 		who = "*";
-		lineElems.push(document.createTextNode("The channel topic is: " + payloadparts[1]));
+		lineElems.push(document.createTextNode("The channel topic is: " + payload[1]));
 	}
 	
 	// Make timestamp cell
@@ -350,7 +343,7 @@ function lineDataToRowElem(line) {
 	// Make message cell
 	td = document.createElement("td");
 	if (lineElems.length == 0)
-		lineElems.push(document.createTextNode(payload));
+		lineElems.push(document.createTextNode(payload.join(" ")));
 	lineElems.forEach(function(elem) {
 		td.appendChild(elem);
 	});
@@ -419,12 +412,10 @@ function loadUpdates(inData) {
 	const scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
-		// 'payload' has type str, and has a variable number of parts delimited by '\n'
-		var payloadparts = payload;
-		var type = payloadparts[0];
+		var type = payload[0];
 		
 		if (type == "APPEND") {
-			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var windowName = payload[1] + "\n" + payload[2];
 			var newWindow = false;
 			if (windowNames.indexOf(windowName) == -1) {
 				windowNames.push(windowName);
@@ -437,7 +428,7 @@ function loadUpdates(inData) {
 				redrawWindowList();
 				newWindow = true;
 			}
-			var line = payloadparts.slice(3);
+			var line = payload.slice(3);
 			var lines = windowData[windowName].lines;
 			lines.push(line);
 			var numPrefixDel = Math.max(lines.length - MAX_MESSAGES_PER_WINDOW, 0);
@@ -448,56 +439,53 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
-			var subtype = split2(line[3])[0];
+			var subtype = line[3];
 			if (subtype == "PRIVMSG") {
 				if (windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
 				else
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
-				if (newWindow && !payloadparts[2].startsWith("#") && !payloadparts[2].startsWith("&") && split2(line[3])[0]) {
+				if (newWindow && !payload[2].startsWith("#") && !payload[2].startsWith("&")) {
 					// Is a private message instead of a channel
-					var temp = split2(split2(line[3])[1]);
-					new Notification("<" + temp[0] + "> " + temp[1]);
+					new Notification("<" + line[4] + "> " + line[5]);
 				} else if ((line[1] & Flags.NICKFLAG) != 0) {
-					var temp = split2(split2(line[3])[1]);
-					new Notification(payloadparts[2] + " <" + temp[0] + "> " + temp[1]);
+					new Notification(payload[2] + " <" + line[4] + "> " + line[5]);
 				}
 			} else if (subtype == "JOIN" || subtype == "PART" || subtype == "QUIT" || subtype == "KICK" || subtype == "NICK") {
-				var members = connectionData[payloadparts[1]].channels[payloadparts[2]].members;
-				var name = split2(line[3])[1];
+				var members = connectionData[payload[1]].channels[payload[2]].members;
+				var name = line[4];
 				if (subtype == "JOIN" && members.indexOf(name) == -1)
 					members.push(name);
 				else if (subtype == "PART" && members.indexOf(name) != -1)
 					members.splice(members.indexOf(name), 1);
-				else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(split2(name)[0]) != -1)
-					members.splice(members.indexOf(split2(name)[0]), 1);
+				else if ((subtype == "QUIT" || subtype == "KICK") && members.indexOf(name) != -1)
+					members.splice(members.indexOf(name), 1);
 				else if (subtype == "NICK") {
-					name = split2(name);
-					if (members.indexOf(name[0]) != -1)
-						members.splice(members.indexOf(name[0]), 1);
-					if (members.indexOf(name[1]) == -1)
-						members.push(name[1]);
+					if (members.indexOf(name) != -1)
+						members.splice(members.indexOf(name), 1);
+					if (members.indexOf(line[5]) == -1)
+						members.push(line[5]);
 				}
 				if (windowName == activeWindow[2])
 					redrawChannelMembers();
 			} else if (subtype == "TOPIC") {
-				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(split2(line[3])[1])[1];
+				connectionData[payload[1]].channels[payload[2]].topic = line[5];
 			} else if (subtype == "INITNOTOPIC") {
-				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = null;
+				connectionData[payload[1]].channels[payload[2]].topic = null;
 			} else if (subtype == "INITTOPIC") {
-				connectionData[payloadparts[1]].channels[payloadparts[2]].topic = split2(line[3])[1];
+				connectionData[payload[1]].channels[payload[2]].topic = line[4];
 			}
 		} else if (type == "MYNICK") {
-			var profile = payloadparts[1];
-			var name = payloadparts[2];
+			var profile = payload[1];
+			var name = payload[2];
 			connectionData[profile].currentNickname = name;
 			if (activeWindow[0] == profile) {
 				setElementText(nicknameElem, name);
 				activeWindowUpdated = true;
 			}
 		} else if (type == "OPENWIN") {
-			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
 			if (index == -1) {
 				windowNames.push(windowName);
@@ -512,7 +500,7 @@ function loadUpdates(inData) {
 				setActiveWindow(windowName);
 			}
 		} else if (type == "CLOSEWIN") {
-			var windowName = payloadparts[1] + "\n" + payloadparts[2];
+			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
 			if (index != -1) {
 				windowNames.splice(index, 1);
@@ -527,8 +515,8 @@ function loadUpdates(inData) {
 				}
 			}
 		} else if (type == "MARKREAD") {
-			var windowName = payloadparts[1] + "\n" + payloadparts[2];
-			var seq = payloadparts[3];
+			var windowName = payload[1] + "\n" + payload[2];
+			var seq = payload[3];
 			windowData[windowName].markedReadUntil = seq;
 			if (windowName == activeWindow[2]) {
 				var lines = windowData[windowName].lines;
@@ -547,8 +535,8 @@ function loadUpdates(inData) {
 				activeWindowUpdated = true;
 			}
 		} else if (type == "CLEARLINES") {
-			var windowName = payloadparts[1] + "\n" + payloadparts[2];
-			var seq = payloadparts[3];
+			var windowName = payload[1] + "\n" + payload[2];
+			var seq = payload[3];
 			var lines = windowData[windowName].lines;
 			var i;
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);

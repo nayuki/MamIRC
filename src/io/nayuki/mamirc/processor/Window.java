@@ -20,7 +20,7 @@ final class Window {
 	
 	
 	
-	public void addLine(int flags, long timestamp, String payload) {
+	public void addLine(int flags, long timestamp, String... payload) {
 		lines.add(new Line(nextSequence, flags, timestamp, payload));
 		nextSequence++;
 	}
@@ -40,16 +40,16 @@ final class Window {
 		public final int sequence;
 		public final int flags;
 		public final long timestamp;
-		public final String payload;
+		public final String[] payload;
 		
 		
-		public Line(int sequence, int flags, long timestamp, String payload) {
+		public Line(int sequence, int flags, long timestamp, String... payload) {
 			if (payload == null)
 				throw new NullPointerException();
 			this.sequence = sequence;
 			this.flags = flags;
 			this.timestamp = timestamp;
-			this.payload = payload;
+			this.payload = payload.clone();
 		}
 	}
 	
