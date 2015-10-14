@@ -15,6 +15,7 @@ const htmlElem        = document.documentElement;
 
 var backgroundImageCss;  // Assigned only once at init()
 
+
 /* Main state */
 
 // All variables must be null before getState() returns successfully. Thereafter, most of them are non-null.
@@ -43,12 +44,16 @@ var password = null;
 // In milliseconds.
 var retryTimeout = 1000;
 
+
+/* Miscellaneous values */
+
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
 var Flags = null;  // Object of integer constants
 
 
-/*---- Major functions ----*/
+
+/*---- User interface functions ----*/
 
 function init() {
 	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
@@ -72,33 +77,6 @@ function authenticate() {
 	password = passwordElem.value;
 	getState();
 	return false;  // To prevent the form submitting
-}
-
-
-function getState() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		var data = JSON.parse(xhr.response);
-		if (typeof data == "string") {
-			setElementText(document.getElementById("login-status"), data);
-		} else {
-			passwordElem.blur();
-			document.getElementById("login").style.display = "none";
-			document.getElementById("main").style.removeProperty("display");
-			htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
-			loadState(data);
-			updateState();
-		}
-	};
-	xhr.ontimeout = xhr.onerror = function() {
-		var li = document.createElement("li");
-		setElementText(li, "(Unable to connect to data provider)");
-		windowListElem.appendChild(li);
-	};
-	xhr.open("POST", "get-state.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 10000;
-	xhr.send(JSON.stringify({"password":password}));
 }
 
 
@@ -380,36 +358,6 @@ function lineDataToRowElem(line) {
 var ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
 
 
-function updateState() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		if (xhr.status != 200)
-			xhr.onerror();
-		else {
-			var data = JSON.parse(xhr.response);
-			if (data != null) {  // Success
-				loadUpdates(data);
-				retryTimeout = 1000;
-				updateState();
-			} else {  // Lost synchronization or fell behind too much; do full update and re-render text
-				setTimeout(getState, retryTimeout);
-				if (retryTimeout < 300000)
-					retryTimeout *= 2;
-			}
-		}
-	};
-	xhr.ontimeout = xhr.onerror = function() {
-		setTimeout(updateState, retryTimeout);
-		if (retryTimeout < 300000)
-			retryTimeout *= 2;
-	};
-	xhr.open("POST", "get-updates.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 80000;
-	xhr.send(JSON.stringify({"password":password, "nextUpdateId":nextUpdateId}));
-}
-
-
 function loadUpdates(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	
@@ -637,33 +585,6 @@ function enableInput() {
 }
 
 
-// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
-function sendAction(payload, onload, ontimeout) {
-	var xhr = new XMLHttpRequest();
-	if (onload != null)
-		xhr.onload = onload;
-	if (ontimeout != null)
-		xhr.ontimeout = ontimeout;
-	xhr.open("POST", "do-actions.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":payload}));
-}
-
-
-function sendMessage(profile, target, text) {
-	inputBoxElem.disabled = true;
-	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]],
-		function() {
-			inputBoxElem.value = "";
-			inputBoxElem.disabled = false;
-		},
-		function() {
-			inputBoxElem.disabled = false;
-		});
-}
-
-
 // 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
 function makeContextMenuOpener(items) {
 	return function(ev) {
@@ -709,6 +630,93 @@ function closeContextMenu() {
 }
 
 
+
+/*---- Networking functions ----*/
+
+function getState() {
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		var data = JSON.parse(xhr.response);
+		if (typeof data == "string") {
+			setElementText(document.getElementById("login-status"), data);
+		} else {
+			passwordElem.blur();
+			document.getElementById("login").style.display = "none";
+			document.getElementById("main").style.removeProperty("display");
+			htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
+			loadState(data);
+			updateState();
+		}
+	};
+	xhr.ontimeout = xhr.onerror = function() {
+		var li = document.createElement("li");
+		setElementText(li, "(Unable to connect to data provider)");
+		windowListElem.appendChild(li);
+	};
+	xhr.open("POST", "get-state.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 10000;
+	xhr.send(JSON.stringify({"password":password}));
+}
+
+
+function updateState() {
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		if (xhr.status != 200)
+			xhr.onerror();
+		else {
+			var data = JSON.parse(xhr.response);
+			if (data != null) {  // Success
+				loadUpdates(data);
+				retryTimeout = 1000;
+				updateState();
+			} else {  // Lost synchronization or fell behind too much; do full update and re-render text
+				setTimeout(getState, retryTimeout);
+				if (retryTimeout < 300000)
+					retryTimeout *= 2;
+			}
+		}
+	};
+	xhr.ontimeout = xhr.onerror = function() {
+		setTimeout(updateState, retryTimeout);
+		if (retryTimeout < 300000)
+			retryTimeout *= 2;
+	};
+	xhr.open("POST", "get-updates.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 80000;
+	xhr.send(JSON.stringify({"password":password, "nextUpdateId":nextUpdateId}));
+}
+
+
+// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
+function sendAction(payload, onload, ontimeout) {
+	var xhr = new XMLHttpRequest();
+	if (onload != null)
+		xhr.onload = onload;
+	if (ontimeout != null)
+		xhr.ontimeout = ontimeout;
+	xhr.open("POST", "do-actions.json", true);
+	xhr.responseType = "text";
+	xhr.timeout = 5000;
+	xhr.send(JSON.stringify({"password":password, "payload":payload}));
+}
+
+
+function sendMessage(profile, target, text) {
+	inputBoxElem.disabled = true;
+	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]],
+		function() {
+			inputBoxElem.value = "";
+			inputBoxElem.disabled = false;
+		},
+		function() {
+			inputBoxElem.disabled = false;
+		});
+}
+
+
 /*---- Simple utility functions ----*/
 
 function formatDate(timestamp) {
@@ -746,6 +754,7 @@ function split2(str) {
 		throw "Cannot split";
 	return [str.substr(0, i), str.substring(i + 1)];
 }
+
 
 
 /*---- Miscellaneous ----*/
