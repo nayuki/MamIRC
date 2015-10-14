@@ -268,7 +268,7 @@ function lineDataToRowElem(line) {
 	const type = flags & Flags.TYPE_MASK;
 	
 	// Output variables
-	var who = "RAW";
+	var who = "*";
 	var lineElems = [];  // list<domnode>
 	var quoteText = null;
 	var tr = document.createElement("tr");
@@ -287,9 +287,7 @@ function lineDataToRowElem(line) {
 			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
 		
-		if (s == "")
-			lineElems.push(document.createTextNode(s));
-		while (s != "") {
+		do {
 			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
 			if (linkmatch == null)
 				linkmatch = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
@@ -302,11 +300,11 @@ function lineDataToRowElem(line) {
 				var a = document.createElement("a");
 				a.href = linkmatch[2];
 				a.target = "_blank";
-				a.appendChild(document.createTextNode(linkmatch[2]));
+				setElementText(a, linkmatch[2]);
 				lineElems.push(a);
 				s = linkmatch[3];
 			}
-		}
+		} while (s != "");
 		if (mematch != null) {
 			var em = document.createElement("em");
 			lineElems.forEach(function(elem) {
@@ -322,29 +320,25 @@ function lineDataToRowElem(line) {
 		who = "(" + payload[0] + ")";
 		lineElems.push(document.createTextNode(payload[1]));
 	} else if (type == Flags.NICK) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
 	} else if (type == Flags.JOIN) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " joined the channel"));
 	} else if (type == Flags.PART) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
 	} else if (type == Flags.QUIT) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " has quit: " + payload[1]));
 	} else if (type == Flags.KICK) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " was kicked: " + payload[1]));
 	} else if (type == Flags.TOPIC) {
 		who = payload[0];
 		lineElems.push(document.createTextNode("set the channel topic to: " + payload[1]));
 	} else if (type == Flags.INITNOTOPIC) {
-		who = "*";
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == Flags.INITTOPIC) {
-		who = "*";
 		lineElems.push(document.createTextNode("The channel topic is: " + payload[0]));
+	} else {
+		who = "RAW";
+		lineElems.push(document.createTextNode(payload.join(" ")));
 	}
 	
 	// Make timestamp cell
@@ -361,8 +355,6 @@ function lineDataToRowElem(line) {
 	
 	// Make message cell and its sophisticated context menu
 	td = document.createElement("td");
-	if (lineElems.length == 0)
-		lineElems.push(document.createTextNode(payload.join(" ")));
 	lineElems.forEach(function(elem) {
 		td.appendChild(elem);
 	});
@@ -374,8 +366,8 @@ function lineDataToRowElem(line) {
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
 		};
 	}
-	menuItems.push(["Mark read to here", function() { sendAction([["mark-read"  , activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
-	menuItems.push(["Clear to here"    , function() {
+	menuItems.push(["Mark read to here", function() { sendAction([["mark-read", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
+	menuItems.push(["Clear to here", function() {
 		closeContextMenu();
 		if (confirm("Do you want to clear text?"))
 			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null);
@@ -391,7 +383,7 @@ function lineDataToRowElem(line) {
 	return tr;
 }
 
-var ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
+const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
 
 
 function loadUpdates(inData) {
@@ -547,54 +539,47 @@ function loadUpdates(inData) {
 
 // Called only by submitting the input line text box.
 function handleInputLine() {
-	var text = inputBoxElem.value;
-	if (text.startsWith("//")) {  // Ordinary message beginning with slash
-		sendMessage(activeWindow[0], activeWindow[1], text.substring(1));
+	var inputStr = inputBoxElem.value;
+	if (inputStr.startsWith("//")) {  // Ordinary message beginning with slash
+		sendMessage(activeWindow[0], activeWindow[1], inputStr.substring(1));
 		
-	} else if (text.startsWith("/")) {  // Command or special message
-		var i = text.indexOf(" ");
+	} else if (inputStr.startsWith("/")) {  // Command or special message
+		var i = inputStr.indexOf(" ");
 		if (i == -1)
-			i = text.length;
-		var cmd = text.substring(1, i).toLowerCase();
+			i = inputStr.length;
+		var cmd = inputStr.substring(1, i).toLowerCase();
 		
-		if (cmd == "me" && text.length - i >= 2) {
-			var text = "\u0001ACTION " + text.substring(4) + "\u0001";
+		if (cmd == "me" && inputStr.length - i >= 2) {
+			var text = "\u0001ACTION " + inputStr.substring(4) + "\u0001";
 			sendMessage(activeWindow[0], activeWindow[1], text);
 			
-		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(text)) {
-			openPrivateMessagingWindow(text.substring(7));
+		} else if (cmd == "query" && /^\/query [^ ]+$/i.test(inputStr)) {
+			openPrivateMessagingWindow(inputStr.substring(7));
 			
-		} else if (cmd == "msg" && text.split(" ").length >= 3) {
-			var parts = split2(text.substring(5));
+		} else if (cmd == "msg" && inputStr.split(" ").length >= 3) {
+			var parts = split2(inputStr.substring(5));
 			var target = parts[0];
 			var text = parts[1];
 			var profile = activeWindow[0];
 			var windowName = profile + "\n" + target;
 			if (windowNames.indexOf(windowName) == -1) {
-				sendAction([["open-window", profile, target], ["send-line", profile, "PRIVMSG " + target + " :" + text]],
-					function() {
-						inputBoxElem.value = "";
-						inputBoxElem.disabled = false;
-					},
-					function() {
-						inputBoxElem.disabled = false;
-					});
+				sendAction([["open-window", profile, target], ["send-line", profile, "PRIVMSG " + target + " :" + text]], clearAndEnableInput, enableInput);
 			} else {
 				setActiveWindow(windowName);
 				sendMessage(profile, target, text);
 			}
 			
-		} else if (cmd == "part" && text.length == 5) {
+		} else if (cmd == "part" && inputStr.length == 5) {
 			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], clearAndEnableInput, enableInput);
 			
-		} else if ((cmd == "nick" || cmd == "join" || cmd == "part") && /^\/[a-z]+ [^ ]+$/i.test(text)) {
-			sendAction([["send-line", activeWindow[0], text.substr(1, 5).toUpperCase() + text.substring(6)]], clearAndEnableInput, enableInput);
+		} else if ((cmd == "nick" || cmd == "join" || cmd == "part") && /^\/[a-z]+ [^ ]+$/i.test(inputStr)) {
+			sendAction([["send-line", activeWindow[0], inputStr.substr(1, 5).toUpperCase() + inputStr.substring(6)]], clearAndEnableInput, enableInput);
 			
 		} else
 			alert("Invalid command");
 	
 	} else {  // Ordinary message
-		sendMessage(activeWindow[0], activeWindow[1], text);
+		sendMessage(activeWindow[0], activeWindow[1], inputStr);
 	}
 	return false;  // To prevent the form submitting
 }
@@ -743,14 +728,7 @@ function sendAction(payload, onload, ontimeout) {
 // Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
 function sendMessage(profile, target, text) {
 	inputBoxElem.disabled = true;
-	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]],
-		function() {
-			inputBoxElem.value = "";
-			inputBoxElem.disabled = false;
-		},
-		function() {
-			inputBoxElem.disabled = false;
-		});
+	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], clearAndEnableInput, enableInput);
 }
 
 
