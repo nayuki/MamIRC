@@ -60,4 +60,16 @@ final class Window {
 		
 	}
 	
+	
+	
+	public enum Flags {
+		OUTGOING(1 << 0),
+		NICKFLAG(1 << 1);
+		
+		public final int value;
+		private Flags(int val) {
+			value = val;
+		}
+	}
+	
 }

@@ -228,7 +228,7 @@ public final class MamircProcessor {
 				String line = msg.command + " " + who + " " + text;
 				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
-					flags |= 1 << 1;
+					flags |= Window.Flags.NICKFLAG.value;
 				addMessage(profile.name, target, ev.timestamp, line, flags);
 				break;
 			}
@@ -386,7 +386,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
 				String line = msg.command + " " + src + " " + text;
-				addMessage(profile.name, party, ev.timestamp, line, 1 << 0);
+				addMessage(profile.name, party, ev.timestamp, line, Window.Flags.OUTGOING.value);
 				break;
 			}
 			
@@ -615,6 +615,10 @@ public final class MamircProcessor {
 		
 		// Miscellaneous
 		result.put("nextUpdateId", nextUpdateId);
+		Map<String,Integer> flagConst = new HashMap<>();
+		for (Window.Flags flag : Window.Flags.values())
+			flagConst.put(flag.name(), flag.value);
+		result.put("flagsConstants", flagConst);
 		return result;
 	}
 	

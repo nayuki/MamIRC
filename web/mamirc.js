@@ -45,10 +45,7 @@ var retryTimeout = 1000;
 
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
-const Flags = {
-	OUTGOING: 0x1,
-	NICKFLAG: 0x2,
-};
+var Flags = null;  // Object of integer constants
 
 
 /*---- Major functions ----*/
@@ -108,6 +105,7 @@ function getState() {
 function loadState(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	connectionData = inData.connections;
+	Flags = inData.flagsConstants;
 	
 	windowNames = [];
 	windowData = {};
