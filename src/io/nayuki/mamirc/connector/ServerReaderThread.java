@@ -81,10 +81,10 @@ final class ServerReaderThread extends Thread {
 		// Clean up
 		} catch (IOException e) {}
 		finally {
+			master.connectionClosed(connectionId);
 			terminate();
 			if (writer != null)
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
-			master.connectionClosed(connectionId);
 		}
 	}
 	
