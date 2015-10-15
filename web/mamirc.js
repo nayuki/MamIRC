@@ -544,10 +544,20 @@ function loadUpdates(inData) {
 				if (!windowData[windowName].isMuted) {
 					if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 						// New private messaging window popped open, or nickflagged in one
-						var notif = new Notification("<" + line[3] + "> " + line[4]);
+						var notif;
+						var match = ME_INCOMING_REGEX.exec(line[4]);
+						if (match == null)
+							notif = new Notification("<" + line[3] + "> " + line[4]);
+						else
+							notif = new Notification(line[3] + " " + match[1]);
 						notif.onclick = function() { setActiveWindow(windowName); };
 					} else if ((line[1] & Flags.NICKFLAG) != 0) {
-						var notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
+						var notif;
+						var match = ME_INCOMING_REGEX.exec(line[4]);
+						if (match == null)
+							notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
+						else
+							notif = new Notification(payload[2] + " " + line[3] + " " + match[1]);
 						notif.onclick = function() { setActiveWindow(windowName); };
 					}
 				}
