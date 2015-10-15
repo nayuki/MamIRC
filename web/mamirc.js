@@ -323,8 +323,8 @@ function lineDataToRowElem(line) {
 			lineElems.push(elem);
 		});
 	} else if (type == Flags.KICK) {
-		lineElems.push(document.createTextNode(payload[0] + " was kicked: "));
-		fancyTextToElems(payload[1]).forEach(function(elem) {
+		lineElems.push(document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
+		fancyTextToElems(payload[2]).forEach(function(elem) {
 			lineElems.push(elem);
 		});
 	} else if (type == Flags.TOPIC) {

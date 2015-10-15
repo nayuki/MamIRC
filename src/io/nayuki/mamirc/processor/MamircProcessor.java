@@ -202,7 +202,7 @@ public final class MamircProcessor {
 				for (String chan : msg.getParameter(0).split(",")) {
 					for (String target : msg.getParameter(1).split(",")) {
 						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target))
-							addKickLine(profile.name, chan, ev.timestamp, target, reason);
+							addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, target, reason);
 						if (target.equals(state.getCurrentNickname())) {
 							curchans.remove(chan);
 							addUpdate("KICKED", state.profile.name, chan, reason);
@@ -577,8 +577,8 @@ public final class MamircProcessor {
 		addWindowLine(profile, target, Window.Flags.JOIN.value, timestamp, nick);
 	}
 	
-	private void addKickLine(String profile, String target, long timestamp, String kickee, String text) {
-		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kickee, text);
+	private void addKickLine(String profile, String target, long timestamp, String kicker, String kickee, String text) {
+		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kicker, kickee, text);
 	}
 	
 	private void addNickLine(String profile, String target, long timestamp, String oldNick, String newNick) {
