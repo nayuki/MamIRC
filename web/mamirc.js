@@ -8,6 +8,8 @@ const windowListElem  = document.getElementById("window-list");
 const messageListElem = document.getElementById("message-list");
 const memberListContainerElem = document.getElementById("member-list-container");
 const memberListElem  = document.getElementById("member-list");
+const failedCommandsContainerElem = document.getElementById("failed-commands-container");
+const failedCommandsElem = document.getElementById("failed-commands");
 const inputBoxElem    = document.getElementById("input-box");
 const nicknameElem    = document.getElementById("nickname");
 const passwordElem    = document.getElementById("password");
@@ -68,6 +70,12 @@ var Flags = null;
 function init() {
 	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
+	removeChildren(failedCommandsElem);
+	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
+		failedCommandsContainerElem.style.display = "none";
+		removeChildren(failedCommandsElem);
+		return false;
+	};
 	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
 	Notification.requestPermission();
 	
@@ -227,7 +235,7 @@ function redrawChannelMembers() {
 		members.forEach(function(name) {
 			var li = document.createElement("li");
 			setElementText(li, name);
-			li.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(name); }]]);
+			li.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(name, null); }]]);
 			memberListElem.appendChild(li);
 		});
 		memberListContainerElem.style.removeProperty("display");
@@ -360,7 +368,7 @@ function lineDataToRowElem(line) {
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
 	if (who != "*" && who != "RAW")
-		td.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(who); }]]);
+		td.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
 	tr.appendChild(td);
 	
 	// Make message cell and its sophisticated context menu
@@ -690,10 +698,17 @@ function handleInputLine() {
 	if (activeWindow == null)
 		return false;
 	var inputStr = inputBoxElem.value;
+	var onerror = function() {
+		failedCommandsContainerElem.style.removeProperty("display");
+		var li = document.createElement("li");
+		setElementText(li, inputStr);
+		failedCommandsElem.appendChild(li);
+	};
+	
 	if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
 		if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
 			inputStr = inputStr.substring(1);
-		sendMessage(activeWindow[0], activeWindow[1], inputStr);
+		sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
 		
 	} else {  // Command or special message
 		// The user input command is case-insensitive. The command sent to the server will be in uppercase.
@@ -706,46 +721,38 @@ function handleInputLine() {
 			var windowName = profile + "\n" + party;
 			var text = nthRemainingPart(inputStr, 2);
 			if (windowNames.indexOf(windowName) == -1) {
-				sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], clearAndEnableInput, enableInput);
+				sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], null, onerror);
 			} else {
 				setActiveWindow(windowName);
-				sendMessage(profile, party, text);
+				sendMessage(profile, party, text, onerror);
 			}
 		} else if (cmd == "/me" && parts.length >= 2) {
-			sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001");
+			sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 		} else if (cmd == "/part" && parts.length == 1) {
-			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], clearAndEnableInput, enableInput);
+			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
 		} else if (cmd == "/query" && parts.length == 2) {
-			openPrivateMessagingWindow(parts[1]);
+			openPrivateMessagingWindow(parts[1], onerror);
 		} else if ((cmd == "/join" || cmd == "/nick" || cmd == "/part") && parts.length == 2) {
-			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts[1]]], clearAndEnableInput, enableInput);
+			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts[1]]], null, onerror);
 		} else {
 			alert("Invalid command");
+			return false;  // Don't clear the text box
 		}
 	}
+	inputBoxElem.value = "";
 	return false;  // To prevent the form submitting
 }
 
 
-function openPrivateMessagingWindow(target) {
+function openPrivateMessagingWindow(target, onerror) {
 	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
 	if (windowNames.indexOf(windowName) == -1)
-		sendAction([["open-window", profile, target]], null, null);
+		sendAction([["open-window", profile, target]], null, onerror);
 	else {
 		setActiveWindow(windowName);
 		inputBoxElem.value = "";
 	}
-}
-
-
-function clearAndEnableInput() {
-	inputBoxElem.value = "";
-	enableInput();
-}
-
-function enableInput() {
-	inputBoxElem.disabled = false;
 }
 
 
@@ -868,9 +875,8 @@ function sendAction(payload, onload, ontimeout) {
 
 
 // Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
-function sendMessage(profile, target, text) {
-	inputBoxElem.disabled = true;
-	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], clearAndEnableInput, enableInput);
+function sendMessage(profile, target, text, onerror) {
+	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], null, onerror);
 }
 
 

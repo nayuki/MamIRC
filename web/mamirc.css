@@ -166,6 +166,24 @@ body {
 	content: ", ";
 }
 
+#failed-commands-container {
+	margin: 0.6em 0em;
+	padding: 0.1em 1.2em;
+	background: #FFB0B0;
+}
+
+#failed-commands-container p {
+	margin: 0.5em 0em;
+}
+
+#failed-commands-container ul {
+	margin-left: 2.0em;
+}
+
+#failed-commands-container li {
+	list-style-type: disc;
+}
+
 table {
 	margin-top: 0.5em;
 	width: 100%;
