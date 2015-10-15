@@ -227,6 +227,7 @@ function redrawChannelMembers() {
 		members.forEach(function(name) {
 			var li = document.createElement("li");
 			setElementText(li, name);
+			li.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(name); }]]);
 			memberListElem.appendChild(li);
 		});
 		memberListContainerElem.style.removeProperty("display");
