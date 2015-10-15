@@ -295,7 +295,7 @@ function lineDataToRowElem(line) {
 			tr.classList.add("outgoing");
 		if ((flags & Flags.NICKFLAG) != 0)
 			tr.classList.add("nickflag");
-		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
+		quoteText = s.replace(/\t/g, " ").replace(REMOVE_FORMATTING_REGEX, "");
 		lineElems = fancyTextToElems(s);
 		if (mematch != null) {
 			tr.classList.add("me-action");
@@ -383,6 +383,7 @@ function lineDataToRowElem(line) {
 }
 
 const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
+const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
 
 
 // Given a string with possible IRC formatting control codes and plain text URLs,
@@ -559,17 +560,17 @@ function loadUpdates(inData) {
 						var notif;
 						var match = ME_INCOMING_REGEX.exec(line[4]);
 						if (match == null)
-							notif = new Notification("<" + line[3] + "> " + line[4]);
+							notif = new Notification("<" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, ""));
 						else
-							notif = new Notification(line[3] + " " + match[1]);
+							notif = new Notification(line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, ""));
 						notif.onclick = function() { setActiveWindow(windowName); };
 					} else if ((line[1] & Flags.NICKFLAG) != 0) {
 						var notif;
 						var match = ME_INCOMING_REGEX.exec(line[4]);
 						if (match == null)
-							notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
+							notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, ""));
 						else
-							notif = new Notification(payload[2] + " " + line[3] + " " + match[1]);
+							notif = new Notification(payload[2] + " " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, ""));
 						notif.onclick = function() { setActiveWindow(windowName); };
 					}
 				}
