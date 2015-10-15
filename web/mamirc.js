@@ -128,6 +128,7 @@ function loadState(inData) {
 	windowNames.sort();
 	
 	// Update UI elements
+	passwordElem.value = "";
 	passwordElem.blur();
 	document.getElementById("login").style.display = "none";
 	document.getElementById("main").style.removeProperty("display");

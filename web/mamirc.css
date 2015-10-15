@@ -44,6 +44,7 @@ body {
 	display: table;
 	width: 100%;
 	height: 100%;
+	font-size: 150%;
 }
 
 #main {
@@ -73,7 +74,7 @@ body {
 /*---- Small elements ----*/
 
 #login h1 {
-	margin-bottom: 0.5em;
+	margin-bottom: 1.1em;
 	font-size: 200%;
 	font-weight: normal;
 }
@@ -81,6 +82,15 @@ body {
 #login form {
 	display: table-cell;
 	text-align: center;
+	vertical-align: middle;
+}
+
+#login p {
+	margin: 0.8em 0em;
+}
+
+#login input[type="password"] {
+	font-size: 80%;
 	vertical-align: middle;
 }
 
@@ -203,7 +213,7 @@ input {
 	font-family: inherit;
 }
 
-input[type="text"] {
+#main input[type="text"] {
 	width: 100%;
 	font-size: inherit;
 }
