@@ -589,7 +589,7 @@ function loadUpdates(inData) {
 			var profile = payload[1];
 			var name = payload[2];
 			connectionData[profile].currentNickname = name;
-			if (activeWindow[0] == profile) {
+			if (activeWindow != null && activeWindow[0] == profile) {
 				setElementText(nicknameElem, name);
 				activeWindowUpdated = true;
 			}
@@ -663,6 +663,8 @@ function loadUpdates(inData) {
 
 // Called only by submitting the input line text box.
 function handleInputLine() {
+	if (activeWindow == null)
+		return false;
 	var inputStr = inputBoxElem.value;
 	if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
 		if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
