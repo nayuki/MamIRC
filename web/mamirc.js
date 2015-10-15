@@ -6,6 +6,7 @@
 // Document nodes (elements)
 const windowListElem  = document.getElementById("window-list");
 const messageListElem = document.getElementById("message-list");
+const memberListContainerElem = document.getElementById("member-list-container");
 const memberListElem  = document.getElementById("member-list");
 const inputBoxElem    = document.getElementById("input-box");
 const nicknameElem    = document.getElementById("nickname");
@@ -216,16 +217,21 @@ function refreshWindowSelection() {
 // Refreshes the channel members text element based on the states of
 // connectionData[profileName].channels[channelName].members and activeWindow.
 function redrawChannelMembers() {
+	removeChildren(memberListElem);
 	var profile = activeWindow[0], party = activeWindow[1];
-	var str = "";
 	if (profile in connectionData && party in connectionData[profile].channels) {
 		var members = connectionData[profile].channels[party].members;
 		members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
 			return s.toLowerCase().localeCompare(t.toLowerCase());
 		});
-		str = "Channel members: " + members.join(", ");
-	}
-	setElementText(memberListElem, str);
+		members.forEach(function(name) {
+			var li = document.createElement("li");
+			setElementText(li, name);
+			memberListElem.appendChild(li);
+		});
+		memberListContainerElem.style.removeProperty("display");
+	} else
+		memberListContainerElem.style.display = "none";
 }
 
 

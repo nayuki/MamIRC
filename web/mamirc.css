@@ -142,12 +142,28 @@ body {
 	background-color: #F8F8F8;
 }
 
-#member-list {
+#member-list-container {
 	margin: 0.4em 0em;
 	padding: 0.4em 0em;
 	border-top: 1px solid #D0D0D0;
 	border-bottom: 1px solid #D0D0D0;
 	font-size: 85%;
+}
+
+#member-list-container p, #member-list, #member-list li {
+	display: inline;
+}
+
+#member-list-container p::after {
+	content: "Channel members: ";
+}
+
+#member-list li:first-child::before {
+	content: none;
+}
+
+#member-list li::before {
+	content: ", ";
 }
 
 table {
