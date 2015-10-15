@@ -432,11 +432,15 @@ function loadUpdates(inData) {
 				else if (!windowData[windowName].isMuted)
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
-				if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
-					// Is a private message instead of a channel
-					new Notification("<" + line[3] + "> " + line[4]);
-				} else if ((line[1] & Flags.NICKFLAG) != 0) {
-					new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
+				if (!windowData[windowName].isMuted) {
+					if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
+						// New private messaging window popped open, or nickflagged in one
+						var notif = new Notification("<" + line[3] + "> " + line[4]);
+						notif.onclick = function() { setActiveWindow(windowName); };
+					} else if ((line[1] & Flags.NICKFLAG) != 0) {
+						var notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4]);
+						notif.onclick = function() { setActiveWindow(windowName); };
+					}
 				}
 			} else if (subtype == Flags.JOIN || subtype == Flags.PART || subtype == Flags.QUIT || subtype == Flags.KICK || subtype == Flags.NICK) {
 				var members = connectionData[payload[1]].channels[payload[2]].members;
