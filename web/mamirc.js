@@ -296,29 +296,7 @@ function lineDataToRowElem(line) {
 		if ((flags & Flags.NICKFLAG) != 0)
 			tr.classList.add("nickflag");
 		quoteText = s.replace(/\t/g, " ").replace(/[\u0000-\u001F]/g, "");  // Sanitize formatting control characters
-		
-		// Split the string into regular text and URL links
-		do {
-			// Try to grab the next URL
-			var linkmatch = /(^|.*?\()(https?:\/\/[^ )]+)(.*)/.exec(s);
-			if (linkmatch == null)
-				linkmatch = /(^|.*? )(https?:\/\/[^ ]+)(.*)/.exec(s);
-			if (linkmatch == null) {
-				// No URL found
-				lineElems.push(document.createTextNode(s));
-				break;
-			} else {
-				// URL found
-				if (linkmatch[1].length > 0)
-					lineElems.push(document.createTextNode(linkmatch[1]));
-				var a = document.createElement("a");
-				a.href = linkmatch[2];
-				a.target = "_blank";
-				setElementText(a, linkmatch[2]);
-				lineElems.push(a);
-				s = linkmatch[3];
-			}
-		} while (s != "");
+		lineElems = fancyTextToElems(s);
 		if (mematch != null) {
 			tr.classList.add("me-action");
 			quoteText = "* " + who + " " + quoteText;
@@ -393,6 +371,137 @@ function lineDataToRowElem(line) {
 }
 
 const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
+
+
+// Given a string with possible IRC formatting control codes and plain text URLs,
+// this returns an array of DOM nodes representing text with formatting and anchor links.
+function fancyTextToElems(str) {
+	// Take fast path if string contains no formatting or potential URLs
+	if (!SPECIAL_FORMATTING_REGEX.test(str))
+		return [document.createTextNode(str)];
+	
+	// These formatting state variables are declared now, referenced in closures in the next section of code
+	// (but not read or written), and mutated in the next next section (when the closures are called)
+	var bold = false;
+	var italic = false;
+	var underline = false;
+	var background = 0;
+	var foreground = 1;
+	
+	// Split the string into literal text and formatting function objects
+	var parts = [];  // Array of strings and functions
+	var start = 0;
+	var end = 0;
+	while (end < str.length) {
+		var ch = str.charCodeAt(end);
+		var action;
+		var newStart;
+		if (ch == 0x02) {
+			action = function() { bold = !bold; };
+			newStart = end + 1;
+		} else if (ch == 0x1D) {
+			action = function() { italic = !italic; };
+			newStart = end + 1;
+		} else if (ch == 0x1F) {
+			action = function() { underline = !underline; }
+			newStart = end + 1;
+		} else if (ch == 0x16) {  // Reverse
+			action = function() {
+				var temp = foreground;
+				foreground = background;
+				background = temp;
+			};
+			newStart = end + 1;
+		} else if (ch == 0x0F) {  // Plain
+			action = function() {
+				bold = false;
+				italic = false;
+				underline = false;
+				background = 0;
+				foreground = 1;
+			};
+			newStart = end + 1;
+		} else if (ch == 0x03) {  // Color code
+			var match = COLOR_CODE_REGEX.exec(str.substring(end));
+			var newfg = match[1] != undefined ? parseInt(match[1], 10) : 1;
+			var newbg = match[2] != undefined ? parseInt(match[2], 10) : 0;
+			action = (function(fg, bg) {
+				return function() {
+					if (fg < TEXT_COLORS.length) foreground = fg;
+					if (bg < TEXT_COLORS.length) background = bg;
+				};
+			})(newfg, newbg);
+			newStart = end + match[0].length;
+		} else {
+			action = null;
+			newStart = -1;
+			end++;
+		}
+		// Execute this iff the 'else' clause wasn't executed
+		if (newStart != -1) {
+			parts.push(str.substring(start, end));
+			parts.push(action);  // action is a function, not null
+			start = newStart;
+			end = newStart;
+		}
+	}
+	if (start < end)
+		parts.push(str.substring(start, end));
+	
+	// Parse URLs in each literal string, and apply formatting functions
+	var result = [];
+	parts.forEach(function(part) {
+		if (typeof part == "string") {
+			while (part != "") {
+				var match = URL_REGEX0.exec(part);
+				if (match == null)
+					match = URL_REGEX1.exec(part);
+				var textEnd = match != null ? match[1].length : part.length;
+				if (textEnd > 0) {
+					var elem = document.createTextNode(part.substr(0, textEnd));
+					if (bold || italic || underline || background != 0 || foreground != 1) {
+						var span = document.createElement("span");
+						if (bold) span.style.fontWeight = "bold";
+						if (italic) span.style.fontStyle = "italic";
+						if (underline) span.style.textDecoration = "underline";
+						if (background != 0)
+							span.style.backgroundColor = TEXT_COLORS[background];
+						if (foreground != 1)
+							span.style.color = TEXT_COLORS[foreground];
+						span.appendChild(elem);
+						elem = span;
+					}
+					result.push(elem);
+				}
+				if (match == null)
+					break;
+				var a = document.createElement("a");
+				a.href = match[2];
+				a.target = "_blank";
+				setElementText(a, match[2]);
+				result.push(a);
+				part = part.substring(match[0].length);
+			}
+		} else if (typeof part == "function")
+			part();
+	});
+	
+	// Epilog
+	if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
+		result.push(document.createTextNode(""));
+	return result;
+}
+
+const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
+const COLOR_CODE_REGEX = /^\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?/;
+const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
+const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
+const TEXT_COLORS = [
+	"#FFFFFF", "#000000", "#00007F", "#009300",
+	"#FF0000", "#7F0000", "#9C009C", "#FC7F00",
+	"#FFFF00", "#00FC00", "#009393", "#00FFFF",
+	"#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
+];
 
 
 function loadUpdates(inData) {
