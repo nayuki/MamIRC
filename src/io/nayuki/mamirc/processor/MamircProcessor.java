@@ -565,7 +565,7 @@ public final class MamircProcessor {
 	
 	// The methods below should only be called from MessageHttpServer.
 	
-	public synchronized Map<String,Object> getState() {
+	public synchronized Map<String,Object> getState(int maxMsgPerWin) {
 		Map<String,Object> result = new HashMap<>();
 		
 		// States of current connections
@@ -600,7 +600,9 @@ public final class MamircProcessor {
 				Window inWindow = targetEntry.getValue();
 				List<List<Object>> outLines = new ArrayList<>();
 				long prevTimestamp = 0;
-				for (Window.Line line : inWindow.lines) {
+				List<Window.Line> inLines = inWindow.lines;
+				inLines = inLines.subList(Math.max(inLines.size() - maxMsgPerWin, 0), inLines.size());
+				for (Window.Line line : inLines) {
 					List<Object> lst = new ArrayList<>();
 					lst.add(line.sequence);
 					lst.add(line.flags);

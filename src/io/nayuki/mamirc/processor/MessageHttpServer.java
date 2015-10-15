@@ -84,7 +84,7 @@ final class MessageHttpServer {
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
 					case "/get-state.json": {
-						writeJsonResponse(master.getState(), he);
+						writeJsonResponse(master.getState(Json.getInt(reqData, "maxMessagesPerWindow")), he);
 						break;
 					}
 					

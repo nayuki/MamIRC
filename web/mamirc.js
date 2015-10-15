@@ -50,7 +50,7 @@ var retryTimeout = 1000;
 
 /* Miscellaneous values */
 
-// Configurable parameter.
+// Configurable parameter. Used by getState().
 const MAX_MESSAGES_PER_WINDOW = 3000;
 
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
@@ -108,14 +108,11 @@ function loadState(inData) {
 		
 		// Preprocess the window's lines
 		var inState = inWindow[2];
-		var lines = inState.lines;
 		var prevTimestamp = 0;
-		lines.forEach(function(line) {
+		inState.lines.forEach(function(line) {
 			line[2] += prevTimestamp;  // Delta decoding
 			prevTimestamp = line[2];
 		});
-		if (lines.length > MAX_MESSAGES_PER_WINDOW)
-			lines.splice(0, lines.length - MAX_MESSAGES_PER_WINDOW);
 		var outState = createBlankWindow();
 		for (var key in inState)
 			outState[key] = inState[key];
@@ -808,7 +805,7 @@ function getState() {
 	xhr.open("POST", "get-state.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 10000;
-	xhr.send(JSON.stringify({"password":password}));
+	xhr.send(JSON.stringify({"maxMessagesPerWindow":MAX_MESSAGES_PER_WINDOW, "password":password}));
 }
 
 
