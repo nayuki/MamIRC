@@ -44,6 +44,9 @@ var nextUpdateId = null;
 // Type str. Value is set by submitting the login form, and remains unchanged after a successful getState().
 var password = null;
 
+// Type bool. Value is set by submitting the login form.
+var optimizeMobile = null;
+
 // In milliseconds. This value changes during execution depending on successful/failed requests.
 var retryTimeout = 1000;
 
@@ -51,7 +54,7 @@ var retryTimeout = 1000;
 /* Miscellaneous values */
 
 // Configurable parameter. Used by getState().
-const MAX_MESSAGES_PER_WINDOW = 3000;
+var maxMessagesPerWindow = 3000;
 
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
 var Flags = null;
@@ -84,6 +87,9 @@ function init() {
 // Called only by submitting the login form.
 function authenticate() {
 	password = passwordElem.value;
+	optimizeMobile = document.getElementById("optimize-mobile").checked;
+	if (optimizeMobile)
+		maxMessagesPerWindow = 500;
 	getState();
 	return false;  // To prevent the form submitting
 }
@@ -536,7 +542,7 @@ function loadUpdates(inData) {
 			var line = payload.slice(3);
 			var lines = windowData[windowName].lines;
 			lines.push(line);
-			var numPrefixDel = Math.max(lines.length - MAX_MESSAGES_PER_WINDOW, 0);
+			var numPrefixDel = Math.max(lines.length - maxMessagesPerWindow, 0);
 			lines.splice(0, numPrefixDel);
 			if (windowName == activeWindow[2]) {
 				messageListElem.appendChild(lineDataToRowElem(line));
@@ -805,7 +811,7 @@ function getState() {
 	xhr.open("POST", "get-state.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 10000;
-	xhr.send(JSON.stringify({"maxMessagesPerWindow":MAX_MESSAGES_PER_WINDOW, "password":password}));
+	xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow, "password":password}));
 }
 
 
@@ -875,8 +881,12 @@ function createBlankWindow() {
 // Converts a Unix millisecond timestamp to a string, in the preferred format for lineDataToRowElem().
 function formatDate(timestamp) {
 	var d = new Date(timestamp);
-	return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + "\u00A0" +
-		twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes()) + ":" + twoDigits(d.getSeconds());
+	if (!optimizeMobile) {
+		return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + "\u00A0" +
+			twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes()) + ":" + twoDigits(d.getSeconds());
+	} else {
+		return DAYS_OF_WEEK[d.getDay()] + "\u00A0" + twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes());
+	}
 }
 
 var DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
