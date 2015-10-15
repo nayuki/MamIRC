@@ -158,7 +158,7 @@ public final class MamircProcessor {
 					Set<String> members = entry.getValue().members;
 					if (members.remove(fromname)) {
 						members.add(toname);
-						addMessage(profile.name, entry.getKey(), Window.Flags.NICK.value, ev.timestamp, fromname, toname);
+						addNickLine(profile.name, entry.getKey(), ev.timestamp, fromname, toname);
 					}
 				}
 				break;
@@ -172,7 +172,7 @@ public final class MamircProcessor {
 					addUpdate("JOINED", state.profile.name, chan);
 				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who))
-					addMessage(profile.name, msg.getParameter(0), Window.Flags.JOIN.value, ev.timestamp, who);
+					addJoinLine(profile.name, msg.getParameter(0), ev.timestamp, who);
 				break;
 			}
 			
@@ -181,7 +181,7 @@ public final class MamircProcessor {
 				String target = msg.getParameter(0);
 				if (target.equals(state.getCurrentNickname()))
 					target = who;
-				addMessage(profile.name, target, Window.Flags.NOTICE.value, ev.timestamp, who, msg.getParameter(1));
+				addNoticeLine(profile.name, target, 0, ev.timestamp, who, msg.getParameter(1));
 				break;
 			}
 			
@@ -189,7 +189,7 @@ public final class MamircProcessor {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who))
-					addMessage(profile.name, chan, Window.Flags.PART.value, ev.timestamp, who);
+					addPartLine(profile.name, chan, ev.timestamp, who);
 				if (who.equals(state.getCurrentNickname())) {
 					curchans.remove(chan);
 					addUpdate("PARTED", state.profile.name, chan);
@@ -202,7 +202,7 @@ public final class MamircProcessor {
 				for (String chan : msg.getParameter(0).split(",")) {
 					for (String target : msg.getParameter(1).split(",")) {
 						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target))
-							addMessage(profile.name, chan, Window.Flags.KICK.value, ev.timestamp, target, reason);
+							addKickLine(profile.name, chan, ev.timestamp, target, reason);
 						if (target.equals(state.getCurrentNickname())) {
 							curchans.remove(chan);
 							addUpdate("KICKED", state.profile.name, chan, reason);
@@ -218,10 +218,10 @@ public final class MamircProcessor {
 				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
 					target = who;
 				String text = msg.getParameter(1);
-				int flags = Window.Flags.PRIVMSG.value;
+				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
 					flags |= Window.Flags.NICKFLAG.value;
-				addMessage(profile.name, target, flags, ev.timestamp, who, text);
+				addPrivmsgLine(profile.name, target, flags, ev.timestamp, who, text);
 				break;
 			}
 			
@@ -230,7 +230,7 @@ public final class MamircProcessor {
 				if (!who.equals(state.getCurrentNickname())) {
 					for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who))
-							addMessage(profile.name, entry.getKey(), Window.Flags.QUIT.value, ev.timestamp, who, msg.getParameter(0));
+							addQuitLine(profile.name, entry.getKey(), ev.timestamp, who, msg.getParameter(0));
 					}
 				} else {
 					addUpdate("QUITTED", state.profile.name);
@@ -244,7 +244,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(1);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addMessage(profile.name, chan, Window.Flags.TOPIC.value, ev.timestamp, who, text);
+				addTopicLine(profile.name, chan, ev.timestamp, who, text);
 				break;
 			}
 			
@@ -291,7 +291,7 @@ public final class MamircProcessor {
 				String chan = msg.getParameter(1);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = null;
-				addMessage(profile.name, chan, Window.Flags.INITNOTOPIC.value, ev.timestamp);
+				addInitNoTopicLine(profile.name, chan, ev.timestamp);
 				break;
 			}
 			
@@ -300,7 +300,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(2);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addMessage(profile.name, chan, Window.Flags.INITTOPIC.value, ev.timestamp, text);
+				addInitTopicLine(profile.name, chan, ev.timestamp, text);
 				break;
 			}
 			
@@ -364,7 +364,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				addMessage(profile.name, party, Window.Flags.NOTICE.value, ev.timestamp, src, text);
+				addNoticeLine(profile.name, party, 0, ev.timestamp, src, text);
 				break;
 			}
 			
@@ -374,7 +374,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				addMessage(profile.name, party, Window.Flags.PRIVMSG.value | Window.Flags.OUTGOING.value, ev.timestamp, src, text);
+				addPrivmsgLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
 				break;
 			}
 			
@@ -527,8 +527,10 @@ public final class MamircProcessor {
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
-	private void addMessage(String profile, String target, int flags, long timestamp, String... payload) {
+	/*---- Window line adding methods ----*/
+	
+	// Must be called in a synchronized context. Should only be called by the stub methods below, not directly by any methods above.
+	private void addWindowLine(String profile, String target, int flags, long timestamp, String... payload) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
 		Map<String,Window> innerMap = windows.get(profile);
@@ -558,6 +560,49 @@ public final class MamircProcessor {
 		temp[5] = timestamp;
 		System.arraycopy(payload, 0, temp, 6, payload.length);
 		addUpdate(temp);
+	}
+	
+	
+	// All of these addXxxLine methods must only be called from a synchronized method above.
+	
+	private void addInitNoTopicLine(String profile, String target, long timestamp) {
+		addWindowLine(profile, target, Window.Flags.INITNOTOPIC.value, timestamp);
+	}
+	
+	private void addInitTopicLine(String profile, String target, long timestamp, String text) {
+		addWindowLine(profile, target, Window.Flags.INITTOPIC.value, timestamp, text);
+	}
+	
+	private void addJoinLine(String profile, String target, long timestamp, String nick) {
+		addWindowLine(profile, target, Window.Flags.JOIN.value, timestamp, nick);
+	}
+	
+	private void addKickLine(String profile, String target, long timestamp, String kickee, String text) {
+		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kickee, text);
+	}
+	
+	private void addNickLine(String profile, String target, long timestamp, String oldNick, String newNick) {
+		addWindowLine(profile, target, Window.Flags.NICK.value, timestamp, oldNick, newNick);
+	}
+	
+	private void addNoticeLine(String profile, String target, int flags, long timestamp, String nick, String text) {
+		addWindowLine(profile, target, Window.Flags.NOTICE.value | flags, timestamp, nick, text);
+	}
+	
+	private void addPartLine(String profile, String target, long timestamp, String nick) {
+		addWindowLine(profile, target, Window.Flags.PART.value, timestamp, nick);
+	}
+	
+	private void addPrivmsgLine(String profile, String target, int flags, long timestamp, String nick, String text) {
+		addWindowLine(profile, target, Window.Flags.PRIVMSG.value | flags, timestamp, nick, text);
+	}
+	
+	private void addTopicLine(String profile, String target, long timestamp, String nick, String text) {
+		addWindowLine(profile, target, Window.Flags.TOPIC.value, timestamp, nick, text);
+	}
+	
+	private void addQuitLine(String profile, String target, long timestamp, String nick, String text) {
+		addWindowLine(profile, target, Window.Flags.QUIT.value, timestamp, nick, text);
 	}
 	
 	
