@@ -314,15 +314,27 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.PART) {
 		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
 	} else if (type == Flags.QUIT) {
-		lineElems.push(document.createTextNode(payload[0] + " has quit: " + payload[1]));
+		lineElems.push(document.createTextNode(payload[0] + " has quit: "));
+		fancyTextToElems(payload[1]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else if (type == Flags.KICK) {
-		lineElems.push(document.createTextNode(payload[0] + " was kicked: " + payload[1]));
+		lineElems.push(document.createTextNode(payload[0] + " was kicked: "));
+		fancyTextToElems(payload[1]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else if (type == Flags.TOPIC) {
-		lineElems.push(document.createTextNode(payload[0] + " set the channel topic to: " + payload[1]));
+		lineElems.push(document.createTextNode(payload[0] + " set the channel topic to: "));
+		fancyTextToElems(payload[1]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else if (type == Flags.INITNOTOPIC) {
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == Flags.INITTOPIC) {
-		lineElems.push(document.createTextNode("The channel topic is: " + payload[0]));
+		lineElems.push(document.createTextNode("The channel topic is: "));
+		fancyTextToElems(payload[0]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else {
 		who = "RAW";
 		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));
