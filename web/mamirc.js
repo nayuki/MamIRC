@@ -760,6 +760,11 @@ function handleInputLine() {
 			openPrivateMessagingWindow(parts[1], onerror);
 		} else if ((cmd == "/join" || cmd == "/nick" || cmd == "/part") && parts.length == 2) {
 			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts[1]]], null, onerror);
+		} else if (cmd == "/topic" && parts.length >= 2) {
+			sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], null, onerror);
+		} else if (cmd == "/kick" && parts.length >= 2) {
+			var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
+			sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
 		} else {
 			alert("Invalid command");
 			return false;  // Don't clear the text box
