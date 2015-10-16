@@ -62,6 +62,9 @@ var maxMessagesPerWindow = 3000;
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
 var Flags = null;
 
+// Type tuple<int begin, int end, str prefix, str name> or null.
+var prevTabCompletion = null;
+
 
 
 /*---- User interface functions ----*/
@@ -84,6 +87,16 @@ function init() {
 		// Change style of text box based if a '/command' is being typed
 		var text = inputBoxElem.value;
 		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
+	};
+	inputBoxElem.onblur = clearTabCompletion;
+	inputBoxElem.onkeypress = function(ev) {
+		if (ev.keyCode == 9) {
+			doInputTabCompletion();
+			return false;
+		} else {
+			clearTabCompletion();
+			return true;
+		}
 	};
 	inputBoxElem.value = "";
 	passwordElem.oninput = function() {
@@ -812,6 +825,75 @@ function closeContextMenu() {
 	var elem = document.getElementById("menu");
 	if (elem != null)
 		elem.parentNode.removeChild(elem);
+}
+
+
+function doInputTabCompletion() {
+	do {  // Simulate goto
+		if (document.activeElement != inputBoxElem)
+			break;
+		var index = inputBoxElem.selectionStart;
+		if (index != inputBoxElem.selectionEnd)
+			break;
+		if (activeWindow == null)
+			break;
+		var profile = activeWindow[0];
+		var party = activeWindow[1];
+		if (!(profile in connectionData) || !(party in connectionData[profile].channels))
+			break;
+		
+		var text = inputBoxElem.value;
+		var match;
+		var prefix;
+		if (prevTabCompletion == null) {
+			match = TAB_COMPLETION_REGEX.exec(text.substr(0, index));
+			prefix = match[2].toLowerCase();
+			if (prefix.length == 0)
+				break;
+		} else {
+			match = null;
+			prefix = prevTabCompletion[2];
+		}
+		
+		var candidates = connectionData[profile].channels[party].members.filter(function(name) {
+			return name.toLowerCase().startsWith(prefix); });
+		if (candidates.length == 0)
+			break;
+		candidates.sort(function(s, t) {
+			return s.toLowerCase().localeCompare(t.toLowerCase()); });
+		
+		var candidate;
+		var beginning;
+		if (prevTabCompletion == null) {
+			candidate = candidates[0];
+			beginning = match[1];
+		} else {
+			var oldcandidate = prevTabCompletion[3].toLowerCase();
+			var i;  // Skip elements until one is strictly larger
+			for (i = 0; i < candidates.length && candidates[i].toLowerCase() <= oldcandidate; i++);
+			candidates.push(candidates[0]);  // Wrap-around
+			candidate = candidates[i];
+			beginning = text.substr(0, prevTabCompletion[0]);
+		}
+		var tabcomp = candidate;
+		if (beginning.length == 0)
+			tabcomp += ": ";
+		else if (index < text.length)
+			tabcomp += " ";
+		inputBoxElem.value = beginning + tabcomp + text.substring(index);
+		prevTabCompletion = [beginning.length, beginning.length + tabcomp.length, prefix, candidate];
+		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion[1];
+		return;  // Don't clear the current tab completion
+		
+	} while (false);
+	clearTabCompletion();
+}
+
+const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
+
+
+function clearTabCompletion() {
+	prevTabCompletion = null;
 }
 
 
