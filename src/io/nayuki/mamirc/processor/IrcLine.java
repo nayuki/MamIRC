@@ -62,19 +62,23 @@ final class IrcLine {
 		String rest = m.group(3);
 		List<String> params = new ArrayList<>();
 		while (rest.length() > 0) {
-			if (rest.charAt(0) != ' ')
+			int i = 0;
+			while (i < rest.length() && rest.charAt(i) == ' ')
+				i++;
+			if (i == 0)
 				throw new AssertionError();
-			else if (rest.startsWith(" :")) {
-				params.add(rest.substring(2));
-				rest = "";
+			
+			if (i == rest.length())
+				break;
+			else if (rest.charAt(i) == ':') {
+				params.add(rest.substring(i + 1));
+				break;
 			} else {
-				int i = rest.indexOf(' ', 1);
-				if (i == -1)
-					i = rest.length();
-				if (i == 1)
-					throw new IrcSyntaxException("Multiple spaces between parameters");
-				params.add(rest.substring(1, i));
-				rest = rest.substring(i);
+				int j = rest.indexOf(' ', i);
+				if (j == -1)
+					j = rest.length();
+				params.add(rest.substring(i, j));
+				rest = rest.substring(j);
 			}
 		}
 		parameters = Collections.unmodifiableList(params);
@@ -95,6 +99,6 @@ final class IrcLine {
 	
 	/*---- Constants ----*/
 	
-	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ )?([^ ]+)(.*)");
+	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ +)?([^ :][^ ]*)(.*)");
 	
 }

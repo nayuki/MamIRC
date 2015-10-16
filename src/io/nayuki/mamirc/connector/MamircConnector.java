@@ -245,7 +245,7 @@ public final class MamircConnector {
 			i++;
 			while (i < b.length && b[i] != ' ')
 				i++;
-			if (i < b.length && b[i] == ' ')
+			while (i < b.length && b[i] == ' ')
 				i++;
 		}
 		

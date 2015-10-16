@@ -78,21 +78,15 @@ public final class IrcLineTest {
 	
 	@Test public void testLineSyntaxErrors() {
 		String[] cases = {
+			":prefixonly",
+			":prefixonly  ",
 			" :prefix PING",
-			":prefix  PING",
-			"HELLO ",
-			"HELLO  ",
-			"HELLO WORLD ",
-			"HELLO  world",
-			"HELLO new  world",
-			"HELLO  new  world",
-			"HELLO  new  world",
 		};
 		for (String line : cases) {
 			try {
 				new IrcLine(line);
 				Assert.fail();
-			} catch (IllegalArgumentException e) {}  // Pass
+			} catch (IrcSyntaxException e) {}  // Pass
 		}
 	}
 	
