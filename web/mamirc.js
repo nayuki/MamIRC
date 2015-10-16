@@ -625,6 +625,19 @@ function loadUpdates(inData) {
 				setElementText(nicknameElem, name);
 				activeWindowUpdated = true;
 			}
+		} else if (type == "JOINED") {
+			connectionData[payload[1]].channels[payload[2]] = {
+				members: [],
+				topic: null,
+			};
+		} else if (type == "PARTED") {
+			delete connectionData[payload[1]].channels[payload[2]];
+			if (activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
+				redrawChannelMembers();
+		} else if (type == "SETCHANNELMEMBERS") {
+			connectionData[payload[1]].channels[payload[2]].members = payload[3];
+			if (activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
+				redrawChannelMembers();
 		} else if (type == "OPENWIN") {
 			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
