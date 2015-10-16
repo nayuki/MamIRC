@@ -200,13 +200,19 @@ public final class MamircProcessor {
 			case "KICK": {
 				String reason = msg.getParameter(2);
 				for (String chan : msg.getParameter(0).split(",")) {
+					boolean mekicked = false;
 					for (String target : msg.getParameter(1).split(",")) {
-						if (curchans.containsKey(chan) && curchans.get(chan).members.remove(target))
-							addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, target, reason);
-						if (target.equals(state.getCurrentNickname())) {
-							curchans.remove(chan);
-							addUpdate("KICKED", state.profile.name, chan, reason);
+						if (curchans.containsKey(chan) && curchans.get(chan).members.contains(target)) {
+							if (target.equalsIgnoreCase(state.getCurrentNickname()))
+								mekicked = true;
+							else
+								addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, target, reason);
 						}
+					}
+					if (mekicked) {  // Save this part for last
+						addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, state.getCurrentNickname(), reason);
+						addUpdate("KICKED", state.profile.name, chan, reason);
+						curchans.remove(chan);
 					}
 				}
 				break;

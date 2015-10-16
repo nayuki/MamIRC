@@ -643,7 +643,7 @@ function loadUpdates(inData) {
 				members: [],
 				topic: null,
 			};
-		} else if (type == "PARTED") {
+		} else if (type == "PARTED" || type == "KICKED") {
 			delete connectionData[payload[1]].channels[payload[2]];
 			if (activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
 				redrawChannelMembers();
