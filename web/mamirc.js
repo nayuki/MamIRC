@@ -721,9 +721,9 @@ function loadUpdates(inData) {
 
 // Called only by submitting the input line text box.
 function handleInputLine() {
-	if (activeWindow == null)
-		return false;
 	var inputStr = inputBoxElem.value;
+	if (activeWindow == null || inputStr == "")
+		return false;
 	var onerror = function() {
 		failedCommandsContainerElem.style.removeProperty("display");
 		var li = document.createElement("li");
