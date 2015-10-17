@@ -342,15 +342,19 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.NICK) {
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
 	} else if (type == Flags.JOIN) {
+		who = "\u2192";  // Rightwards arrow
 		lineElems.push(document.createTextNode(payload[0] + " joined the channel"));
 	} else if (type == Flags.PART) {
+		who = "\u2190";  // Leftwards arrow
 		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
 	} else if (type == Flags.QUIT) {
+		who = "\u2190";  // Leftwards arrow
 		lineElems.push(document.createTextNode(payload[0] + " has quit: "));
 		fancyTextToElems(payload[1]).forEach(function(elem) {
 			lineElems.push(elem);
 		});
 	} else if (type == Flags.KICK) {
+		who = "\u2190";  // Leftwards arrow
 		lineElems.push(document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
 		fancyTextToElems(payload[2]).forEach(function(elem) {
 			lineElems.push(elem);
