@@ -375,6 +375,9 @@ function lineDataToRowElem(line) {
 			text += payload[i];
 		}
 		lineElems.push(document.createTextNode(text));
+	} else if (type == Flags.MODE) {
+		who = "*";
+		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
 	} else {
 		who = "RAW";
 		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));

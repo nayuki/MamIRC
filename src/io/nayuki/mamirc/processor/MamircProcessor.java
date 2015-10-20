@@ -218,6 +218,20 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "MODE": {
+				String target = msg.getParameter(0);
+				if (!state.getCurrentChannels().containsKey(target))
+					break;
+				String text = "";
+				for (int i = 1; i < msg.parameters.size(); i++) {
+					if (text.length() > 0)
+						text += " ";
+					text += msg.getParameter(i);
+				}
+				addModeLine(profile.name, target, ev.timestamp, msg.prefixName, text);
+				break;
+			}
+			
 			case "PRIVMSG": {
 				String who = msg.prefixName;
 				String target = msg.getParameter(0);
@@ -620,6 +634,10 @@ public final class MamircProcessor {
 	
 	private void addKickLine(String profile, String target, long timestamp, String kicker, String kickee, String text) {
 		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kicker, kickee, text);
+	}
+	
+	private void addModeLine(String profile, String target, long timestamp, String source, String text) {
+		addWindowLine(profile, target, Window.Flags.MODE.value, timestamp, source, text);
 	}
 	
 	private void addNamesLine(String profile, String target, long timestamp, String[] names) {
