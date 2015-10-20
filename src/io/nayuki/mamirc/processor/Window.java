@@ -67,7 +67,8 @@ final class Window {
 		PART(7),
 		PRIVMSG(8),
 		QUIT(9),
-		TOPIC(10),
+		SERVERREPLY(10),
+		TOPIC(11),
 		TYPE_MASK((1 << 4) - 1),
 		OUTGOING(1 << 4),
 		NICKFLAG(1 << 5);

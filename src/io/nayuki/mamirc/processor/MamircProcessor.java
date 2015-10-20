@@ -337,6 +337,35 @@ public final class MamircProcessor {
 			default:
 				break;  // Ignore event
 		}
+		
+		// Relay some types of numeric replies to the client
+		if (msg.command.matches("\\d{3}")) {
+			switch (Integer.parseInt(msg.command)) {
+				case 331:
+				case 332:
+				case 333:
+				case 353:
+				case 366: {
+					// Do nothing
+					break;
+				}
+				
+				default: {
+					if (msg.command.equals("433") && state.getRegistrationState() != RegState.REGISTERED)
+						break;  // Suppress nickname conflict notices during registration
+					
+					// Note: Parameter 0 should be my current nickname, which isn't very useful information
+					String text = "";
+					for (int i = 1; i < msg.parameters.size(); i++) {
+						if (text.length() > 0)
+							text += " ";
+						text += msg.getParameter(i);
+					}
+					addServerReplyLine(profile.name, ev.timestamp, msg.command, text);
+					break;
+				}
+			}
+		}
 	}
 	
 	
@@ -609,6 +638,10 @@ public final class MamircProcessor {
 	
 	private void addQuitLine(String profile, String target, long timestamp, String nick, String text) {
 		addWindowLine(profile, target, Window.Flags.QUIT.value, timestamp, nick, text);
+	}
+	
+	private void addServerReplyLine(String profile, long timestamp, String code, String text) {
+		addWindowLine(profile, "", Window.Flags.SERVERREPLY.value, timestamp, code, text);
 	}
 	
 	

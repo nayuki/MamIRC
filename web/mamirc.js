@@ -165,25 +165,15 @@ function loadState(inData) {
 // the current states of windowNames, windowData[windowName].newMessages, and activeWindow.
 function redrawWindowList() {
 	removeChildren(windowListElem);
-	var prevProfile = null;
 	windowNames.forEach(function(windowName) {
 		// windowName has type str, and is of the form (profile+"\n"+party)
 		var parts = windowName.split("\n");
 		var profile = parts[0];
 		var party = parts[1];
 		
-		// Add <li class="profile"> at the start of each new profile
-		if (prevProfile == null || profile != prevProfile) {
-			var extrali = document.createElement("li");
-			setElementText(extrali, profile);
-			extrali.className = "profile";
-			windowListElem.appendChild(extrali);
-			prevProfile = profile;
-		}
-		
 		// Create the anchor element
 		var a = document.createElement("a");
-		var s = party;
+		var s = party != "" ? party : profile;
 		var n = windowData[windowName].numNewMessages;
 		if (n > 0)
 			s += " (" + n + ")";
@@ -208,6 +198,8 @@ function redrawWindowList() {
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
+		if (party == "")
+			li.className = "profile";
 		windowListElem.appendChild(li);
 	});
 	refreshWindowSelection();
@@ -216,7 +208,7 @@ function redrawWindowList() {
 	for (var key in windowData)
 		totalNewMsg += windowData[key].numNewMessages;
 	if (activeWindow != null)
-		document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + activeWindow[1] + " - " + activeWindow[0] + " - MamIRC";
+		document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + (activeWindow[1] != "" ? activeWindow[1] + " - " : "") + activeWindow[0] + " - MamIRC";
 }
 
 
@@ -226,12 +218,12 @@ function refreshWindowSelection() {
 	if (activeWindow == null)
 		return;
 	var windowLis = windowListElem.getElementsByTagName("li");
-	for (var i = 0, j = 0; i < windowLis.length; i++) {
-		if (windowLis[i].className != "profile") {
-			windowLis[i].className = windowNames[j] == activeWindow[2] ? "selected" : "";
-			j++;
-		}
-	}
+	windowNames.forEach(function(name, i) {
+		if (name == activeWindow[2])
+			windowLis[i].classList.add("selected");
+		else
+			windowLis[i].classList.remove("selected");
+	});
 }
 
 
@@ -371,6 +363,9 @@ function lineDataToRowElem(line) {
 		fancyTextToElems(payload[0]).forEach(function(elem) {
 			lineElems.push(elem);
 		});
+	} else if (type == Flags.SERVERREPLY) {
+		who = "*";
+		lineElems.push(document.createTextNode(payload[1]));
 	} else {
 		who = "RAW";
 		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));
@@ -633,6 +628,11 @@ function loadUpdates(inData) {
 				connectionData[payload[1]].channels[payload[2]].topic = null;
 			} else if (subtype == Flags.INITTOPIC) {
 				connectionData[payload[1]].channels[payload[2]].topic = line[3];
+			} else if (subtype == Flags.SERVERREPLY) {
+				if (!windowData[windowName].isMuted) {
+					windowData[windowName].numNewMessages++;
+					redrawWindowList();
+				}
 			}
 		} else if (type == "MYNICK") {
 			var profile = payload[1];

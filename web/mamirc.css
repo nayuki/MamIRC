@@ -106,23 +106,11 @@ body {
 
 #window-list li {
 	display: inline-block;
-	padding-left: 0.5em;  /* For non-profile */
+	padding-left: 0.5em;
 }
 
 #window-list li.profile {
-	padding-top: 0.5em;
-	padding-bottom: 0.5em;
-	padding-left: 0em;
-}
-
-#window-list li.profile::after {
-	content: ":";
-}
-
-#window-list li + li.profile {
-	margin-left: 2.0em;
-	padding-left: 2.0em;
-	border-left: 1px solid #909090;
+	font-weight: bold;
 }
 
 #window-list a {
