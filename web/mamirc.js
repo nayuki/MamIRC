@@ -366,6 +366,15 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.SERVERREPLY) {
 		who = "*";
 		lineElems.push(document.createTextNode(payload[1]));
+	} else if (type == Flags.NAMES) {
+		who = "*";
+		var text = "Users in channel: ";
+		for (var i = 0; i < payload.length; i++) {
+			if (i > 0)
+				text += ", ";
+			text += payload[i];
+		}
+		lineElems.push(document.createTextNode(text));
 	} else {
 		who = "RAW";
 		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));

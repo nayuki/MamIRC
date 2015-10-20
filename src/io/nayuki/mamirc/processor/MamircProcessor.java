@@ -329,8 +329,14 @@ public final class MamircProcessor {
 			}
 			
 			case "366": {  // RPL_ENDOFNAMES
-				for (IrcSession.ChannelState chanstate : curchans.values())
-					chanstate.processingNamesReply = false;
+				for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
+					IrcSession.ChannelState chanstate = entry.getValue();
+					if (chanstate.processingNamesReply) {
+						chanstate.processingNamesReply = false;
+						String[] names = chanstate.members.toArray(new String[0]);
+						addNamesLine(profile.name, entry.getKey(), ev.timestamp, names);
+					}
+				}
 				break;
 			}
 			
@@ -614,6 +620,10 @@ public final class MamircProcessor {
 	
 	private void addKickLine(String profile, String target, long timestamp, String kicker, String kickee, String text) {
 		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kicker, kickee, text);
+	}
+	
+	private void addNamesLine(String profile, String target, long timestamp, String[] names) {
+		addWindowLine(profile, target, Window.Flags.NAMES.value, timestamp, names);
 	}
 	
 	private void addNickLine(String profile, String target, long timestamp, String oldNick, String newNick) {
