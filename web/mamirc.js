@@ -459,7 +459,7 @@ function fancyTextToElems(str) {
 			action = function() { italic = !italic; };
 			newStart = end + 1;
 		} else if (ch == 0x1F) {
-			action = function() { underline = !underline; }
+			action = function() { underline = !underline; };
 			newStart = end + 1;
 		} else if (ch == 0x16) {  // Reverse
 			action = function() {
