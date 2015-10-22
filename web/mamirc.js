@@ -291,7 +291,7 @@ function setActiveWindow(name) {
 	
 	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
-	setElementText(nicknameElem, connectionData[activeWindow[0]].currentNickname);
+	setElementText(nicknameElem, (activeWindow[0] in connectionData ? connectionData[activeWindow[0]].currentNickname : ""));
 	redrawWindowList();
 	redrawChannelMembers();
 	
@@ -407,6 +407,8 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.MODE) {
 		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
+	} else if (type == Flags.DISCONNECTED) {
+		lineElems.push(document.createTextNode("Disconnected from server"));
 	} else {
 		who = "RAW";
 		lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));
@@ -676,6 +678,8 @@ function loadUpdates(inData) {
 				}
 			} else if (subtype == Flags.NAMES) {
 				connectionData[payload[1]].channels[payload[2]].members = line.slice(3);
+			} else if (subtype == Flags.DISCONNECTED && payload[2] == "") {
+				delete connectionData[payload[1]];
 			}
 		} else if (type == "MYNICK") {
 			var profile = payload[1];
@@ -752,6 +756,11 @@ function loadUpdates(inData) {
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
+		} else if (type == "CONNECTED") {
+			connectionData[payload[1]] = {
+				currentNickname: null,
+				channels: {},
+			};
 		}
 	});
 	

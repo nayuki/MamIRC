@@ -131,9 +131,17 @@ public final class MamircProcessor {
 				sendIrcLine(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED", state.profile.name);
 			
-		} else if (line.equals("disconnect") || line.equals("closed")) {
-			ircSessions.remove(conId);
-			tryConnect(state.profile);
+		} else if (line.equals("disconnect")) {
+			// Do nothing
+			
+		} else if (line.equals("closed")) {
+			if (state != null) {
+				for (String chan : state.getCurrentChannels().keySet())
+					addDisconnectedLine(state.profile.name, chan, ev.timestamp);
+				addDisconnectedLine(state.profile.name, "", ev.timestamp);
+				ircSessions.remove(conId);
+				tryConnect(state.profile);
+			}
 		}
 	}
 	
@@ -618,6 +626,10 @@ public final class MamircProcessor {
 	
 	
 	// All of these addXxxLine methods must only be called from a synchronized method above.
+	
+	private void addDisconnectedLine(String profile, String target, long timestamp) {
+		addWindowLine(profile, target, Window.Flags.DISCONNECTED.value, timestamp);
+	}
 	
 	private void addInitNoTopicLine(String profile, String target, long timestamp) {
 		addWindowLine(profile, target, Window.Flags.INITNOTOPIC.value, timestamp);
