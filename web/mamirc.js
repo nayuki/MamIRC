@@ -65,6 +65,9 @@ var Flags = null;
 // Type tuple<int begin, int end, str prefix, str name> or null.
 var prevTabCompletion = null;
 
+// Type int. The default of 400 is a safe number to use, because an IRC protocol line is generally limited to 512 bytes, including prefix and parameters and newline.
+var maxBytesPerLine = 400;
+
 
 
 /*---- User interface functions ----*/
@@ -84,9 +87,32 @@ function init() {
 	
 	htmlElem.onmousedown = closeContextMenu;
 	inputBoxElem.oninput = function() {
-		// Change style of text box based if a '/command' is being typed
+		// Change classes of text box based on '/commands' and overlong text
 		var text = inputBoxElem.value;
-		inputBoxElem.className = text.startsWith("/") && !text.startsWith("//") ? "is-command" : "";
+		if (text.startsWith("/") && !text.startsWith("//"))
+			inputBoxElem.classList.add("is-command");
+		else
+			inputBoxElem.classList.remove("is-command");
+		
+		var checktext;
+		if (text.startsWith("//"))
+			checktext = text.substring(1);
+		else if (!text.startsWith("/"))
+			checktext = text;
+		else {  // Starts with '/' but not '//'
+			var parts = text.split(" ");
+			var cmd = parts[0].toLowerCase();
+			if ((cmd == "/kick" || cmd == "/msg") && parts.length >= 3)
+				checktext = nthRemainingPart(text, 2);
+			else if ((cmd == "/me" || cmd == "/topic") && parts.length >= 2)
+				checktext = nthRemainingPart(text, 1);
+			else
+				checktext = text;
+		}
+		if (countUtf8Bytes(checktext) > maxBytesPerLine)
+			inputBoxElem.classList.add("is-overlong");
+		else
+			inputBoxElem.classList.remove("is-overlong");
 	};
 	inputBoxElem.onblur = clearTabCompletion;
 	inputBoxElem.onkeypress = function(ev) {
@@ -1053,6 +1079,25 @@ function nthRemainingPart(s, n) {
 		j++;
 	}
 	return s.substring(j);
+}
+
+
+function countUtf8Bytes(s) {
+	var result = 0;
+	for (var i = 0; i < s.length; i++) {
+		var c = s.charCodeAt(i);
+		if (c < 0x80)
+			result += 1;
+		else if (c < 0x800)
+			result += 2;
+		else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // UTF-16 high and low surrogates
+				&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
+			result += 4;
+			i++;
+		} else
+			result += 3;
+	}
+	return result;
 }
 
 
