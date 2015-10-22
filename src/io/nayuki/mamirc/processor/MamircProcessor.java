@@ -337,7 +337,6 @@ public final class MamircProcessor {
 							name = name.substring(1);
 						chanstate.members.add(name);
 					}
-					addUpdate("SETCHANNELMEMBERS", profile.name, chan, new ArrayList<>(chanstate.members));
 				}
 				break;
 			}

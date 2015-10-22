@@ -610,7 +610,7 @@ function loadUpdates(inData) {
 			lines.push(line);
 			var numPrefixDel = Math.max(lines.length - maxMessagesPerWindow, 0);
 			lines.splice(0, numPrefixDel);
-			if (windowName == activeWindow[2]) {
+			if (activeWindow != null && windowName == activeWindow[2]) {
 				messageListElem.appendChild(lineDataToRowElem(line));
 				for (var i = 0; i < numPrefixDel; i++)
 					messageListElem.removeChild(messageListElem.firstChild);
@@ -618,7 +618,7 @@ function loadUpdates(inData) {
 			}
 			var subtype = line[1] & Flags.TYPE_MASK;
 			if (subtype == Flags.PRIVMSG) {
-				if (windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
+				if (activeWindow != null && windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
 				else if (!windowData[windowName].isMuted)
 					windowData[windowName].numNewMessages++;
@@ -658,7 +658,7 @@ function loadUpdates(inData) {
 					if (members.indexOf(line[4]) == -1)
 						members.push(line[4]);
 				}
-				if (windowName == activeWindow[2])
+				if (activeWindow != null && windowName == activeWindow[2])
 					redrawChannelMembers();
 			} else if (subtype == Flags.TOPIC) {
 				connectionData[payload[1]].channels[payload[2]].topic = line[4];
@@ -671,6 +671,8 @@ function loadUpdates(inData) {
 					windowData[windowName].numNewMessages++;
 					redrawWindowList();
 				}
+			} else if (subtype == Flags.NAMES) {
+				connectionData[payload[1]].channels[payload[2]].members = line.slice(3);
 			}
 		} else if (type == "MYNICK") {
 			var profile = payload[1];
@@ -687,11 +689,7 @@ function loadUpdates(inData) {
 			};
 		} else if (type == "PARTED" || type == "KICKED") {
 			delete connectionData[payload[1]].channels[payload[2]];
-			if (activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
-				redrawChannelMembers();
-		} else if (type == "SETCHANNELMEMBERS") {
-			connectionData[payload[1]].channels[payload[2]].members = payload[3];
-			if (activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
+			if (activeWindow != null && activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
 				redrawChannelMembers();
 		} else if (type == "OPENWIN") {
 			var windowName = payload[1] + "\n" + payload[2];
@@ -711,7 +709,7 @@ function loadUpdates(inData) {
 				windowNames.splice(index, 1);
 				delete windowData[windowName];
 				redrawWindowList();
-				if (windowName == activeWindow[2]) {
+				if (activeWindow != null && windowName == activeWindow[2]) {
 					inputBoxElem.value = "";
 					if (windowNames.length > 0)
 						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
@@ -723,7 +721,7 @@ function loadUpdates(inData) {
 			var windowName = payload[1] + "\n" + payload[2];
 			var seq = payload[3];
 			windowData[windowName].markedReadUntil = seq;
-			if (windowName == activeWindow[2]) {
+			if (activeWindow != null && windowName == activeWindow[2]) {
 				var lines = windowData[windowName].lines;
 				var rows = messageListElem.children;
 				for (var i = 0; i < lines.length; i++) {
@@ -746,7 +744,7 @@ function loadUpdates(inData) {
 			var i;
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
 			lines.splice(0, i);
-			if (windowName == activeWindow[2]) {
+			if (activeWindow != null && windowName == activeWindow[2]) {
 				for (var j = 0; j < i; j++)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
