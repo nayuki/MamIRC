@@ -219,7 +219,10 @@ function redrawWindowList() {
 				redrawWindowList();
 			}]);
 		}
-		menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]);
+		if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
+			menuItems.push(["Close window", null]);
+		else
+			menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]);
 		a.oncontextmenu = makeContextMenuOpener(menuItems);
 		
 		var li = document.createElement("li");
