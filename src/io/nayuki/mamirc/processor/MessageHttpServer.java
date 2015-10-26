@@ -1,6 +1,7 @@
 package io.nayuki.mamirc.processor;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -48,14 +49,14 @@ final class MessageHttpServer {
 							uriPath += filePath;
 						if (uriPath.equals(reqPath)) {
 							File file = new File("web", entry[0]);
-							ByteArrayOutputStream bout = new ByteArrayOutputStream((int)file.length());
-							InputStream in = new FileInputStream(file);
+							byte[] b = new byte[(int)file.length()];
+							DataInputStream in = new DataInputStream(new FileInputStream(file));
 							try {
-								copyStream(in, bout);
+								in.readFully(b);
 							} finally {
 								in.close();
 							}
-							writeResponse(bout.toByteArray(), entry[1], !entry[0].endsWith(".png"), he);
+							writeResponse(b, entry[1], !entry[0].endsWith(".png"), he);
 							return;
 						}
 					}
