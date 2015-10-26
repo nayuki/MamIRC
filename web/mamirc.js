@@ -793,6 +793,7 @@ function handleInputLine() {
 		var parts = inputStr.split(" ");
 		var cmd = parts[0].toLowerCase();
 		
+		// Irregular commands
 		if (cmd == "/msg" && parts.length >= 3) {
 			var profile = activeWindow[0];
 			var party = parts[1];
@@ -810,17 +811,22 @@ function handleInputLine() {
 			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
 		} else if (cmd == "/query" && parts.length == 2) {
 			openPrivateMessagingWindow(parts[1], onerror);
-		} else if ((cmd == "/join" || cmd == "/nick" || cmd == "/part") && parts.length == 2) {
-			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts[1]]], null, onerror);
 		} else if (cmd == "/topic" && parts.length >= 2) {
 			sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], null, onerror);
 		} else if (cmd == "/kick" && parts.length >= 2) {
 			var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
 			sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
-		} else if ((cmd == "/info" || cmd == "/links" || cmd == "/list" || cmd == "/stats" || cmd == "/time" || cmd == "/users" || cmd == "/version" || cmd == "/who") && parts.length == 0) {
-			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase()]], null, onerror);
-		} else if ((cmd == "/info" || cmd == "/links" || cmd == "/list" || cmd == "/stats" || cmd == "/time" || cmd == "/users" || cmd == "/version" || cmd == "/who" || cmd == "/whois" || cmd == "/whowas") && parts.length >= 1 || cmd == "/invite" && parts.length == 2) {
-			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts.slice(1).join(" ")]], null, onerror);
+		} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
+			// Regular commands
+			var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
+			var numParams = parts.length - 1;
+			if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
+				var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
+				sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], null, onerror);
+			} else {
+				alert("Invalid command");
+				return false;  // Don't clear the text box
+			}
 		} else {
 			alert("Invalid command");
 			return false;  // Don't clear the text box
@@ -829,6 +835,26 @@ function handleInputLine() {
 	inputBoxElem.value = "";
 	return false;  // To prevent the form submitting
 }
+
+
+// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
+// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
+const OUTGOING_COMMAND_PARAM_COUNTS = {
+	"/info"   : [0, 1],
+	"/invite" : [2, 2],
+	"/join"   : [1, 2],
+	"/links"  : [0, 2],
+	"/list"   : [0, 2],
+	"/nick"   : [1, 1],
+	"/part"   : [1, 1],
+	"/stats"  : [0, 2],
+	"/time"   : [0, 1],
+	"/users"  : [0, 1],
+	"/version": [0, 1],
+	"/who"    : [0, 2],
+	"/whois"  : [1, 2],
+	"/whowas" : [1, 3],
+};
 
 
 function openPrivateMessagingWindow(target, onerror) {
