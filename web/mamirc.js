@@ -817,6 +817,10 @@ function handleInputLine() {
 		} else if (cmd == "/kick" && parts.length >= 2) {
 			var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
 			sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
+		} else if ((cmd == "/info" || cmd == "/links" || cmd == "/list" || cmd == "/stats" || cmd == "/time" || cmd == "/users" || cmd == "/version" || cmd == "/who") && parts.length == 0) {
+			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase()]], null, onerror);
+		} else if ((cmd == "/info" || cmd == "/links" || cmd == "/list" || cmd == "/stats" || cmd == "/time" || cmd == "/users" || cmd == "/version" || cmd == "/who" || cmd == "/whois" || cmd == "/whowas") && parts.length >= 1 || cmd == "/invite" && parts.length == 2) {
+			sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + " " + parts.slice(1).join(" ")]], null, onerror);
 		} else {
 			alert("Invalid command");
 			return false;  // Don't clear the text box
