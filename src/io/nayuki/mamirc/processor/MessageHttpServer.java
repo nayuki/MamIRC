@@ -46,16 +46,27 @@ final class MessageHttpServer {
 						String uriPath = "/";
 						if (!filePath.equals("mamirc-web-ui.html"))
 							uriPath += filePath;
+						
 						if (uriPath.equals(reqPath)) {
 							File file = new File("web", entry[0]);
-							byte[] b = new byte[(int)file.length()];
-							DataInputStream in = new DataInputStream(new FileInputStream(file));
-							try {
-								in.readFully(b);
-							} finally {
-								in.close();
+							String etag = "\"" + file.lastModified() + "\"";
+							String ifnonematch = he.getRequestHeaders().getFirst("If-None-Match");
+							Headers respHead = he.getResponseHeaders();
+							respHead.set("Cache-Control", "public, max-age=2500000, no-cache");
+							respHead.set("ETag", etag);
+							if (ifnonematch != null && ifnonematch.equals(etag)) {
+								he.sendResponseHeaders(304, -1);  // Not Modified
+								he.close();
+							} else {
+								byte[] b = new byte[(int)file.length()];
+								DataInputStream in = new DataInputStream(new FileInputStream(file));
+								try {
+									in.readFully(b);
+								} finally {
+									in.close();
+								}
+								writeResponse(b, entry[1], !entry[0].endsWith(".png"), he);
 							}
-							writeResponse(b, entry[1], !entry[0].endsWith(".png"), he);
 							return;
 						}
 					}
@@ -211,7 +222,6 @@ final class MessageHttpServer {
 	private static void writeResponse(byte[] data, String type, boolean compressible, HttpExchange he) throws IOException {
 		Headers head = he.getResponseHeaders();
 		head.set("Content-Type", type);
-		head.set("Cache-Control", "no-cache");
 		
 		if (compressible && data.length > 3000) {  // Try to use compression
 			String accepted = he.getRequestHeaders().getFirst("Accept-Encoding");
