@@ -816,6 +816,9 @@ function handleInputLine() {
 		} else if (cmd == "/kick" && parts.length >= 2) {
 			var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
 			sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
+		} else if (cmd == "/names" && parts.length == 1) {
+			var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
+			sendAction([["send-line", activeWindow[0], "NAMES" + params]], null, onerror);
 		} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
 			// Regular commands
 			var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
