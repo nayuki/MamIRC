@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,22 @@ final class MessageHttpServer {
 			public void handle(HttpExchange he) throws IOException {
 				// Read request and parse JSON
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				copyStream(he.getRequestBody(), bout);
+				InputStream in = he.getRequestBody();
+				try {
+					int len = 0;
+					byte[] buf = new byte[1024];
+					while (true) {
+						int n = in.read(buf);
+						if (n == -1)
+							break;
+						bout.write(buf, 0, n);
+						len += n;
+						if (len > MAX_REQUEST_BODY_LEN)
+							throw new RuntimeException("Request body too long");
+					}
+				} finally {
+					in.close();
+				}
 				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 				
 				// Check password field
@@ -167,18 +181,11 @@ final class MessageHttpServer {
 	};
 	
 	
+	private static final int MAX_REQUEST_BODY_LEN = 10000;
+	
+	
+	
 	/*---- Methods ----*/
-	
-	private static void copyStream(InputStream in, OutputStream out) throws IOException {
-		byte[] buf = new byte[1024];
-		while (true) {
-			int n = in.read(buf);
-			if (n == -1)
-				break;
-			out.write(buf, 0, n);
-		}
-	}
-	
 	
 	public void terminate() {
 		server.stop(0);
