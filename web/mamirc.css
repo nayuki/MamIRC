@@ -9,6 +9,10 @@ html, body, h1, h2, p, ul, li, table, tr, td, th {
 	list-style-type: none;
 }
 
+input {
+	font-family: inherit;
+}
+
 
 /*---- Major elements ----*/
 
@@ -71,7 +75,9 @@ body {
 }
 
 
-/*---- Small elements ----*/
+/*---- Detailed elements ----*/
+
+/* Login screen */
 
 #login h1 {
 	margin-bottom: 1.1em;
@@ -97,6 +103,9 @@ body {
 #main h1, #main h2 {
 	display: none;
 }
+
+
+/* List of chat windows */
 
 #window-list {
 	margin-top: 0.5em;
@@ -130,6 +139,9 @@ body {
 	background-color: #F8F8F8;
 }
 
+
+/* List of channel members */
+
 #member-list-container {
 	margin: 0.4em 0em;
 	padding: 0.4em 0em;
@@ -154,6 +166,9 @@ body {
 	content: ", ";
 }
 
+
+/* List of failed commands */
+
 #failed-commands-container {
 	margin: 0.6em 0em;
 	padding: 0.1em 1.2em;
@@ -171,6 +186,9 @@ body {
 #failed-commands-container li {
 	list-style-type: disc;
 }
+
+
+/* Main table of messages */
 
 table {
 	margin-top: 0.5em;
@@ -231,9 +249,8 @@ tfoot td {
 	color: #B0B0B0;
 }
 
-input {
-	font-family: inherit;
-}
+
+/* Main input text box */
 
 #main input[type="text"] {
 	width: 100%;
@@ -247,6 +264,9 @@ input.is-command {
 input.is-overlong {
 	color: #FF0000;
 }
+
+
+/* Right-click context menu */
 
 #menu {
 	position: absolute;
@@ -262,10 +282,6 @@ input.is-overlong {
 	padding: 0.3em 0.9em;
 }
 
-#menu li > span.disabled {
-	color: #B0B0B0;
-}
-
 #menu a {
 	text-decoration: none;
 	color: inherit;
@@ -273,4 +289,8 @@ input.is-overlong {
 
 #menu a:hover {
 	background-color: #E0E0E0;
+}
+
+#menu li > span.disabled {
+	color: #B0B0B0;
 }
