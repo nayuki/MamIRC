@@ -13,9 +13,6 @@ const windowListElem              = elemId("window-list");
 const messageListElem             = elemId("message-list");
 const memberListContainerElem     = elemId("member-list-container");
 const memberListElem              = elemId("member-list");
-const failedCommandsContainerElem = elemId("failed-commands-container");
-const failedCommandsElem          = elemId("failed-commands");
-const inputBoxElem                = elemId("input-box");
 const nicknameElem                = elemId("nickname");
 
 
@@ -65,68 +62,15 @@ var maxMessagesPerWindow = 3000;
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
 var Flags = null;
 
-// Type tuple<int begin, int end, str prefix, str name> or null.
-var prevTabCompletion = null;
-
-// Type int. The default of 400 is a safe number to use, because an IRC protocol line is generally limited to 512 bytes, including prefix and parameters and newline.
-var maxBytesPerLine = 400;
-
 
 
 /*---- User interface functions ----*/
 
 // Called once after the script and page are loaded.
 function init() {
-	elemId("main").getElementsByTagName("form")[0].onsubmit = handleInputLine;
-	removeChildren(failedCommandsElem);
-	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
-		failedCommandsContainerElem.style.display = "none";
-		removeChildren(failedCommandsElem);
-		return false;
-	};
 	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
 	Notification.requestPermission();
-	
 	htmlElem.onmousedown = closeContextMenu;
-	inputBoxElem.oninput = function() {
-		// Change classes of text box based on '/commands' and overlong text
-		var text = inputBoxElem.value;
-		if (text.startsWith("/") && !text.startsWith("//"))
-			inputBoxElem.classList.add("is-command");
-		else
-			inputBoxElem.classList.remove("is-command");
-		
-		var checktext;
-		if (text.startsWith("//"))
-			checktext = text.substring(1);
-		else if (!text.startsWith("/"))
-			checktext = text;
-		else {  // Starts with '/' but not '//'
-			var parts = text.split(" ");
-			var cmd = parts[0].toLowerCase();
-			if ((cmd == "/kick" || cmd == "/msg") && parts.length >= 3)
-				checktext = nthRemainingPart(text, 2);
-			else if ((cmd == "/me" || cmd == "/topic") && parts.length >= 2)
-				checktext = nthRemainingPart(text, 1);
-			else
-				checktext = text;
-		}
-		if (countUtf8Bytes(checktext) > maxBytesPerLine)
-			inputBoxElem.classList.add("is-overlong");
-		else
-			inputBoxElem.classList.remove("is-overlong");
-	};
-	inputBoxElem.onblur = clearTabCompletion;
-	inputBoxElem.onkeypress = function(ev) {
-		if (ev.keyCode == 9) {
-			doInputTabCompletion();
-			return false;
-		} else {
-			clearTabCompletion();
-			return true;
-		}
-	};
-	inputBoxElem.value = "";
 }
 
 
@@ -417,9 +361,7 @@ function lineDataToRowElem(line) {
 	var menuItems = [["Quote text", null]];
 	if (quoteText != null) {
 		menuItems[0][1] = function() {
-			inputBoxElem.value = quoteText;
-			inputBoxElem.focus();
-			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = quoteText.length;
+			inputBoxModule.putText(quoteText);
 		};
 	}
 	menuItems.push(["Mark read to here", function() { sendAction([["mark-read", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
@@ -577,7 +519,7 @@ const TEXT_COLORS = [
 function loadUpdates(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	
-	const scrollToBottom = inputBoxElem.getBoundingClientRect().bottom < document.documentElement.clientHeight;
+	const scrollToBottom = elemId("input-box").getBoundingClientRect().bottom < document.documentElement.clientHeight;
 	const scrollPosition = document.documentElement.scrollTop;
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
@@ -689,7 +631,7 @@ function loadUpdates(inData) {
 				windowNames.sort();
 				windowData[windowName] = createBlankWindow();
 				redrawWindowList();
-				inputBoxElem.value = "";
+				inputBoxModule.clearText();
 				setActiveWindow(windowName);
 			}
 		} else if (type == "CLOSEWIN") {
@@ -700,7 +642,7 @@ function loadUpdates(inData) {
 				delete windowData[windowName];
 				redrawWindowList();
 				if (activeWindow != null && windowName == activeWindow[2]) {
-					inputBoxElem.value = "";
+					inputBoxModule.clearText();
 					if (windowNames.length > 0)
 						setActiveWindow(windowNames[Math.min(index, windowNames.length - 1)]);
 					else
@@ -754,95 +696,6 @@ function loadUpdates(inData) {
 }
 
 
-// Called only by submitting the input line text box.
-function handleInputLine() {
-	var inputStr = inputBoxElem.value;
-	if (activeWindow == null || inputStr == "")
-		return false;
-	var onerror = function() {
-		failedCommandsContainerElem.style.removeProperty("display");
-		var li = document.createElement("li");
-		setElementText(li, inputStr);
-		failedCommandsElem.appendChild(li);
-	};
-	
-	if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
-		if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
-			inputStr = inputStr.substring(1);
-		sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
-		
-	} else {  // Command or special message
-		// The user input command is case-insensitive. The command sent to the server will be in uppercase.
-		var parts = inputStr.split(" ");
-		var cmd = parts[0].toLowerCase();
-		
-		// Irregular commands
-		if (cmd == "/msg" && parts.length >= 3) {
-			var profile = activeWindow[0];
-			var party = parts[1];
-			var windowName = profile + "\n" + party;
-			var text = nthRemainingPart(inputStr, 2);
-			if (windowNames.indexOf(windowName) == -1) {
-				sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], null, onerror);
-			} else {
-				setActiveWindow(windowName);
-				sendMessage(profile, party, text, onerror);
-			}
-		} else if (cmd == "/me" && parts.length >= 2) {
-			sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
-		} else if (cmd == "/part" && parts.length == 1) {
-			sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
-		} else if (cmd == "/query" && parts.length == 2) {
-			openPrivateMessagingWindow(parts[1], onerror);
-		} else if (cmd == "/topic" && parts.length >= 2) {
-			sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], null, onerror);
-		} else if (cmd == "/kick" && parts.length >= 2) {
-			var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
-			sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
-		} else if (cmd == "/names" && parts.length == 1) {
-			var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
-			sendAction([["send-line", activeWindow[0], "NAMES" + params]], null, onerror);
-		} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
-			// Regular commands
-			var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
-			var numParams = parts.length - 1;
-			if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
-				var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
-				sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], null, onerror);
-			} else {
-				alert("Invalid command");
-				return false;  // Don't clear the text box
-			}
-		} else {
-			alert("Invalid command");
-			return false;  // Don't clear the text box
-		}
-	}
-	inputBoxElem.value = "";
-	return false;  // To prevent the form submitting
-}
-
-
-// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
-// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
-const OUTGOING_COMMAND_PARAM_COUNTS = {
-	"/info"   : [0, 1],
-	"/invite" : [2, 2],
-	"/join"   : [1, 2],
-	"/links"  : [0, 2],
-	"/list"   : [0, 2],
-	"/nick"   : [1, 1],
-	"/part"   : [1, 1],
-	"/stats"  : [0, 2],
-	"/time"   : [0, 1],
-	"/users"  : [0, 1],
-	"/version": [0, 1],
-	"/who"    : [0, 2],
-	"/whois"  : [1, 2],
-	"/whowas" : [1, 3],
-};
-
-
 function openPrivateMessagingWindow(target, onerror) {
 	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
@@ -850,7 +703,7 @@ function openPrivateMessagingWindow(target, onerror) {
 		sendAction([["open-window", profile, target]], null, onerror);
 	else {
 		setActiveWindow(windowName);
-		inputBoxElem.value = "";
+		inputBoxModule.clearText();
 	}
 }
 
@@ -901,75 +754,6 @@ function closeContextMenu() {
 }
 
 
-function doInputTabCompletion() {
-	do {  // Simulate goto
-		if (document.activeElement != inputBoxElem)
-			break;
-		var index = inputBoxElem.selectionStart;
-		if (index != inputBoxElem.selectionEnd)
-			break;
-		if (activeWindow == null)
-			break;
-		var profile = activeWindow[0];
-		var party = activeWindow[1];
-		if (!(profile in connectionData) || !(party in connectionData[profile].channels))
-			break;
-		
-		var text = inputBoxElem.value;
-		var match;
-		var prefix;
-		if (prevTabCompletion == null) {
-			match = TAB_COMPLETION_REGEX.exec(text.substr(0, index));
-			prefix = match[2].toLowerCase();
-			if (prefix.length == 0)
-				break;
-		} else {
-			match = null;
-			prefix = prevTabCompletion[2];
-		}
-		
-		var candidates = connectionData[profile].channels[party].members.filter(function(name) {
-			return name.toLowerCase().startsWith(prefix); });
-		if (candidates.length == 0)
-			break;
-		candidates.sort(function(s, t) {
-			return s.toLowerCase().localeCompare(t.toLowerCase()); });
-		
-		var candidate;
-		var beginning;
-		if (prevTabCompletion == null) {
-			candidate = candidates[0];
-			beginning = match[1];
-		} else {
-			var oldcandidate = prevTabCompletion[3].toLowerCase();
-			var i;  // Skip elements until one is strictly larger
-			for (i = 0; i < candidates.length && candidates[i].toLowerCase() <= oldcandidate; i++);
-			candidates.push(candidates[0]);  // Wrap-around
-			candidate = candidates[i];
-			beginning = text.substr(0, prevTabCompletion[0]);
-		}
-		var tabcomp = candidate;
-		if (beginning.length == 0)
-			tabcomp += ": ";
-		else if (index < text.length)
-			tabcomp += " ";
-		inputBoxElem.value = beginning + tabcomp + text.substring(index);
-		prevTabCompletion = [beginning.length, beginning.length + tabcomp.length, prefix, candidate];
-		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion[1];
-		return;  // Don't clear the current tab completion
-		
-	} while (false);
-	clearTabCompletion();
-}
-
-const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
-
-
-function clearTabCompletion() {
-	prevTabCompletion = null;
-}
-
-
 
 /*---- Login module ----*/
 
@@ -1007,6 +791,238 @@ const loginModule = new function() {
 	this.loginFailure = function(errmsg) {
 		setElementText(loginStatusElem, errmsg);
 		blockSubmit = false;
+	};
+};
+
+
+
+/*---- Input text box module ----*/
+
+const inputBoxModule = new function() {
+	// Elements
+	const inputBoxElem                = elemId("input-box");
+	const failedCommandsContainerElem = elemId("failed-commands-container");
+	const failedCommandsElem          = elemId("failed-commands");
+	
+	// Variables
+	var prevTabCompletion = null;  // Type tuple<int begin, int end, str prefix, str name> or null.
+	
+	// Constants
+	const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
+	// Type int. The default of 400 is a safe number to use, because an IRC protocol line is generally limited to 512 bytes, including prefix and parameters and newline.
+	const maxBytesPerLine = 400;
+	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
+	// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
+	const OUTGOING_COMMAND_PARAM_COUNTS = {
+		"/info"   : [0, 1],
+		"/invite" : [2, 2],
+		"/join"   : [1, 2],
+		"/links"  : [0, 2],
+		"/list"   : [0, 2],
+		"/nick"   : [1, 1],
+		"/part"   : [1, 1],
+		"/stats"  : [0, 2],
+		"/time"   : [0, 1],
+		"/users"  : [0, 1],
+		"/version": [0, 1],
+		"/who"    : [0, 2],
+		"/whois"  : [1, 2],
+		"/whowas" : [1, 3],
+	};
+	
+	// Initialization
+	elemId("main").getElementsByTagName("form")[0].onsubmit = handleLine;
+	inputBoxElem.oninput = colorizeLine;
+	inputBoxElem.onblur = clearTabCompletion;
+	inputBoxElem.onkeypress = function(ev) {
+		if (ev.keyCode == 9) {
+			doTabCompletion();
+			return false;
+		} else {
+			clearTabCompletion();
+			return true;
+		}
+	};
+	inputBoxElem.value = "";
+	
+	removeChildren(failedCommandsElem);
+	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
+		failedCommandsContainerElem.style.display = "none";
+		removeChildren(failedCommandsElem);
+		return false;
+	};
+	
+	// Private functions
+	
+	function handleLine() {
+		var inputStr = inputBoxElem.value;
+		if (activeWindow == null || inputStr == "")
+			return false;
+		var onerror = function() {
+			failedCommandsContainerElem.style.removeProperty("display");
+			var li = document.createElement("li");
+			setElementText(li, inputStr);
+			failedCommandsElem.appendChild(li);
+		};
+		
+		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
+			if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
+				inputStr = inputStr.substring(1);
+			sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
+			
+		} else {  // Command or special message
+			// The user input command is case-insensitive. The command sent to the server will be in uppercase.
+			var parts = inputStr.split(" ");
+			var cmd = parts[0].toLowerCase();
+			
+			// Irregular commands
+			if (cmd == "/msg" && parts.length >= 3) {
+				var profile = activeWindow[0];
+				var party = parts[1];
+				var windowName = profile + "\n" + party;
+				var text = nthRemainingPart(inputStr, 2);
+				if (windowNames.indexOf(windowName) == -1) {
+					sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], null, onerror);
+				} else {
+					setActiveWindow(windowName);
+					sendMessage(profile, party, text, onerror);
+				}
+			} else if (cmd == "/me" && parts.length >= 2) {
+				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+			} else if (cmd == "/part" && parts.length == 1) {
+				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
+			} else if (cmd == "/query" && parts.length == 2) {
+				openPrivateMessagingWindow(parts[1], onerror);
+			} else if (cmd == "/topic" && parts.length >= 2) {
+				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], null, onerror);
+			} else if (cmd == "/kick" && parts.length >= 2) {
+				var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
+				sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
+			} else if (cmd == "/names" && parts.length == 1) {
+				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
+				sendAction([["send-line", activeWindow[0], "NAMES" + params]], null, onerror);
+			} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
+				// Regular commands
+				var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
+				var numParams = parts.length - 1;
+				if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
+					var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
+					sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], null, onerror);
+				} else {
+					alert("Invalid command");
+					return false;  // Don't clear the text box
+				}
+			} else {
+				alert("Invalid command");
+				return false;  // Don't clear the text box
+			}
+		}
+		inputBoxElem.value = "";
+		return false;  // To prevent the form submitting
+	}
+	
+	// Change classes of text box based on '/commands' and overlong text
+	function colorizeLine() {
+		var text = inputBoxElem.value;
+		if (text.startsWith("/") && !text.startsWith("//"))
+			inputBoxElem.classList.add("is-command");
+		else
+			inputBoxElem.classList.remove("is-command");
+		
+		var checktext;
+		if (text.startsWith("//"))
+			checktext = text.substring(1);
+		else if (!text.startsWith("/"))
+			checktext = text;
+		else {  // Starts with '/' but not '//'
+			var parts = text.split(" ");
+			var cmd = parts[0].toLowerCase();
+			if ((cmd == "/kick" || cmd == "/msg") && parts.length >= 3)
+				checktext = nthRemainingPart(text, 2);
+			else if ((cmd == "/me" || cmd == "/topic") && parts.length >= 2)
+				checktext = nthRemainingPart(text, 1);
+			else
+				checktext = text;
+		}
+		if (countUtf8Bytes(checktext) > maxBytesPerLine)
+			inputBoxElem.classList.add("is-overlong");
+		else
+			inputBoxElem.classList.remove("is-overlong");
+	}
+	
+	function doTabCompletion() {
+		do {  // Simulate goto
+			if (document.activeElement != inputBoxElem)
+				break;
+			var index = inputBoxElem.selectionStart;
+			if (index != inputBoxElem.selectionEnd)
+				break;
+			if (activeWindow == null)
+				break;
+			var profile = activeWindow[0];
+			var party = activeWindow[1];
+			if (!(profile in connectionData) || !(party in connectionData[profile].channels))
+				break;
+			
+			var text = inputBoxElem.value;
+			var match;
+			var prefix;
+			if (prevTabCompletion == null) {
+				match = TAB_COMPLETION_REGEX.exec(text.substr(0, index));
+				prefix = match[2].toLowerCase();
+				if (prefix.length == 0)
+					break;
+			} else {
+				match = null;
+				prefix = prevTabCompletion[2];
+			}
+			
+			var candidates = connectionData[profile].channels[party].members.filter(function(name) {
+				return name.toLowerCase().startsWith(prefix); });
+			if (candidates.length == 0)
+				break;
+			candidates.sort(function(s, t) {
+				return s.toLowerCase().localeCompare(t.toLowerCase()); });
+			
+			var candidate;
+			var beginning;
+			if (prevTabCompletion == null) {
+				candidate = candidates[0];
+				beginning = match[1];
+			} else {
+				var oldcandidate = prevTabCompletion[3].toLowerCase();
+				var i;  // Skip elements until one is strictly larger
+				for (i = 0; i < candidates.length && candidates[i].toLowerCase() <= oldcandidate; i++);
+				candidates.push(candidates[0]);  // Wrap-around
+				candidate = candidates[i];
+				beginning = text.substr(0, prevTabCompletion[0]);
+			}
+			var tabcomp = candidate;
+			if (beginning.length == 0)
+				tabcomp += ": ";
+			else if (index < text.length)
+				tabcomp += " ";
+			inputBoxElem.value = beginning + tabcomp + text.substring(index);
+			prevTabCompletion = [beginning.length, beginning.length + tabcomp.length, prefix, candidate];
+			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion[1];
+			return;  // Don't clear the current tab completion
+			
+		} while (false);
+		clearTabCompletion();
+	}
+	
+	function clearTabCompletion() {
+		prevTabCompletion = null;
+	}
+	
+	// Exported members
+	this.putText = function(s) {
+		inputBoxElem.value = s;
+		inputBoxElem.focus();
+		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = s.length;
+	};
+	this.clearText = function() {
+		inputBoxElem.value = "";
 	};
 };
 
