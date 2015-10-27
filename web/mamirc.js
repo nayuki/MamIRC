@@ -12,7 +12,6 @@ const failedCommandsContainerElem = document.getElementById("failed-commands-con
 const failedCommandsElem = document.getElementById("failed-commands");
 const inputBoxElem    = document.getElementById("input-box");
 const nicknameElem    = document.getElementById("nickname");
-const passwordElem    = document.getElementById("password");
 const htmlElem        = document.documentElement;
 
 var backgroundImageCss;  // Assigned only once at init()
@@ -74,7 +73,6 @@ var maxBytesPerLine = 400;
 
 // Called once after the script and page are loaded.
 function init() {
-	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = authenticate;
 	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
 	removeChildren(failedCommandsElem);
 	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
@@ -125,21 +123,6 @@ function init() {
 		}
 	};
 	inputBoxElem.value = "";
-	passwordElem.oninput = function() {
-		removeChildren(document.getElementById("login-status"));
-	};
-	passwordElem.focus();
-}
-
-
-// Called only by submitting the login form.
-function authenticate() {
-	password = passwordElem.value;
-	optimizeMobile = document.getElementById("optimize-mobile").checked;
-	if (optimizeMobile)
-		maxMessagesPerWindow = 500;
-	getState();
-	return false;  // To prevent the form submitting
 }
 
 
@@ -176,11 +159,7 @@ function loadState(inData) {
 	windowNames.sort();
 	
 	// Update UI elements
-	passwordElem.value = "";
-	passwordElem.blur();
-	document.getElementById("login").style.display = "none";
-	document.getElementById("main").style.removeProperty("display");
-	htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
+	loginModule.loginSuccess();
 	redrawWindowList();
 	if (windowNames.length > 0)
 		setActiveWindow(windowNames[0]);
@@ -985,6 +964,39 @@ const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
 function clearTabCompletion() {
 	prevTabCompletion = null;
 }
+
+
+
+/*---- Login module ----*/
+
+const loginModule = new function() {
+	// Global variables
+	const passwordElem = document.getElementById("password");
+	const loginStatusElem = document.getElementById("login-status");
+	
+	// Initialization
+	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = function() {
+		password = passwordElem.value;
+		optimizeMobile = document.getElementById("optimize-mobile").checked;
+		if (optimizeMobile)
+			maxMessagesPerWindow = 500;
+		getState();
+		return false;  // To prevent the form submitting
+	};
+	passwordElem.oninput = function() {
+		removeChildren(loginStatusElem);
+	};
+	passwordElem.focus();
+	
+	// Exported members
+	this.loginSuccess = function() {
+		passwordElem.value = "";
+		passwordElem.blur();
+		document.getElementById("login").style.display = "none";
+		document.getElementById("main").style.removeProperty("display");
+		htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
+	};
+};
 
 
 
