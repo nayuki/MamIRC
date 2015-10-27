@@ -1,6 +1,6 @@
 /*---- Reset defaults ----*/
 
-html, body, h1, h2, p, ul, li, table, tr, td, th {
+html, body, h1, h2, p, ul, li, table, tbody, tr, td, th {
 	margin: 0em;
 	padding: 0em;
 	font-family: inherit;
@@ -190,17 +190,17 @@ body {
 
 /* Main table of messages */
 
-table {
+#main table {
 	margin-top: 0.5em;
 	width: 100%;
 	border-collapse: collapse;
 }
 
-thead {
+#main thead {
 	display: none;
 }
 
-tr:hover {
+#main tr:hover {
 	background-color: #F6F6F6;
 }
 
@@ -228,23 +228,23 @@ tbody td:nth-child(3) {
 	word-wrap: break-word;
 }
 
-tfoot td {
+#main tfoot td {
 	vertical-align: middle;
 }
 
-.outgoing td:nth-child(2), .outgoing td:nth-child(3) {
+tr.outgoing td:nth-child(2), tr.outgoing td:nth-child(3) {
 	background: #e8e8ff;
 }
 
-.nickflag {
+tr.nickflag {
 	background: #ffe0d0;
 }
 
-.me-action {
+tr.me-action {
 	font-style: italic;
 }
 
-.read {
+tr.read {
 	background: #F4F4F4;
 	color: #B0B0B0;
 }
@@ -257,11 +257,11 @@ tfoot td {
 	font-size: inherit;
 }
 
-input.is-command {
+#main input.is-command {
 	color: #2060FF;
 }
 
-input.is-overlong {
+#main input.is-overlong {
 	color: #FF0000;
 }
 
@@ -277,7 +277,7 @@ input.is-overlong {
 	box-shadow: 0.2em 0.2em 0.3em #505050;
 }
 
-#menu li > a, #menu li > span.disabled {
+#menu a, #menu span.disabled {
 	display: block;
 	padding: 0.3em 0.9em;
 }
@@ -291,6 +291,6 @@ input.is-overlong {
 	background-color: #E0E0E0;
 }
 
-#menu li > span.disabled {
+#menu span.disabled {
 	color: #B0B0B0;
 }
