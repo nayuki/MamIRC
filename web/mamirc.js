@@ -977,14 +977,18 @@ const loginModule = new function() {
 	// Global variables
 	const passwordElem = elemId("password");
 	const loginStatusElem = elemId("login-status");
+	var blockSubmit = false;
 	
 	// Initialization
 	elemId("login").getElementsByTagName("form")[0].onsubmit = function() {
+		if (blockSubmit)
+			return;
 		password = passwordElem.value;
 		optimizeMobile = elemId("optimize-mobile").checked;
 		if (optimizeMobile)
 			maxMessagesPerWindow = 500;
 		getState();
+		blockSubmit = true;
 		return false;  // To prevent the form submitting
 	};
 	passwordElem.oninput = function() {
@@ -1000,6 +1004,10 @@ const loginModule = new function() {
 		elemId("main").style.removeProperty("display");
 		htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
 	};
+	this.loginFailure = function(errmsg) {
+		setElementText(loginStatusElem, errmsg);
+		blockSubmit = false;
+	};
 };
 
 
@@ -1013,7 +1021,7 @@ function getState() {
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
 		if (typeof data == "string") {  // Error message
-			setElementText(elemId("login-status"), data);
+			loginModule.loginFailure(data);
 		} else {  // Good data
 			loadState(data);  // Process data and update UI
 			updateState();  // Start polling
