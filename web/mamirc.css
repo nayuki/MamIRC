@@ -212,6 +212,7 @@ td {
 td:nth-child(1) {
 	width: 1%;
 	text-align: right;
+	white-space: pre;
 	font-kerning: none;
 	color: #A0A0A0;
 }
@@ -219,6 +220,7 @@ td:nth-child(1) {
 td:nth-child(2) {
 	width: 1%;
 	text-align: right;
+	white-space: pre;
 }
 
 tbody td:nth-child(3) {

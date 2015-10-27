@@ -1081,10 +1081,10 @@ function createBlankWindow() {
 function formatDate(timestamp) {
 	var d = new Date(timestamp);
 	if (!optimizeMobile) {
-		return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + "\u00A0" +
+		return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + " " +
 			twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes()) + ":" + twoDigits(d.getSeconds());
 	} else {
-		return DAYS_OF_WEEK[d.getDay()] + "\u00A0" + twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes());
+		return DAYS_OF_WEEK[d.getDay()] + " " + twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes());
 	}
 }
 
