@@ -3,18 +3,20 @@
 
 /*---- Global variables ----*/
 
-// Document nodes (elements)
-const windowListElem  = document.getElementById("window-list");
-const messageListElem = document.getElementById("message-list");
-const memberListContainerElem = document.getElementById("member-list-container");
-const memberListElem  = document.getElementById("member-list");
-const failedCommandsContainerElem = document.getElementById("failed-commands-container");
-const failedCommandsElem = document.getElementById("failed-commands");
-const inputBoxElem    = document.getElementById("input-box");
-const nicknameElem    = document.getElementById("nickname");
-const htmlElem        = document.documentElement;
+function elemId(s) {  // Abbreviated function name
+	return document.getElementById(s);
+}
 
-var backgroundImageCss;  // Assigned only once at init()
+// Document nodes (elements)
+const htmlElem                    = document.documentElement;
+const windowListElem              = elemId("window-list");
+const messageListElem             = elemId("message-list");
+const memberListContainerElem     = elemId("member-list-container");
+const memberListElem              = elemId("member-list");
+const failedCommandsContainerElem = elemId("failed-commands-container");
+const failedCommandsElem          = elemId("failed-commands");
+const inputBoxElem                = elemId("input-box");
+const nicknameElem                = elemId("nickname");
 
 
 /* Main state */
@@ -52,6 +54,8 @@ var optimizeMobile = null;
 // In milliseconds. This value changes during execution depending on successful/failed requests.
 var retryTimeout = 1000;
 
+var backgroundImageCss = null;  // Type str. Assigned only once at init().
+
 
 /* Miscellaneous values */
 
@@ -73,7 +77,7 @@ var maxBytesPerLine = 400;
 
 // Called once after the script and page are loaded.
 function init() {
-	document.getElementById("main" ).getElementsByTagName("form")[0].onsubmit = handleInputLine;
+	elemId("main").getElementsByTagName("form")[0].onsubmit = handleInputLine;
 	removeChildren(failedCommandsElem);
 	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
 		failedCommandsContainerElem.style.display = "none";
@@ -891,7 +895,7 @@ function makeContextMenuOpener(items) {
 
 // Deletes the context menu <div> element, if one is present.
 function closeContextMenu() {
-	var elem = document.getElementById("menu");
+	var elem = elemId("menu");
 	if (elem != null)
 		elem.parentNode.removeChild(elem);
 }
@@ -971,13 +975,13 @@ function clearTabCompletion() {
 
 const loginModule = new function() {
 	// Global variables
-	const passwordElem = document.getElementById("password");
-	const loginStatusElem = document.getElementById("login-status");
+	const passwordElem = elemId("password");
+	const loginStatusElem = elemId("login-status");
 	
 	// Initialization
-	document.getElementById("login").getElementsByTagName("form")[0].onsubmit = function() {
+	elemId("login").getElementsByTagName("form")[0].onsubmit = function() {
 		password = passwordElem.value;
-		optimizeMobile = document.getElementById("optimize-mobile").checked;
+		optimizeMobile = elemId("optimize-mobile").checked;
 		if (optimizeMobile)
 			maxMessagesPerWindow = 500;
 		getState();
@@ -992,8 +996,8 @@ const loginModule = new function() {
 	this.loginSuccess = function() {
 		passwordElem.value = "";
 		passwordElem.blur();
-		document.getElementById("login").style.display = "none";
-		document.getElementById("main").style.removeProperty("display");
+		elemId("login").style.display = "none";
+		elemId("main").style.removeProperty("display");
 		htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
 	};
 };
@@ -1009,7 +1013,7 @@ function getState() {
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
 		if (typeof data == "string") {  // Error message
-			setElementText(document.getElementById("login-status"), data);
+			setElementText(elemId("login-status"), data);
 		} else {  // Good data
 			loadState(data);  // Process data and update UI
 			updateState();  // Start polling
