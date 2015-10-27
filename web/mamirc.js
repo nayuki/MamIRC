@@ -603,6 +603,8 @@ function loadUpdates(inData) {
 				}
 			} else if (subtype == Flags.NAMES) {
 				connectionData[payload[1]].channels[payload[2]].members = line.slice(3);
+				if (activeWindow != null && payload[1] == activeWindow[0] && payload[2] == activeWindow[1])
+					redrawChannelMembers();
 			} else if (subtype == Flags.DISCONNECTED && payload[2] == "") {
 				delete connectionData[payload[1]];
 			}
