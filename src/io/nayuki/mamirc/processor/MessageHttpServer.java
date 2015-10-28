@@ -29,6 +29,7 @@ final class MessageHttpServer {
 	private final String password;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	public MessageHttpServer(final MamircProcessor master, int port, String password) throws IOException {
@@ -37,46 +38,10 @@ final class MessageHttpServer {
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		// Static files
-		server.createContext("/", new HttpHandler() {
-			public void handle(HttpExchange he) throws IOException {
-				try {
-					String reqPath = he.getRequestURI().getPath();
-					for (String[] entry : STATIC_FILES) {
-						String filePath = entry[0];
-						String uriPath = "/";
-						if (!filePath.equals("mamirc-web-ui.html"))
-							uriPath += filePath;
-						
-						if (uriPath.equals(reqPath)) {
-							File file = new File("web", entry[0]);
-							String etag = "\"" + file.lastModified() + "\"";
-							String ifnonematch = he.getRequestHeaders().getFirst("If-None-Match");
-							Headers respHead = he.getResponseHeaders();
-							respHead.set("Cache-Control", "public, max-age=2500000, no-cache");
-							respHead.set("ETag", etag);
-							if (ifnonematch != null && ifnonematch.equals(etag)) {
-								he.sendResponseHeaders(304, -1);  // Not Modified
-								he.close();
-							} else {
-								byte[] b = new byte[(int)file.length()];
-								DataInputStream in = new DataInputStream(new FileInputStream(file));
-								try {
-									in.readFully(b);
-								} finally {
-									in.close();
-								}
-								writeResponse(b, entry[1], !entry[0].endsWith(".png"), he);
-							}
-							return;
-						}
-					}
-					// If no match
-					he.sendResponseHeaders(404, 0);
-				} finally {
-					he.close();
-				}
-			}
-		});
+		for (String[] entry : STATIC_FILES) {
+			String uriPath = entry[1] == null ? "/" + entry[0] : entry[1];
+			server.createContext(uriPath, new FileHttpHandler(uriPath, new File("web", entry[0]), entry[2], !entry[2].startsWith("image/")));
+		}
 		
 		// Dynamic actions
 		HttpHandler apiHandler = new HttpHandler() {
@@ -184,11 +149,11 @@ final class MessageHttpServer {
 	
 	
 	private static final String[][] STATIC_FILES = {
-		{"mamirc-web-ui.html", "application/xhtml+xml"},
-		{"mamirc.css", "text/css"},
-		{"mamirc.js", "application/javascript"},
-		{"tomoe-mami.png", "image/png"},
-		{"tomoe-mami-2x.png", "image/png"},
+		{"mamirc-web-ui.html", "/" , "application/xhtml+xml" },
+		{"mamirc.css"        , null, "text/css"              },
+		{"mamirc.js"         , null, "application/javascript"},
+		{"tomoe-mami.png"    , null, "image/png"             },
+		{"tomoe-mami-2x.png" , null, "image/png"             },
 	};
 	
 	
@@ -243,6 +208,60 @@ final class MessageHttpServer {
 		he.sendResponseHeaders(200, data.length);
 		he.getResponseBody().write(data);
 		he.close();
+	}
+	
+	
+	
+	/*---- Helper class ----*/
+	
+	private static final class FileHttpHandler implements HttpHandler {
+		
+		private final String uriPath;
+		private final File file;
+		private final String mediaType;
+		private final boolean isCompressible;
+		
+		
+		public FileHttpHandler(String uriPath, File file, String mediaType, boolean isCompressible) {
+			if (uriPath == null || file == null || mediaType == null)
+				throw new NullPointerException();
+			this.uriPath = uriPath;
+			this.file = file;
+			this.mediaType = mediaType;
+			this.isCompressible = isCompressible;
+		}
+		
+		
+		public void handle(HttpExchange he) throws IOException {
+			try {
+				if (!he.getRequestURI().getPath().equals(uriPath)) {  // If this handler was called on a subpath
+					he.sendResponseHeaders(404, 0);
+					return;
+				}
+				
+				String etag = "\"" + file.lastModified() + "\"";
+				String ifnonematch = he.getRequestHeaders().getFirst("If-None-Match");
+				Headers respHead = he.getResponseHeaders();
+				respHead.set("Cache-Control", "public, max-age=2500000, no-cache");
+				respHead.set("ETag", etag);
+				if (ifnonematch != null && ifnonematch.equals(etag)) {
+					he.sendResponseHeaders(304, -1);  // Not Modified
+					return;
+				}
+				
+				byte[] b = new byte[(int)file.length()];
+				DataInputStream in = new DataInputStream(new FileInputStream(file));
+				try {
+					in.readFully(b);
+				} finally {
+					in.close();
+				}
+				writeResponse(b, mediaType, isCompressible, he);
+			} finally {
+				he.close();
+			}
+		}
+		
 	}
 	
 }
