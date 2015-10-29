@@ -97,8 +97,8 @@ final class MessageHttpServer {
 						} finally {
 							in.close();
 						}
-						s = s.replace("#status#", cookies.get("password") != null && checkPassword(cookies.get("password")) ? "" : "Incorrect password");
-						s = s.replace("#optimize-mobile#", cookies.get("optimize-mobile") != null && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
+						s = s.replace("#status#", cookies.containsKey("password") && !checkPassword(cookies.get("password")) ? "Incorrect password" : "");
+						s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
 						he.getResponseHeaders().add("Cache-Control", "no-store");
 						writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
 					} else {
