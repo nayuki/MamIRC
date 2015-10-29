@@ -286,7 +286,9 @@ function lineDataToRowElem(line) {
 		
 	} else if (type == Flags.NOTICE) {
 		who = "(" + payload[0] + ")";
-		lineElems.push(document.createTextNode(payload[1]));
+		fancyTextToElems(payload[1]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else if (type == Flags.NICK) {
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
 	} else if (type == Flags.JOIN) {
@@ -321,7 +323,9 @@ function lineDataToRowElem(line) {
 		});
 	} else if (type == Flags.SERVERREPLY) {
 		who = "*";
-		lineElems.push(document.createTextNode(payload[1]));
+		fancyTextToElems(payload[1]).forEach(function(elem) {
+			lineElems.push(elem);
+		});
 	} else if (type == Flags.NAMES) {
 		who = "*";
 		var text = "Users in channel: ";
