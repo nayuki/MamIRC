@@ -73,7 +73,6 @@ function init() {
 		maxMessagesPerWindow = 500;
 	
 	Notification.requestPermission();
-	htmlElem.onmousedown = closeContextMenu;
 	getState();
 }
 
@@ -153,7 +152,7 @@ function redrawWindowList() {
 			menuItems.push(["Close window", null]);
 		else
 			menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]);
-		a.oncontextmenu = makeContextMenuOpener(menuItems);
+		a.oncontextmenu = menuModule.makeOpener(menuItems);
 		
 		var li = document.createElement("li");
 		li.appendChild(a);
@@ -199,7 +198,7 @@ function redrawChannelMembers() {
 		members.forEach(function(name) {
 			var li = document.createElement("li");
 			setElementText(li, name);
-			li.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(name, null); }]]);
+			li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { openPrivateMessagingWindow(name, null); }]]);
 			memberListElem.appendChild(li);
 		});
 		memberListContainerElem.style.removeProperty("display");
@@ -339,7 +338,7 @@ function lineDataToRowElem(line) {
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
 	if (who != "*" && who != "RAW")
-		td.oncontextmenu = makeContextMenuOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
+		td.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
 	tr.appendChild(td);
 	
 	// Make message cell and its sophisticated context menu
@@ -355,11 +354,10 @@ function lineDataToRowElem(line) {
 	}
 	menuItems.push(["Mark read to here", function() { sendAction([["mark-read", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
 	menuItems.push(["Clear to here", function() {
-		closeContextMenu();
 		if (confirm("Do you want to clear text?"))
 			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null);
 	}]);
-	td.oncontextmenu = makeContextMenuOpener(menuItems);
+	td.oncontextmenu = menuModule.makeOpener(menuItems);
 	tr.appendChild(td);
 	
 	// Finishing touches
@@ -689,52 +687,6 @@ function openPrivateMessagingWindow(target, onerror) {
 }
 
 
-// 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
-function makeContextMenuOpener(items) {
-	return function(ev) {
-		closeContextMenu();
-		var div = document.createElement("div");
-		div.id = "menu";
-		div.style.left = ev.pageX + "px";
-		div.style.top  = ev.pageY + "px";
-		var ul = document.createElement("ul");
-		
-		items.forEach(function(item) {
-			var li = document.createElement("li");
-			var child;
-			if (item[1] == null) {
-				child = document.createElement("span");
-				child.className = "disabled";
-			} else {
-				child = document.createElement("a");
-				child.href = "#";
-				child.onclick = function() {
-					item[1]();
-					closeContextMenu();
-					return false;
-				};
-			}
-			setElementText(child, item[0]);
-			li.appendChild(child);
-			ul.appendChild(li);
-		});
-		
-		div.appendChild(ul);
-		div.onmousedown = function(evt) { evt.stopPropagation(); };
-		document.getElementsByTagName("body")[0].appendChild(div);
-		return false;
-	};
-}
-
-
-// Deletes the context menu <div> element, if one is present.
-function closeContextMenu() {
-	var elem = elemId("menu");
-	if (elem != null)
-		elem.parentNode.removeChild(elem);
-}
-
-
 
 /*---- Input text box module ----*/
 
@@ -963,6 +915,62 @@ const inputBoxModule = new function() {
 	};
 	this.clearText = function() {
 		inputBoxElem.value = "";
+	};
+};
+
+
+
+/*---- Context menu module ----*/
+
+const menuModule = new function() {
+	// Deletes the context menu <div> element, if one is present.
+	function closeMenu() {
+		var elem = elemId("menu");
+		if (elem != null)
+			elem.parentNode.removeChild(elem);
+	}
+	
+	// Initialization
+	htmlElem.onmousedown = closeMenu;
+	
+	// Exported members
+	this.closeMenu = closeMenu;
+	
+	// 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
+	this.makeOpener = function(items) {
+		return function(ev) {
+			closeMenu();
+			var div = document.createElement("div");
+			div.id = "menu";
+			div.style.left = ev.pageX + "px";
+			div.style.top  = ev.pageY + "px";
+			var ul = document.createElement("ul");
+			
+			items.forEach(function(item) {
+				var li = document.createElement("li");
+				var child;
+				if (item[1] == null) {
+					child = document.createElement("span");
+					child.className = "disabled";
+				} else {
+					child = document.createElement("a");
+					child.href = "#";
+					child.onclick = function() {
+						closeMenu();
+						item[1]();
+						return false;
+					};
+				}
+				setElementText(child, item[0]);
+				li.appendChild(child);
+				ul.appendChild(li);
+			});
+			
+			div.appendChild(ul);
+			div.onmousedown = function(evt) { evt.stopPropagation(); };
+			document.getElementsByTagName("body")[0].appendChild(div);
+			return false;
+		};
 	};
 };
 
