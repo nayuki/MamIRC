@@ -8,12 +8,12 @@ function elemId(s) {  // Abbreviated function name
 }
 
 // Document nodes (elements)
-const htmlElem                    = document.documentElement;
-const windowListElem              = elemId("window-list");
-const messageListElem             = elemId("message-list");
-const memberListContainerElem     = elemId("member-list-container");
-const memberListElem              = elemId("member-list");
-const nicknameElem                = elemId("nickname");
+const htmlElem                = document.documentElement;
+const windowListElem          = elemId("window-list");
+const messageListElem         = elemId("message-list");
+const memberListContainerElem = elemId("member-list-container");
+const memberListElem          = elemId("member-list");
+const nicknameElem            = elemId("nickname");
 
 
 /* Main state */
@@ -289,9 +289,7 @@ function lineDataToRowElem(line) {
 		
 	} else if (type == Flags.NOTICE) {
 		who = "(" + payload[0] + ")";
-		fancyTextToElems(payload[1]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[1]);
 	} else if (type == Flags.NICK) {
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
 	} else if (type == Flags.JOIN) {
@@ -302,42 +300,26 @@ function lineDataToRowElem(line) {
 		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
 	} else if (type == Flags.QUIT) {
 		who = "\u2190";  // Leftwards arrow
-		lineElems.push(document.createTextNode(payload[0] + " has quit: "));
-		fancyTextToElems(payload[1]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[1]);
+		lineElems.splice(0, 0, document.createTextNode(payload[0] + " has quit: "));
 	} else if (type == Flags.KICK) {
 		who = "\u2190";  // Leftwards arrow
-		lineElems.push(document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
-		fancyTextToElems(payload[2]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[2]);
+		lineElems.splice(0, 0, document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
 	} else if (type == Flags.TOPIC) {
-		lineElems.push(document.createTextNode(payload[0] + " set the channel topic to: "));
-		fancyTextToElems(payload[1]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[1]);
+		lineElems.splice(0, 0, document.createTextNode(payload[0] + " set the channel topic to: "));
 	} else if (type == Flags.INITNOTOPIC) {
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == Flags.INITTOPIC) {
-		lineElems.push(document.createTextNode("The channel topic is: "));
-		fancyTextToElems(payload[0]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[0]);
+		lineElems.splice(0, 0, document.createTextNode("The channel topic is: "));
 	} else if (type == Flags.SERVERREPLY) {
 		who = "*";
-		fancyTextToElems(payload[1]).forEach(function(elem) {
-			lineElems.push(elem);
-		});
+		lineElems = fancyTextToElems(payload[1]);
 	} else if (type == Flags.NAMES) {
 		who = "*";
-		var text = "Users in channel: ";
-		for (var i = 0; i < payload.length; i++) {
-			if (i > 0)
-				text += ", ";
-			text += payload[i];
-		}
-		lineElems.push(document.createTextNode(text));
+		lineElems.push(document.createTextNode("Users in channel: " + payload.join(", ")));
 	} else if (type == Flags.MODE) {
 		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
