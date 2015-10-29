@@ -85,18 +85,22 @@ body {
 
 #window-list li {
 	display: inline-block;
-	padding-left: 0.5em;
+	padding-left: 0.1em;
 }
 
 #window-list li.profile {
 	font-weight: bold;
 }
 
+#window-list li + li.profile {
+	padding-left: 1.2em;
+}
+
 #window-list a {
 	display: inline-block;
 	border: 1px solid #909090;
-	padding: 0.5em 1.0em;
-	border-radius: 0.5em;
+	padding: 0.3em 1.0em;
+	border-radius: 0.3em;
 	color: inherit;
 	text-decoration: none;
 }
@@ -113,11 +117,14 @@ body {
 /* List of channel members */
 
 #member-list-container {
-	margin: 0.4em 0em;
-	padding: 0.4em 0em;
-	border-top: 1px solid #D0D0D0;
-	border-bottom: 1px solid #D0D0D0;
+	margin: 0.5em 0em;
+	padding: 0.3em 1.0em;
+	background-color: #F4F4F4;
+	border-radius: 0.8em;
+	padding-left: 3.0em;
+	text-indent: -2.0em;
 	font-size: 85%;
+	color: #808080;
 }
 
 #member-list-container p, #member-list, #member-list li {
