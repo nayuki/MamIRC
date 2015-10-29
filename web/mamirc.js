@@ -531,22 +531,23 @@ function loadUpdates(inData) {
 					windowData[windowName].numNewMessages++;
 				redrawWindowList();
 				if (!windowData[windowName].isMuted) {
+					var notiftext = null;
 					if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 						// New private messaging window popped open, or nickflagged in one
-						var notif;
 						var match = ME_INCOMING_REGEX.exec(line[4]);
 						if (match == null)
-							notif = new Notification("<" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, ""));
+							notiftext = "<" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
 						else
-							notif = new Notification(line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, ""));
-						notif.onclick = function() { setActiveWindow(windowName); };
+							notiftext = line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
 					} else if ((line[1] & Flags.NICKFLAG) != 0) {
-						var notif;
 						var match = ME_INCOMING_REGEX.exec(line[4]);
 						if (match == null)
-							notif = new Notification(payload[2] + " <" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, ""));
+							notiftext = payload[2] + " <" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
 						else
-							notif = new Notification(payload[2] + " " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, ""));
+							notiftext = payload[2] + " " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
+					}
+					if (notiftext != null) {
+						var notif = new Notification(notiftext);
 						notif.onclick = function() { setActiveWindow(windowName); };
 					}
 				}
