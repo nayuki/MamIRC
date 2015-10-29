@@ -547,7 +547,8 @@ function loadUpdates(inData) {
 							notiftext = payload[2] + " * " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
 					}
 					if (notiftext != null) {
-						var notif = new Notification(notiftext);
+						var opts = {icon: "tomoe-mami-icon.png"};
+						var notif = new Notification(notiftext, opts);
 						notif.onclick = function() { setActiveWindow(windowName); };
 					}
 				}
