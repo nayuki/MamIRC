@@ -222,6 +222,10 @@ tr.read {
 	color: #B0B0B0;
 }
 
+td span a {
+	color: inherit;
+}
+
 
 /* Main input text box */
 

@@ -440,7 +440,8 @@ function fancyTextToElems(str) {
 		}
 		// Execute this iff the 'else' clause wasn't executed
 		if (newStart != -1) {
-			parts.push(str.substring(start, end));
+			if (start < end)
+				parts.push(str.substring(start, end));
 			parts.push(action);  // action is a function, not null
 			start = newStart;
 			end = newStart;
@@ -453,36 +454,59 @@ function fancyTextToElems(str) {
 	var result = [];
 	parts.forEach(function(part) {
 		if (typeof part == "string") {
+			var elems = [];
 			while (part != "") {
 				var match = URL_REGEX0.exec(part);
 				if (match == null)
 					match = URL_REGEX1.exec(part);
 				var textEnd = match != null ? match[1].length : part.length;
-				if (textEnd > 0) {
-					var elem = document.createTextNode(part.substr(0, textEnd));
-					if (bold || italic || underline || background != 0 || foreground != 1) {
-						var span = document.createElement("span");
-						if (bold) span.style.fontWeight = "bold";
-						if (italic) span.style.fontStyle = "italic";
-						if (underline) span.style.textDecoration = "underline";
-						if (background != 0)
-							span.style.backgroundColor = TEXT_COLORS[background];
-						if (foreground != 1)
-							span.style.color = TEXT_COLORS[foreground];
-						span.appendChild(elem);
-						elem = span;
-					}
-					result.push(elem);
-				}
+				if (textEnd > 0)
+					elems.push(document.createTextNode(part.substr(0, textEnd)));
 				if (match == null)
 					break;
 				var a = document.createElement("a");
 				a.href = match[2];
 				a.target = "_blank";
 				setElementText(a, match[2]);
-				result.push(a);
+				elems.push(a);
 				part = part.substring(match[0].length);
 			}
+			
+			if (background != 0 || foreground != 1) {
+				var elem = document.createElement("span");
+				if (background != 0)
+					elem.style.backgroundColor = TEXT_COLORS[background];
+				if (foreground != 1)
+					elem.style.color = TEXT_COLORS[foreground];
+				elems.forEach(function(e) {
+					elem.appendChild(e);
+				});
+				elems = [elem];
+			}
+			if (bold) {
+				var elem = document.createElement("b");
+				elems.forEach(function(e) {
+					elem.appendChild(e);
+				});
+				elems = [elem];
+			}
+			if (italic) {
+				var elem = document.createElement("i");
+				elems.forEach(function(e) {
+					elem.appendChild(e);
+				});
+				elems = [elem];
+			}
+			if (underline) {
+				var elem = document.createElement("u");
+				elems.forEach(function(e) {
+					elem.appendChild(e);
+				});
+				elems = [elem];
+			}
+			elems.forEach(function(e) {
+				result.push(e);
+			});
 		} else if (typeof part == "function")
 			part();
 	});
