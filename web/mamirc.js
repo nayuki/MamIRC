@@ -42,16 +42,11 @@ var connectionData = null;
 // Type int. At least 0.
 var nextUpdateId = null;
 
-// Type str. Value is set by submitting the login form, and remains unchanged after a successful getState().
-var password = null;
-
-// Type bool. Value is set by submitting the login form.
-var optimizeMobile = null;
+// Type bool.
+var optimizeMobile = false;
 
 // In milliseconds. This value changes during execution depending on successful/failed requests.
 var retryTimeout = 1000;
-
-var backgroundImageCss = null;  // Type str. Assigned only once at init().
 
 
 /* Miscellaneous values */
@@ -68,9 +63,18 @@ var Flags = null;
 
 // Called once after the script and page are loaded.
 function init() {
-	backgroundImageCss = window.getComputedStyle(htmlElem).backgroundImage;  // str: 'url("foo.png")'
+	var cookieParts = document.cookie.split(";");
+	cookieParts.forEach(function(s) {
+		s = s.trim();
+		if (s.startsWith("optimize-mobile="))
+			optimizeMobile = s.substring(16) == "true";
+	});
+	if (optimizeMobile)
+		maxMessagesPerWindow = 500;
+	
 	Notification.requestPermission();
 	htmlElem.onmousedown = closeContextMenu;
+	getState();
 }
 
 
@@ -107,7 +111,6 @@ function loadState(inData) {
 	windowNames.sort();
 	
 	// Update UI elements
-	loginModule.loginSuccess();
 	redrawWindowList();
 	if (windowNames.length > 0)
 		setActiveWindow(windowNames[0]);
@@ -761,47 +764,6 @@ function closeContextMenu() {
 
 
 
-/*---- Login module ----*/
-
-const loginModule = new function() {
-	// Global variables
-	const passwordElem = elemId("password");
-	const loginStatusElem = elemId("login-status");
-	var blockSubmit = false;
-	
-	// Initialization
-	elemId("login").getElementsByTagName("form")[0].onsubmit = function() {
-		if (blockSubmit)
-			return;
-		password = passwordElem.value;
-		optimizeMobile = elemId("optimize-mobile").checked;
-		if (optimizeMobile)
-			maxMessagesPerWindow = 500;
-		getState();
-		blockSubmit = true;
-		return false;  // To prevent the form submitting
-	};
-	passwordElem.oninput = function() {
-		removeChildren(loginStatusElem);
-	};
-	passwordElem.focus();
-	
-	// Exported members
-	this.loginSuccess = function() {
-		passwordElem.value = "";
-		passwordElem.blur();
-		elemId("login").style.display = "none";
-		elemId("main").style.removeProperty("display");
-		htmlElem.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)), " + backgroundImageCss;
-	};
-	this.loginFailure = function(errmsg) {
-		setElementText(loginStatusElem, errmsg);
-		blockSubmit = false;
-	};
-};
-
-
-
 /*---- Input text box module ----*/
 
 const inputBoxModule = new function() {
@@ -1042,9 +1004,7 @@ function getState() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
-		if (typeof data == "string") {  // Error message
-			loginModule.loginFailure(data);
-		} else {  // Good data
+		if (typeof data != "string") {  // Good data
 			loadState(data);  // Process data and update UI
 			updateState();  // Start polling
 		}
@@ -1057,7 +1017,7 @@ function getState() {
 	xhr.open("POST", "get-state.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 10000;
-	xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow, "password":password}));
+	xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow}));
 }
 
 
@@ -1087,7 +1047,7 @@ function updateState() {
 	xhr.open("POST", "get-updates.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 80000;
-	xhr.send(JSON.stringify({"password":password, "nextUpdateId":nextUpdateId}));
+	xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId}));
 }
 
 
@@ -1101,7 +1061,7 @@ function sendAction(payload, onload, ontimeout) {
 	xhr.open("POST", "do-actions.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"password":password, "payload":payload}));
+	xhr.send(JSON.stringify({"payload":payload}));
 }
 
 

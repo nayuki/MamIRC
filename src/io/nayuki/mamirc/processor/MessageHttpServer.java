@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -43,9 +44,93 @@ final class MessageHttpServer {
 			server.createContext(uriPath, new FileHttpHandler(uriPath, new File("web", entry[0]), entry[2], !entry[2].startsWith("image/")));
 		}
 		
+		// Main/login page
+		server.createContext("/", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				try {
+					if (!he.getRequestURI().getPath().equals("/"))
+						throw new IllegalArgumentException();
+					
+					if (he.getRequestMethod().equals("POST")) {
+						String type = he.getRequestHeaders().getFirst("Content-Type");
+						if (type == null || !type.equals("application/x-www-form-urlencoded"))
+							throw new IllegalArgumentException();
+						
+						ByteArrayOutputStream bout = new ByteArrayOutputStream();
+						InputStream in = he.getRequestBody();
+						try {
+							int len = 0;
+							byte[] buf = new byte[1024];
+							while (true) {
+								int n = in.read(buf);
+								if (n == -1)
+									break;
+								bout.write(buf, 0, n);
+								len += n;
+								if (len > MAX_REQUEST_BODY_LEN)
+									throw new RuntimeException("Request body too long");
+							}
+						} finally {
+							in.close();
+						}
+						
+						Map<String,String> formdata = parseForm(Utils.fromUtf8(bout.toByteArray()));
+						Headers respHead = he.getResponseHeaders();
+						respHead.add("Set-Cookie", "password=" + (formdata.containsKey("password") ? formdata.get("password").replaceAll("[^A-Za-z0-9]", "") : "") + "; Max-Age=2500000");
+						respHead.add("Set-Cookie", "optimize-mobile=" + (formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on")) + "; Max-Age=2500000");
+						respHead.add("Location", "/");
+						he.sendResponseHeaders(303, -1);
+					}
+					
+					if (!he.getRequestMethod().equals("GET"))
+						throw new IllegalArgumentException();
+					
+					Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
+					if (!(cookies.containsKey("password") && checkPassword(cookies.get("password")))) {
+						File file = new File("web", "login.html");
+						String s;
+						DataInputStream in = new DataInputStream(new FileInputStream(file));
+						try {
+							byte[] b = new byte[(int)file.length()];
+							in.readFully(b);
+							s = Utils.fromUtf8(b);
+						} finally {
+							in.close();
+						}
+						s = s.replace("#status#", cookies.get("password") != null && checkPassword(cookies.get("password")) ? "" : "Incorrect password");
+						s = s.replace("#optimize-mobile#", cookies.get("optimize-mobile") != null && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
+						he.getResponseHeaders().add("Cache-Control", "no-store");
+						writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
+					} else {
+						File file = new File("web", "mamirc.html");
+						byte[] b = new byte[(int)file.length()];
+						DataInputStream in = new DataInputStream(new FileInputStream(file));
+						try {
+							in.readFully(b);
+						} finally {
+							in.close();
+						}
+						he.getResponseHeaders().add("Cache-Control", "no-store");
+						writeResponse(b, "application/xhtml+xml", true, he);
+					}
+				} catch (IllegalArgumentException e) {
+					he.sendResponseHeaders(404, -1);
+				} finally {
+					he.close();
+				}
+			}
+		});
+		
 		// Dynamic actions
 		HttpHandler apiHandler = new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
+				// Check password cookie
+				Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
+				if (!(cookies.containsKey("password") && checkPassword(cookies.get("password")))) {
+					writeJsonResponse("Authentication error", he);
+					return;
+				}
+				
 				// Read request and parse JSON
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				InputStream in = he.getRequestBody();
@@ -65,12 +150,6 @@ final class MessageHttpServer {
 					in.close();
 				}
 				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-				
-				// Check password field
-				if (!checkPassword(Json.getString(reqData, "password"))) {
-					writeJsonResponse("Authentication error", he);
-					return;
-				}
 				
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
@@ -149,7 +228,7 @@ final class MessageHttpServer {
 	
 	
 	private static final String[][] STATIC_FILES = {
-		{"mamirc-web-ui.html", "/" , "application/xhtml+xml" },
+		{"login.css"         , null, "text/css"              },
 		{"mamirc.css"        , null, "text/css"              },
 		{"mamirc.js"         , null, "application/javascript"},
 		{"tomoe-mami.png"    , null, "image/png"             },
@@ -208,6 +287,34 @@ final class MessageHttpServer {
 		he.sendResponseHeaders(200, data.length);
 		he.getResponseBody().write(data);
 		he.close();
+	}
+	
+	
+	// Naive parser, not fully standards-compliant.
+	private static Map<String,String> parseCookies(String raw) {
+		Map<String,String> result = new HashMap<>();
+		if (raw != null) {
+			String[] parts = raw.split("\\s*;\\s*");
+			for (String item : parts) {
+				String[] subparts = item.split("\\s*=\\s*", 2);
+				if (subparts.length == 2)
+					result.put(subparts[0], subparts[1]);
+			}
+		}
+		return result;
+	}
+	
+	
+	// Naive parser, not fully standards-compliant.
+	private static Map<String,String> parseForm(String raw) {
+		Map<String,String> result = new HashMap<>();
+		String[] parts = raw.split("&");
+		for (String item : parts) {
+			String[] subparts = item.split("=", 2);
+			if (subparts.length == 2)
+				result.put(subparts[0], subparts[1]);
+		}
+		return result;
 	}
 	
 	
