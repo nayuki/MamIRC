@@ -381,95 +381,37 @@ function fancyTextToElems(str) {
 	if (!SPECIAL_FORMATTING_REGEX.test(str))
 		return [document.createTextNode(str)];
 	
-	// These formatting state variables are declared now, referenced in closures in the next section of code
-	// (but not read or written), and mutated in the next next section (when the closures are called)
+	// Current formatting state
 	var bold = false;
 	var italic = false;
 	var underline = false;
 	var background = 0;
 	var foreground = 1;
 	
-	// Split the string into literal text and formatting function objects
-	var parts = [];  // Array of strings and functions
-	var start = 0;
-	var end = 0;
-	while (end < str.length) {
-		var ch = str.charCodeAt(end);
-		var action;
-		var newStart;
-		if (ch == 0x02) {
-			action = function() { bold = !bold; };
-			newStart = end + 1;
-		} else if (ch == 0x1D) {
-			action = function() { italic = !italic; };
-			newStart = end + 1;
-		} else if (ch == 0x1F) {
-			action = function() { underline = !underline; };
-			newStart = end + 1;
-		} else if (ch == 0x16) {  // Reverse
-			action = function() {
-				var temp = foreground;
-				foreground = background;
-				background = temp;
-			};
-			newStart = end + 1;
-		} else if (ch == 0x0F) {  // Plain
-			action = function() {
-				bold = false;
-				italic = false;
-				underline = false;
-				background = 0;
-				foreground = 1;
-			};
-			newStart = end + 1;
-		} else if (ch == 0x03) {  // Color code
-			var match = COLOR_CODE_REGEX.exec(str.substring(end));
-			var newfg = match[1] != undefined ? parseInt(match[1], 10) : 1;
-			var newbg = match[2] != undefined ? parseInt(match[2], 10) : 0;
-			action = (function(fg, bg) {
-				return function() {
-					if (fg < TEXT_COLORS.length) foreground = fg;
-					if (bg < TEXT_COLORS.length) background = bg;
-				};
-			})(newfg, newbg);
-			newStart = end + match[0].length;
-		} else {
-			action = null;
-			newStart = -1;
-			end++;
-		}
-		// Execute this iff the 'else' clause wasn't executed
-		if (newStart != -1) {
-			if (start < end)
-				parts.push(str.substring(start, end));
-			parts.push(action);  // action is a function, not null
-			start = newStart;
-			end = newStart;
-		}
-	}
-	if (start < end)
-		parts.push(str.substring(start, end));
-	
-	// Parse URLs in each literal string, and apply formatting functions
+	// Process formatting commands and chunks of text
 	var result = [];
-	parts.forEach(function(part) {
-		if (typeof part == "string") {
+	while (str != "") {
+		var formatMatch = FORMAT_CODE_REGEX.exec(str);
+		var strPartEnd = formatMatch != null ? formatMatch[1].length : str.length;
+		if (strPartEnd > 0) {
+			// Process text
+			var chunk = str.substr(0, strPartEnd);
 			var elems = [];
-			while (part != "") {
-				var match = URL_REGEX0.exec(part);
-				if (match == null)
-					match = URL_REGEX1.exec(part);
-				var textEnd = match != null ? match[1].length : part.length;
-				if (textEnd > 0)
-					elems.push(document.createTextNode(part.substr(0, textEnd)));
-				if (match == null)
+			while (chunk != "") {
+				var urlMatch = URL_REGEX0.exec(chunk);
+				if (urlMatch == null)
+					urlMatch = URL_REGEX1.exec(chunk);
+				var chunkPartEnd = urlMatch != null ? urlMatch[1].length : chunk.length;
+				if (chunkPartEnd > 0)
+					elems.push(document.createTextNode(chunk.substr(0, chunkPartEnd)));
+				if (urlMatch == null)
 					break;
 				var a = document.createElement("a");
-				a.href = match[2];
+				a.href = urlMatch[2];
 				a.target = "_blank";
-				setElementText(a, match[2]);
+				setElementText(a, urlMatch[2]);
 				elems.push(a);
-				part = part.substring(match[0].length);
+				chunk = chunk.substring(urlMatch[0].length);
 			}
 			
 			if (background != 0 || foreground != 1) {
@@ -483,33 +425,57 @@ function fancyTextToElems(str) {
 				});
 				elems = [elem];
 			}
-			if (bold) {
-				var elem = document.createElement("b");
-				elems.forEach(function(e) {
-					elem.appendChild(e);
-				});
-				elems = [elem];
-			}
-			if (italic) {
-				var elem = document.createElement("i");
-				elems.forEach(function(e) {
-					elem.appendChild(e);
-				});
-				elems = [elem];
-			}
-			if (underline) {
-				var elem = document.createElement("u");
-				elems.forEach(function(e) {
-					elem.appendChild(e);
-				});
-				elems = [elem];
-			}
+			var temp = [[bold, "b"], [italic, "i"], [underline, "u"]];
+			temp.forEach(function(pair) {
+				if (pair[0]) {
+					var elem = document.createElement(pair[1]);
+					elems.forEach(function(e) {
+						elem.appendChild(e);
+					});
+					elems = [elem];
+				}
+			});
 			elems.forEach(function(e) {
 				result.push(e);
 			});
-		} else if (typeof part == "function")
-			part();
-	});
+		}
+		if (formatMatch == null)
+			break;
+		
+		// Process format code
+		switch (str.charCodeAt(strPartEnd)) {
+			case 0x02:
+				bold = !bold;
+				break;
+			case 0x1D:
+				italic = !italic;
+				break;
+			case 0x1F:
+				underline = !underline;
+				break;
+			case 0x16:  // Reverse
+				var temp = foreground;
+				foreground = background;
+				background = temp;
+				break;
+			case 0x0F:  // Plain
+				bold = false;
+				italic = false;
+				underline = false;
+				background = 0;
+				foreground = 1;
+				break;
+			case 0x03:  // Color
+				var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : 1;
+				var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : 0;
+				if (fore < TEXT_COLORS.length) foreground = fore;
+				if (back < TEXT_COLORS.length) background = back;
+				break;
+			default:
+				throw "Assertion error";
+		}
+		str = str.substring(formatMatch[0].length);
+	}
 	
 	// Epilog
 	if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
@@ -518,7 +484,7 @@ function fancyTextToElems(str) {
 }
 
 const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
-const COLOR_CODE_REGEX = /^\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?/;
+const FORMAT_CODE_REGEX = /^(.*?)(?:[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?)/;
 const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
 const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
 const TEXT_COLORS = [
