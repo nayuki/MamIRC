@@ -222,7 +222,15 @@ tr.read {
 	color: #B0B0B0;
 }
 
-td span a {
+td a:link {
+	color: #D8B100
+}
+
+td a:visited {
+	color: #7F6800;
+}
+
+td span a:link, td span a:visited {
 	color: inherit;
 }
 
