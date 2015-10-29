@@ -538,13 +538,13 @@ function loadUpdates(inData) {
 						if (match == null)
 							notiftext = "<" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
 						else
-							notiftext = line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
+							notiftext = "* " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
 					} else if ((line[1] & Flags.NICKFLAG) != 0) {
 						var match = ME_INCOMING_REGEX.exec(line[4]);
 						if (match == null)
 							notiftext = payload[2] + " <" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
 						else
-							notiftext = payload[2] + " " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
+							notiftext = payload[2] + " * " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
 					}
 					if (notiftext != null) {
 						var notif = new Notification(notiftext);
