@@ -783,6 +783,8 @@ const inputBoxModule = new function() {
 				}
 			} else if (cmd == "/me" && parts.length >= 2) {
 				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+			} else if (cmd == "/notice" && parts.length >= 3) {
+				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + nthRemainingPart(inputStr, 2)]], null, onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
 				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
