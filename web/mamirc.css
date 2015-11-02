@@ -224,6 +224,26 @@ tr.me-action {
 	font-style: italic;
 }
 
+tr.user-enter td:nth-child(2), tr.user-enter td:nth-child(3) {
+	color: #A9CE9F;
+}
+
+tr.user-exit td:nth-child(2), tr.user-exit td:nth-child(3) {
+	color: #E8BFB7;
+}
+
+tr.nick-change td:nth-child(2), tr.nick-change td:nth-child(3) {
+	color: #E0DC9A;
+}
+
+tr.mode-change td:nth-child(2), tr.mode-change td:nth-child(3) {
+	color: #A0B8E5;
+}
+
+tr.user-list td:nth-child(2), tr.user-list td:nth-child(3) {
+	color: #C0C0C0;
+}
+
 tr.read {
 	background: #F4F4F4;
 	color: #B0B0B0;

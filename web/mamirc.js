@@ -291,20 +291,25 @@ function lineDataToRowElem(line) {
 		lineElems = fancyTextToElems(payload[1]);
 	} else if (type == Flags.NICK) {
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
+		tr.classList.add("nick-change");
 	} else if (type == Flags.JOIN) {
 		who = "\u2192";  // Rightwards arrow
 		lineElems.push(document.createTextNode(payload[0] + " joined the channel"));
+		tr.classList.add("user-enter");
 	} else if (type == Flags.PART) {
 		who = "\u2190";  // Leftwards arrow
 		lineElems.push(document.createTextNode(payload[0] + " left the channel"));
+		tr.classList.add("user-exit");
 	} else if (type == Flags.QUIT) {
 		who = "\u2190";  // Leftwards arrow
 		lineElems = fancyTextToElems(payload[1]);
 		lineElems.splice(0, 0, document.createTextNode(payload[0] + " has quit: "));
+		tr.classList.add("user-exit");
 	} else if (type == Flags.KICK) {
 		who = "\u2190";  // Leftwards arrow
 		lineElems = fancyTextToElems(payload[2]);
 		lineElems.splice(0, 0, document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
+		tr.classList.add("user-exit");
 	} else if (type == Flags.TOPIC) {
 		lineElems = fancyTextToElems(payload[1]);
 		lineElems.splice(0, 0, document.createTextNode(payload[0] + " set the channel topic to: "));
@@ -319,9 +324,11 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.NAMES) {
 		who = "*";
 		lineElems.push(document.createTextNode("Users in channel: " + payload.join(", ")));
+		tr.classList.add("user-list");
 	} else if (type == Flags.MODE) {
 		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
+		tr.classList.add("mode-change");
 	} else if (type == Flags.DISCONNECTED) {
 		lineElems.push(document.createTextNode("Disconnected from server"));
 	} else {
