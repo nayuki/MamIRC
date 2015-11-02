@@ -161,11 +161,13 @@ final class MessageHttpServer {
 					case "/get-updates.json": {
 						// Get or wait for new data
 						int startId = Json.getInt(reqData, "nextUpdateId");
+						int maxWait = Json.getInt(reqData, "maxWait");
+						maxWait = Math.max(Math.min(maxWait, 300000), 1);
 						synchronized(master) {
 							Map<String,Object> data = master.getUpdates(startId);
 							if (data != null && Json.getList(data, "updates").size() == 0) {
 								try {
-									master.wait(60000);
+									master.wait(maxWait);
 								} catch (InterruptedException e) {}
 								data = master.getUpdates(startId);
 							}
@@ -221,7 +223,7 @@ final class MessageHttpServer {
 		server.createContext("/do-actions.json", apiHandler);
 		
 		// Start the server
-		executor = Executors.newFixedThreadPool(4);
+		executor = Executors.newFixedThreadPool(10);
 		server.setExecutor(executor);
 		server.start();
 	}

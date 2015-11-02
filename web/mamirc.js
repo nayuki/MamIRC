@@ -1028,10 +1028,11 @@ function updateState() {
 		if (retryTimeout < 300000)
 			retryTimeout *= 2;
 	};
+	var maxWait = 60000;
 	xhr.open("POST", "get-updates.json", true);
 	xhr.responseType = "text";
-	xhr.timeout = 80000;
-	xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId}));
+	xhr.timeout = maxWait + 20000;
+	xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId, "maxWait":maxWait}));
 }
 
 
