@@ -260,7 +260,7 @@ function lineDataToRowElem(line) {
 	const type = flags & Flags.TYPE_MASK;
 	
 	// Output variables
-	var who = "*";         // Type str
+	var who = "\u25CF";    // Type str
 	var lineElems = [];    // Type list<domnode>
 	var quoteText = null;  // Type str or null
 	var tr = document.createElement("tr");
@@ -282,6 +282,7 @@ function lineDataToRowElem(line) {
 		if (mematch != null) {
 			tr.classList.add("me-action");
 			quoteText = "* " + who + " " + quoteText;
+			who = "\u2605";  // Star
 		} else {
 			quoteText = "<" + who + "> " + quoteText;
 		}
@@ -319,14 +320,11 @@ function lineDataToRowElem(line) {
 		lineElems = fancyTextToElems(payload[0]);
 		lineElems.splice(0, 0, document.createTextNode("The channel topic is: "));
 	} else if (type == Flags.SERVERREPLY) {
-		who = "*";
 		lineElems = fancyTextToElems(payload[1]);
 	} else if (type == Flags.NAMES) {
-		who = "*";
 		lineElems.push(document.createTextNode("Users in channel: " + payload.join(", ")));
 		tr.classList.add("user-list");
 	} else if (type == Flags.MODE) {
-		who = "*";
 		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
 		tr.classList.add("mode-change");
 	} else if (type == Flags.DISCONNECTED) {
@@ -344,7 +342,7 @@ function lineDataToRowElem(line) {
 	// Make nickname cell
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
-	if (who != "*" && who != "RAW")
+	if (who != "\u25CF" && who != "\u2190" && who != "\u2192" && who != "\u2605" && who != "RAW")
 		td.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
 	tr.appendChild(td);
 	
