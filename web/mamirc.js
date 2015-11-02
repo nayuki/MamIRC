@@ -763,6 +763,11 @@ const inputBoxModule = new function() {
 		var inputStr = inputBoxElem.value;
 		if (activeWindow == null || inputStr == "")
 			return false;
+		if (isLineOverlong()) {
+			alert("Line is too long");
+			return false;
+		}
+		
 		var onerror = function() {
 			failedCommandsContainerElem.style.removeProperty("display");
 			var li = document.createElement("li");
@@ -836,6 +841,14 @@ const inputBoxModule = new function() {
 		else
 			inputBoxElem.classList.remove("is-command");
 		
+		if (isLineOverlong())
+			inputBoxElem.classList.add("is-overlong");
+		else
+			inputBoxElem.classList.remove("is-overlong");
+	}
+	
+	function isLineOverlong() {
+		var text = inputBoxElem.value;
 		var checktext;
 		if (text.startsWith("//"))
 			checktext = text.substring(1);
@@ -851,10 +864,7 @@ const inputBoxModule = new function() {
 			else
 				checktext = text;
 		}
-		if (countUtf8Bytes(checktext) > maxBytesPerLine)
-			inputBoxElem.classList.add("is-overlong");
-		else
-			inputBoxElem.classList.remove("is-overlong");
+		return countUtf8Bytes(checktext) > maxBytesPerLine;
 	}
 	
 	function doTabCompletion() {
