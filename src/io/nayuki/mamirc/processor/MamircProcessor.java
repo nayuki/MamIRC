@@ -214,11 +214,12 @@ public final class MamircProcessor {
 							if (target.equalsIgnoreCase(state.getCurrentNickname()))
 								mekicked = true;
 							else
-								addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, target, reason);
+								addKickLine(profile.name, chan, ev.timestamp, target, msg.prefixName, reason);
+							curchans.get(chan).members.remove(target);
 						}
 					}
 					if (mekicked) {  // Save this part for last
-						addKickLine(profile.name, chan, ev.timestamp, msg.prefixName, state.getCurrentNickname(), reason);
+						addKickLine(profile.name, chan, ev.timestamp, state.getCurrentNickname(), msg.prefixName, reason);
 						addUpdate("KICKED", state.profile.name, chan, reason);
 						curchans.remove(chan);
 					}
@@ -643,8 +644,8 @@ public final class MamircProcessor {
 		addWindowLine(profile, target, Window.Flags.JOIN.value, timestamp, nick);
 	}
 	
-	private void addKickLine(String profile, String target, long timestamp, String kicker, String kickee, String text) {
-		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kicker, kickee, text);
+	private void addKickLine(String profile, String target, long timestamp, String kickee, String kicker, String text) {
+		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kickee, kicker, text);
 	}
 	
 	private void addModeLine(String profile, String target, long timestamp, String source, String text) {

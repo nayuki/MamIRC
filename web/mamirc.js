@@ -309,7 +309,7 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.KICK) {
 		who = "\u2190";  // Leftwards arrow
 		lineElems = fancyTextToElems(payload[2]);
-		lineElems.splice(0, 0, document.createTextNode(payload[1] + " was kicked by " + payload[0] + ": "));
+		lineElems.splice(0, 0, document.createTextNode(payload[0] + " was kicked by " + payload[1] + ": "));
 		tr.classList.add("user-exit");
 	} else if (type == Flags.TOPIC) {
 		lineElems = fancyTextToElems(payload[1]);
