@@ -412,6 +412,7 @@ function fancyTextToElems(str) {
 				var a = document.createElement("a");
 				a.href = urlMatch[2];
 				a.target = "_blank";
+				a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
 				setElementText(a, urlMatch[2]);
 				elems.push(a);
 				chunk = chunk.substring(urlMatch[0].length);
@@ -941,6 +942,10 @@ const menuModule = new function() {
 	
 	// Initialization
 	htmlElem.onmousedown = closeMenu;
+	htmlElem.onkeydown = function(ev) {
+		if (ev.keyCode == 27)  // Escape
+			closeMenu();
+	};
 	
 	// Exported members
 	this.closeMenu = closeMenu;
@@ -948,6 +953,8 @@ const menuModule = new function() {
 	// 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
 	this.makeOpener = function(items) {
 		return function(ev) {
+			if (window.getSelection().toString() != "")
+				return;  // To show the native context menu - allows the user to copy the highlight text, to search the web, etc.
 			closeMenu();
 			var div = document.createElement("div");
 			div.id = "menu";
@@ -976,7 +983,7 @@ const menuModule = new function() {
 			});
 			
 			div.appendChild(ul);
-			div.onmousedown = function(evt) { evt.stopPropagation(); };
+			div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
 			document.getElementsByTagName("body")[0].appendChild(div);
 			return false;
 		};
