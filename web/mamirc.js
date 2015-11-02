@@ -177,10 +177,7 @@ function refreshWindowSelection() {
 		return;
 	var windowLis = windowListElem.getElementsByTagName("li");
 	windowNames.forEach(function(name, i) {
-		if (name == activeWindow[2])
-			windowLis[i].classList.add("selected");
-		else
-			windowLis[i].classList.remove("selected");
+		setClasslistItem(windowLis[i].classList, "selected", name == activeWindow[2]);
 	});
 }
 
@@ -650,14 +647,8 @@ function loadUpdates(inData) {
 				var rows = messageListElem.children;
 				for (var i = 0; i < lines.length; i++) {
 					var row = rows[i];
-					var cl = row.classList;
-					if (lines[i][0] < seq) {
-						cl.add("read");
-						cl.remove("unread");
-					} else {
-						cl.add("unread");
-						cl.remove("read");
-					}
+					setClasslistItem(row.classList, "read"  , lines[i][0] <  seq);
+					setClasslistItem(row.classList, "unread", lines[i][0] >= seq);
 				}
 				activeWindowUpdated = true;
 			}
@@ -836,15 +827,8 @@ const inputBoxModule = new function() {
 	// Change classes of text box based on '/commands' and overlong text
 	function colorizeLine() {
 		var text = inputBoxElem.value;
-		if (text.startsWith("/") && !text.startsWith("//"))
-			inputBoxElem.classList.add("is-command");
-		else
-			inputBoxElem.classList.remove("is-command");
-		
-		if (isLineOverlong())
-			inputBoxElem.classList.add("is-overlong");
-		else
-			inputBoxElem.classList.remove("is-overlong");
+		setClasslistItem(inputBoxElem.classList, "is-command", text.startsWith("/") && !text.startsWith("//"));
+		setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong());
 	}
 	
 	function isLineOverlong() {
@@ -1159,6 +1143,12 @@ function countUtf8Bytes(s) {
 			result += 3;
 	}
 	return result;
+}
+
+
+function setClasslistItem(clslst, name, enable) {
+	if (clslst.contains(name) != enable)
+		clslst.toggle(name);
 }
 
 
