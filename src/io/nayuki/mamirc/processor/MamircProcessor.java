@@ -220,7 +220,7 @@ public final class MamircProcessor {
 					}
 					if (mekicked) {  // Save this part for last
 						addKickLine(profile.name, chan, ev.timestamp, state.getCurrentNickname(), msg.prefixName, reason);
-						addUpdate("KICKED", state.profile.name, chan, reason);
+						addUpdate("KICKED", state.profile.name, chan, msg.prefixName, reason);
 						curchans.remove(chan);
 					}
 				}

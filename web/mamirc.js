@@ -610,6 +610,11 @@ function loadUpdates(inData) {
 			delete connectionData[payload[1]].channels[payload[2]];
 			if (activeWindow != null && activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
 				redrawChannelMembers();
+			if (type == "KICKED") {
+				var opts = {icon:"tomoe-mami-icon-text.png"};
+				var notif = new Notification("You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4].replace(REMOVE_FORMATTING_REGEX, ""), opts);
+				notif.onclick = function() { setActiveWindow(windowName); };
+			}
 		} else if (type == "OPENWIN") {
 			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
