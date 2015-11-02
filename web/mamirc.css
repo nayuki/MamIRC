@@ -220,8 +220,12 @@ tr.nickflag {
 	background: #ffe0d0;
 }
 
-tr.me-action {
+tr.me-action td:nth-child(2), tr.me-action td:nth-child(3) {
 	font-style: italic;
+}
+
+tr.me-action td:nth-child(2):before {
+	content: "\2606\00A0";
 }
 
 tr.user-enter td:nth-child(2), tr.user-enter td:nth-child(3) {

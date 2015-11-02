@@ -279,7 +279,6 @@ function lineDataToRowElem(line) {
 		if (mematch != null) {
 			tr.classList.add("me-action");
 			quoteText = "* " + who + " " + quoteText;
-			who = "\u2605";  // Star
 		} else {
 			quoteText = "<" + who + "> " + quoteText;
 		}
@@ -339,7 +338,7 @@ function lineDataToRowElem(line) {
 	// Make nickname cell
 	td = document.createElement("td");
 	td.appendChild(document.createTextNode(who));
-	if (who != "\u25CF" && who != "\u2190" && who != "\u2192" && who != "\u2605" && who != "RAW")
+	if (who != "\u25CF" && who != "\u2190" && who != "\u2192" && who != "RAW")
 		td.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
 	tr.appendChild(td);
 	
