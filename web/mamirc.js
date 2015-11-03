@@ -258,6 +258,7 @@ function lineDataToRowElem(line) {
 	
 	// Output variables
 	var who = "\u25CF";    // Type str
+	var nameColor = null;  // Type str or null
 	var lineElems = [];    // Type list<domnode>
 	var quoteText = null;  // Type str or null
 	var tr = document.createElement("tr");
@@ -265,6 +266,7 @@ function lineDataToRowElem(line) {
 	// Take action depending on head of payload
 	if (type == Flags.PRIVMSG) {
 		who = payload[0];
+		nameColor = nickColorModule.getNickColor(who);
 		var s = payload[1];
 		var mematch = ME_INCOMING_REGEX.exec(s);
 		if (mematch != null)
@@ -340,6 +342,8 @@ function lineDataToRowElem(line) {
 	td.appendChild(document.createTextNode(who));
 	if (who != "\u25CF" && who != "\u2190" && who != "\u2192" && who != "RAW")
 		td.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { openPrivateMessagingWindow(who, null); }]]);
+	if (nameColor != null)
+		td.style.color = nameColor;
 	tr.appendChild(td);
 	
 	// Make message cell and its sophisticated context menu
@@ -985,6 +989,56 @@ const menuModule = new function() {
 			document.getElementsByTagName("body")[0].appendChild(div);
 			return false;
 		};
+	};
+};
+
+
+
+/*---- Nickname coloration module ----*/
+
+const nickColorModule = new function() {
+	// From "CET Perceptually Uniform Colour Maps", by Peter Kovesi, map rainbow_bgyr_35-85_c73_n256, http://peterkovesi.com/projects/colourmaps/
+	const colorTable = [  // 256 entries
+		"0035F9","0038F6","003AF3","003DF0","003FED","0042EA","0044E7","0047E4","0049E1","004BDF","004DDC","004FD9","0051D6","0053D3","0055D0","0057CD",
+		"0059CA","005BC7","005CC4","005EC2","0060BF","0062BC","0063B9","0065B6","0067B3","0068B0","006AAE","006CAB","006DA8","006FA5","0070A3","0071A0",
+		"00739D","00749B","007598","007696","077793","0E7891","147A8E","187B8C","1C7C89","207D87","237E85","267F82","298080","2B817E","2D827B","2F8379",
+		"318476","338574","348672","35876F","37886D","38896A","398A68","3A8B65","3B8C63","3B8D60","3C8E5E","3D8F5B","3D9058","3E9156","3E9253","3E9350",
+		"3F944E","3F954B","3F9648","3F9845","3F9942","3F9A3F","3F9B3C","3F9C39","3F9D35","3F9E32","3F9F2F","3FA02B","3FA128","40A224","40A321","41A41E",
+		"42A51B","44A618","46A615","48A713","4AA811","4DA910","4FA90F","52AA0E","55AB0D","57AB0D","5AAC0D","5DAC0E","60AD0E","63AE0E","65AE0E","68AF0F",
+		"6AAF0F","6DB010","70B110","72B110","75B211","77B211","7AB311","7CB412","7EB412","81B513","83B513","86B613","88B614","8AB714","8DB714","8FB815",
+		"91B915","94B915","96BA16","98BA16","9ABB17","9DBB17","9FBC17","A1BC18","A3BD18","A6BD18","A8BE19","AABF19","ACBF1A","AFC01A","B1C01A","B3C11B",
+		"B5C11B","B7C21B","BAC21C","BCC31C","BEC31C","C0C41D","C2C41D","C4C51E","C7C51E","C9C61E","CBC61F","CDC71F","CFC71F","D1C820","D3C820","D6C921",
+		"D8C921","DACA21","DCCA22","DECB22","E0CB22","E2CB23","E5CC23","E7CC23","E9CD24","EBCD24","EDCD24","EFCD25","F1CD25","F2CD25","F4CD25","F5CD25",
+		"F7CC25","F8CC24","F9CB24","FACA24","FBC923","FBC823","FCC722","FCC522","FDC421","FDC321","FDC120","FDC020","FEBF1F","FEBD1E","FEBC1E","FEBB1D",
+		"FEB91D","FFB81C","FFB61B","FFB51B","FFB41A","FFB219","FFB119","FFB018","FFAE18","FFAD17","FFAB16","FFAA16","FFA815","FFA714","FFA614","FFA413",
+		"FFA312","FFA112","FFA011","FF9E10","FF9D10","FF9C0F","FF9A0E","FF990D","FF970D","FF960C","FF940B","FF930A","FF910A","FF9009","FF8E08","FF8D07",
+		"FF8B07","FF8A06","FF8805","FF8605","FF8504","FF8303","FF8203","FF8002","FF7F02","FF7D01","FF7B01","FF7A00","FF7800","FF7600","FF7500","FF7300",
+		"FF7100","FF7000","FF6E00","FF6C00","FF6A00","FF6800","FF6700","FF6500","FF6300","FF6100","FF5F00","FF5D00","FF5B00","FF5900","FF5700","FF5500",
+		"FF5300","FF5100","FF4F00","FF4C00","FF4A00","FF4800","FF4500","FF4300","FF4000","FF3D00","FF3B00","FF3800","FF3500","FF3100","FF2E00","FF2A00"];
+	
+	var nickColorCache = {};
+	var nickColorCacheSize = 0;
+	
+	// Exported members
+	var debug = true;
+	this.getNickColor = function(name) {
+		if (!(name in nickColorCache)) {
+			var hash = 1;  // Signed 32-bit integer
+			for (var i = 0; i < name.length; i++) {
+				for (var j = 0; j < 128; j++) {  // LFSR based on CRC-32
+					if (j % 19 == 0)
+						hash = (hash + name.charCodeAt(i)) | 0;
+					hash = (hash >>> 1) ^ (-(hash & 1) & 0xEDB88320);
+				}
+			}
+			if (nickColorCacheSize > 100) {
+				nickColorCache = {};
+				nickColorCacheSize = 0;
+			}
+			nickColorCache[name] = "#" + colorTable[hash & 0xFF];
+			nickColorCacheSize++;
+		}
+		return nickColorCache[name];
 	};
 };
 
