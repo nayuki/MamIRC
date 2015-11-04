@@ -212,12 +212,12 @@ tbody td:nth-child(3) {
 	vertical-align: middle;
 }
 
-tr.outgoing td:nth-child(2), tr.outgoing td:nth-child(3) {
-	background: #e8e8ff;
+tr.outgoing td:nth-child(2)::before {
+	content: "\25A0\00A0";
 }
 
-tr.nickflag {
-	background: #ffe0d0;
+tr.nickflag td:nth-child(3) {
+	background: #FFF4F0;
 }
 
 tr.me-action td:nth-child(2), tr.me-action td:nth-child(3) {
