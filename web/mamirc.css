@@ -113,6 +113,22 @@ body {
 	background-color: #F8F8F8;
 }
 
+#window-list li span {
+	display: none;
+}
+
+#window-list li span:nth-child(2) {
+	display: inline;
+	margin-left: 0.3em;
+	padding: 0em 0.4em;
+	border-radius: 1em;
+	background-color: #A0A0E0;
+	position: relative;
+	top: -0.15em;
+	font-size: 75%;
+	color: #F0F0F0;
+}
+
 
 /* List of channel members */
 

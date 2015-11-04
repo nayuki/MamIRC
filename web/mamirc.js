@@ -128,11 +128,19 @@ function redrawWindowList() {
 		
 		// Create the anchor element
 		var a = document.createElement("a");
-		var s = party != "" ? party : profile;
+		setElementText(a, party != "" ? party : profile);
 		var n = windowData[windowName].numNewMessages;
-		if (n > 0)
-			s += " (" + n + ")";
-		setElementText(a, s);
+		if (n > 0) {
+			var span = document.createElement("span");
+			setElementText(span, " (");
+			a.appendChild(span);
+			span = document.createElement("span");
+			setElementText(span, n.toString());
+			a.appendChild(span);
+			span = document.createElement("span");
+			setElementText(span, ")");
+			a.appendChild(span);
+		}
 		a.href = "#";
 		a.onclick = function() {
 			setActiveWindow(windowName);
