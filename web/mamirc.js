@@ -32,6 +32,7 @@ var windowNames = null;
 // - list<list<int seq, int flags, int timestamp, str... payload>> lines
 // - int markedReadUntil
 // - int numNewMessages
+// - bool isNickflagged
 var windowData = null;
 
 // Type map<str,object>. Key is the network profile name. Each object has these properties:
@@ -141,6 +142,8 @@ function redrawWindowList() {
 			setElementText(span, ")");
 			a.appendChild(span);
 		}
+		if (windowData[windowName].isNickflagged)
+			a.classList.add("nickflag");
 		a.href = "#";
 		a.onclick = function() {
 			setActiveWindow(windowName);
@@ -153,6 +156,7 @@ function redrawWindowList() {
 			menuItems.push(["Mute window", function() {
 				windowData[windowName].isMuted = true;
 				windowData[windowName].numNewMessages = 0;
+				windowData[windowName].isNickflagged = false;
 				redrawWindowList();
 			}]);
 		}
@@ -218,6 +222,7 @@ function redrawChannelMembers() {
 function setActiveWindow(name) {
 	// activeWindow may be null at the start of this method, but will be non-null afterward
 	windowData[name].numNewMessages = 0;
+	windowData[name].isNickflagged = false;
 	if (activeWindow != null && activeWindow[2] == name) {
 		redrawWindowList();
 		return;
@@ -541,8 +546,11 @@ function loadUpdates(inData) {
 			if (subtype == Flags.PRIVMSG) {
 				if (activeWindow != null && windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
 					windowData[windowName].numNewMessages = 0;
-				else if (!windowData[windowName].isMuted)
+				else if (!windowData[windowName].isMuted) {
 					windowData[windowName].numNewMessages++;
+					if ((line[1] & Flags.NICKFLAG) != 0)
+						windowData[windowName].isNickflagged = true;
+				}
 				redrawWindowList();
 				if (!windowData[windowName].isMuted) {
 					var notiftext = null;
@@ -1135,6 +1143,7 @@ function createBlankWindow() {
 		lines: [],
 		markedReadUntil: 0,
 		numNewMessages: 0,
+		isNickflagged: false,
 		isMuted: false,
 	};
 }

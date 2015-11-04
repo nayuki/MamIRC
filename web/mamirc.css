@@ -129,6 +129,11 @@ body {
 	color: #F0F0F0;
 }
 
+#window-list li a.nickflag span:nth-child(2) {
+	background-color: #F06060;
+	color: #FFFFFF;
+}
+
 
 /* List of channel members */
 
