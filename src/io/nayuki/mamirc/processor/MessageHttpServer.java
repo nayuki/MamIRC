@@ -33,8 +33,8 @@ final class MessageHttpServer {
 	
 	/*---- Constructor ----*/
 	
-	public MessageHttpServer(final MamircProcessor master, int port, String password) throws IOException {
-		this.password = password;
+	public MessageHttpServer(final MamircProcessor master, int port, String pswd) throws IOException {
+		this.password = pswd;
 		
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
@@ -86,7 +86,7 @@ final class MessageHttpServer {
 						throw new IllegalArgumentException();
 					
 					Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
-					if (!(cookies.containsKey("password") && checkPassword(cookies.get("password")))) {
+					if (!(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
 						File file = new File("web", "login.html");
 						String s;
 						DataInputStream in = new DataInputStream(new FileInputStream(file));
@@ -97,7 +97,7 @@ final class MessageHttpServer {
 						} finally {
 							in.close();
 						}
-						s = s.replace("#status#", cookies.containsKey("password") && !checkPassword(cookies.get("password")) ? "Incorrect password" : "");
+						s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
 						s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
 						he.getResponseHeaders().add("Cache-Control", "no-store");
 						writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
@@ -126,7 +126,7 @@ final class MessageHttpServer {
 			public void handle(HttpExchange he) throws IOException {
 				// Check password cookie
 				Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
-				if (!(cookies.containsKey("password") && checkPassword(cookies.get("password")))) {
+				if (!(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
 					writeJsonResponse("Authentication error", he);
 					return;
 				}
@@ -252,12 +252,13 @@ final class MessageHttpServer {
 	}
 	
 	
-	private boolean checkPassword(String s) {
-		if (s.length() != password.length())
+	// Performs a constant-time equality comparison if both strings are the same length.
+	private static boolean equalsTimingSafe(String s, String t) {
+		if (s.length() != t.length())
 			return false;
 		int diff = 0;
 		for (int i = 0; i < s.length(); i++)
-			diff ^= s.charAt(i) ^ password.charAt(i);
+			diff ^= s.charAt(i) ^ t.charAt(i);
 		return diff == 0;
 	}
 	
