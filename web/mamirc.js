@@ -49,6 +49,9 @@ var optimizeMobile = false;
 // In milliseconds. This value changes during execution depending on successful/failed requests.
 var retryTimeout = 1000;
 
+// Type str.
+var csrfToken = null;
+
 
 /* Miscellaneous values */
 
@@ -84,6 +87,7 @@ function loadState(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	connectionData = inData.connections;
 	Flags = inData.flagsConstants;
+	csrfToken = inData.csrfToken;
 	
 	// Handle the windows
 	windowNames = [];
@@ -1126,7 +1130,7 @@ function sendAction(payload, onload, ontimeout) {
 	xhr.open("POST", "do-actions.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"payload":payload}));
+	xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken}));
 }
 
 

@@ -7,9 +7,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.DeflaterOutputStream;
@@ -29,12 +31,19 @@ final class MessageHttpServer {
 	private final ExecutorService executor;
 	private final String password;
 	
+	private String csrfToken;
+	
 	
 	
 	/*---- Constructor ----*/
 	
 	public MessageHttpServer(final MamircProcessor master, int port, String pswd) throws IOException {
 		this.password = pswd;
+		
+		Random rand = new SecureRandom();
+		csrfToken = "";
+		for (int i = 0; i < 16; i++)
+			csrfToken += (char)('a' + rand.nextInt(26));
 		
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
@@ -154,7 +163,9 @@ final class MessageHttpServer {
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
 					case "/get-state.json": {
-						writeJsonResponse(master.getState(Json.getInt(reqData, "maxMessagesPerWindow")), he);
+						Map<String,Object> data = master.getState(Json.getInt(reqData, "maxMessagesPerWindow"));
+						data.put("csrfToken", csrfToken);
+						writeJsonResponse(data, he);
 						break;
 					}
 					
@@ -177,42 +188,47 @@ final class MessageHttpServer {
 					}
 					
 					case "/do-actions.json": {
-						boolean result = true;
-						for (Object row : Json.getList(reqData, "payload")) {
-							List<Object> tuple = Json.getList(row);
-							String profile = Json.getString(tuple, 1);
-							String party = Json.getString(tuple, 2);
-							
-							switch (Json.getString(tuple, 0)) {
-								case "send-line": {
-									// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
-									result &= master.sendLine(profile, party);
-									break;
+						boolean result;
+						if (!equalsTimingSafe(Json.getString(reqData, "csrfToken"), csrfToken)) {
+							result = false;
+						} else {
+							result = true;
+							for (Object row : Json.getList(reqData, "payload")) {
+								List<Object> tuple = Json.getList(row);
+								String profile = Json.getString(tuple, 1);
+								String party = Json.getString(tuple, 2);
+								
+								switch (Json.getString(tuple, 0)) {
+									case "send-line": {
+										// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
+										result &= master.sendLine(profile, party);
+										break;
+									}
+									case "mark-read": {
+										master.markRead(profile, party, Json.getInt(tuple, 3));
+										break;
+									}
+									case "clear-lines": {
+										master.clearLines(profile, party, Json.getInt(tuple, 3));
+										break;
+									}
+									case "open-window": {
+										master.openWindow(profile, party);
+										break;
+									}
+									case "close-window": {
+										master.closeWindow(profile, party);
+										break;
+									}
+									default:
+										throw new AssertionError();
 								}
-								case "mark-read": {
-									master.markRead(profile, party, Json.getInt(tuple, 3));
-									break;
-								}
-								case "clear-lines": {
-									master.clearLines(profile, party, Json.getInt(tuple, 3));
-									break;
-								}
-								case "open-window": {
-									master.openWindow(profile, party);
-									break;
-								}
-								case "close-window": {
-									master.closeWindow(profile, party);
-									break;
-								}
-								default:
-									throw new AssertionError();
 							}
 						}
 						writeJsonResponse(result, he);
 						break;
 					}
-						
+					
 					default:
 						throw new AssertionError();
 				}
