@@ -774,8 +774,8 @@ const inputBoxModule = new function() {
 			return false;
 		}
 		
-		var onerror = function() {
-			alertMsgModule.addMessage(inputStr);
+		var onerror = function(reason) {
+			alertMsgModule.addMessage("Sending line failed (" + reason + "): " + inputStr);
 		};
 		
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
@@ -1134,10 +1134,21 @@ function updateState() {
 
 
 // Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
-function sendAction(payload, ontimeout) {
+function sendAction(payload, onerror) {
 	var xhr = new XMLHttpRequest();
-	if (ontimeout != null)
-		xhr.ontimeout = ontimeout;
+	if (onerror != null) {
+		xhr.onload = function() {
+			var data = JSON.parse(xhr.response);
+			if (data != "OK")
+				onerror(data.toString());
+		};
+		xhr.ontimeout = function() {
+			onerror("Connection timeout");
+		};
+		xhr.error = function() {
+			onerror("Network error");
+		};
+	}
 	xhr.open("POST", "do-actions.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;

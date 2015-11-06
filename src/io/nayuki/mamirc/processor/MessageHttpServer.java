@@ -193,11 +193,11 @@ final class MessageHttpServer {
 					}
 					
 					case "/do-actions.json": {
-						boolean result;
+						String result;
 						if (!equalsTimingSafe(Json.getString(reqData, "csrfToken"), csrfToken)) {
-							result = false;
+							result = "CSRF check failed";
 						} else {
-							result = true;
+							result = "OK";
 							for (Object row : Json.getList(reqData, "payload")) {
 								List<Object> tuple = Json.getList(row);
 								String profile = Json.getString(tuple, 1);
@@ -206,7 +206,8 @@ final class MessageHttpServer {
 								switch (Json.getString(tuple, 0)) {
 									case "send-line": {
 										// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
-										result &= master.sendLine(profile, party);
+										if (!master.sendLine(profile, party))
+											result = "Profile not found";
 										break;
 									}
 									case "mark-read": {
