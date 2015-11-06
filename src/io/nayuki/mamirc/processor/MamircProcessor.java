@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,6 +52,7 @@ public final class MamircProcessor {
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
 	private MessageHttpServer server;
+	private Timer namesRefresher;
 	
 	// Mutable current state
 	private final Map<Integer,IrcSession> ircSessions;
@@ -84,6 +87,20 @@ public final class MamircProcessor {
 			e.printStackTrace();
 			terminate();
 		}
+		
+		// Refresh all channel names on all connections once a day
+		namesRefresher = new Timer();
+		namesRefresher.schedule(new TimerTask() {
+			public void run() {
+				synchronized (MamircProcessor.this) {
+					for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
+						int conId = entry.getKey();
+						for (String chan : entry.getValue().getCurrentChannels().keySet())
+							sendIrcLine(conId, "NAMES", chan);
+					}
+				}
+			}
+		}, 86400000, 86400000);
 	}
 	
 	
@@ -569,6 +586,8 @@ public final class MamircProcessor {
 	public synchronized void terminate() {
 		if (server != null)
 			server.terminate();
+		if (namesRefresher != null)
+			namesRefresher.cancel();
 	}
 	
 	
