@@ -331,3 +331,15 @@ td span a:link, td span a:visited {
 #menu span.disabled {
 	color: #B0B0B0;
 }
+
+
+/* Miscellaneous */
+
+#show-more-messages {
+	margin: 0.5em 0em;
+	text-align: center;
+}
+
+#show-more-messages a {
+	padding: 1.0em 1.0em;
+}

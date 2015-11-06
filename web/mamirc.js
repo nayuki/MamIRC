@@ -14,6 +14,7 @@ const messageListElem         = elemId("message-list");
 const memberListContainerElem = elemId("member-list-container");
 const memberListElem          = elemId("member-list");
 const nicknameElem            = elemId("nickname");
+const showMoreMessagesElem    = elemId("show-more-messages");
 
 
 /* Main state */
@@ -58,6 +59,8 @@ var csrfToken = null;
 // Configurable parameter. Used by getState().
 var maxMessagesPerWindow = 3000;
 
+var curWindowMaxMessages = null;
+
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
 var Flags = null;
 
@@ -75,6 +78,17 @@ function init() {
 	});
 	if (optimizeMobile)
 		maxMessagesPerWindow = 500;
+	
+	showMoreMessagesElem.style.display = "none";
+	showMoreMessagesElem.getElementsByTagName("a")[0].onclick = function() {
+		if (activeWindow == null)
+			return;
+		var temp = Math.sqrt(curWindowMaxMessages / 300) + 0.5;
+		temp = Math.round(temp * temp * 300);
+		curWindowMaxMessages = Math.min(temp, 10000);
+		redrawMessagesTable();
+		return false;
+	};
 	
 	Notification.requestPermission();
 	getState();
@@ -240,13 +254,25 @@ function setActiveWindow(name) {
 	redrawChannelMembers();
 	
 	// Redraw all message lines in this window
-	removeChildren(messageListElem);
-	windowData[name].lines.forEach(function(line) {
-		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
-		messageListElem.appendChild(lineDataToRowElem(line));
-	});
-	reflowMessagesTable();
+	curWindowMaxMessages = 300;
+	redrawMessagesTable();
 	window.scrollTo(0, document.documentElement.scrollHeight);
+}
+
+
+function redrawMessagesTable() {
+	removeChildren(messageListElem);
+	var lines = windowData[activeWindow[2]].lines;
+	for (var i = Math.max(lines.length - curWindowMaxMessages, 0); i < lines.length; i++) {
+		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
+		var line = lines[i];
+		messageListElem.appendChild(lineDataToRowElem(line));
+	}
+	reflowMessagesTable();
+	if (lines.length <= curWindowMaxMessages)
+		showMoreMessagesElem.style.display = "none";
+	else
+		showMoreMessagesElem.style.removeProperty("display");
 }
 
 
@@ -543,7 +569,7 @@ function loadUpdates(inData) {
 			lines.splice(0, numPrefixDel);
 			if (activeWindow != null && windowName == activeWindow[2]) {
 				messageListElem.appendChild(lineDataToRowElem(line));
-				for (var i = 0; i < numPrefixDel; i++)
+				while (messageListElem.children.length > curWindowMaxMessages)
 					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
