@@ -721,8 +721,6 @@ function openPrivateMessagingWindow(target, onerror) {
 const inputBoxModule = new function() {
 	// Elements
 	const inputBoxElem                = elemId("input-box");
-	const failedCommandsContainerElem = elemId("failed-commands-container");
-	const failedCommandsElem          = elemId("failed-commands");
 	
 	// Variables
 	var prevTabCompletion = null;  // Type tuple<int begin, int end, str prefix, str name> or null.
@@ -765,13 +763,6 @@ const inputBoxModule = new function() {
 	};
 	inputBoxElem.value = "";
 	
-	removeChildren(failedCommandsElem);
-	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
-		failedCommandsContainerElem.style.display = "none";
-		removeChildren(failedCommandsElem);
-		return false;
-	};
-	
 	// Private functions
 	
 	function handleLine() {
@@ -784,10 +775,7 @@ const inputBoxModule = new function() {
 		}
 		
 		var onerror = function() {
-			failedCommandsContainerElem.style.removeProperty("display");
-			var li = document.createElement("li");
-			setElementText(li, inputStr);
-			failedCommandsElem.appendChild(li);
+			alertMsgModule.addMessage(inputStr);
 		};
 		
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
@@ -1065,6 +1053,30 @@ const nickColorModule = new function() {
 
 
 
+/*---- Alert messages module ----*/
+
+const alertMsgModule = new function() {
+	const failedCommandsContainerElem = elemId("failed-commands-container");
+	const failedCommandsElem          = elemId("failed-commands");
+	
+	removeChildren(failedCommandsElem);
+	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
+		failedCommandsContainerElem.style.display = "none";
+		removeChildren(failedCommandsElem);
+		return false;
+	};
+	
+	// Exported members
+	this.addMessage = function(s) {
+		failedCommandsContainerElem.style.removeProperty("display");
+		var li = document.createElement("li");
+		setElementText(li, s);
+		failedCommandsElem.appendChild(li);
+	};
+};
+
+
+
 /*---- Networking functions ----*/
 
 // Called after login (from authenticate()) and after a severe state desynchronization (indirectly from updateState()).
@@ -1143,12 +1155,8 @@ function checkTimeSkew() {
 	var xhr = new XMLHttpRequest();
 	xhr.onload = function() {
 		var skew = Date.now() - JSON.parse(xhr.response);
-		if (Math.abs(skew) > 10000) {
-			elemId("failed-commands-container").style.removeProperty("display");
-			var li = document.createElement("li");
-			setElementText(li, "Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
-			elemId("failed-commands").appendChild(li);
-		}
+		if (Math.abs(skew) > 10000)
+			alertMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
 	};
 	xhr.open("POST", "get-time.json", true);
 	xhr.responseType = "text";
