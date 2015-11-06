@@ -253,12 +253,12 @@ final class MessageHttpServer {
 	
 	
 	private static final String[][] STATIC_FILES = {
-		{"login.css"         , null, "text/css"              },
-		{"mamirc.css"        , null, "text/css"              },
-		{"mamirc.js"         , null, "application/javascript"},
-		{"tomoe-mami.png"    , null, "image/png"             },
-		{"tomoe-mami-2x.png" , null, "image/png"             },
-		{"tomoe-mami-icon.png", null, "image/png"             },
+		{"login.css"               , null, "text/css"              },
+		{"mamirc.css"              , null, "text/css"              },
+		{"mamirc.js"               , null, "application/javascript"},
+		{"tomoe-mami.png"          , null, "image/png"             },
+		{"tomoe-mami-2x.png"       , null, "image/png"             },
+		{"tomoe-mami-icon.png"     , null, "image/png"             },
 		{"tomoe-mami-icon-text.png", null, "image/png"             },
 	};
 	

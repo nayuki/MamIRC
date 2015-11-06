@@ -720,7 +720,7 @@ function openPrivateMessagingWindow(target, onerror) {
 
 const inputBoxModule = new function() {
 	// Elements
-	const inputBoxElem                = elemId("input-box");
+	const inputBoxElem = elemId("input-box");
 	
 	// Variables
 	var prevTabCompletion = null;  // Type tuple<int begin, int end, str prefix, str name> or null.
