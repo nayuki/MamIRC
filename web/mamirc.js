@@ -78,6 +78,7 @@ function init() {
 	
 	Notification.requestPermission();
 	getState();
+	checkTimeSkew();
 }
 
 
@@ -1137,6 +1138,24 @@ function sendAction(payload, onload, ontimeout) {
 // Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
 function sendMessage(profile, target, text, onerror) {
 	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], null, onerror);
+}
+
+
+function checkTimeSkew() {
+	var xhr = new XMLHttpRequest();
+	xhr.onload = function() {
+		var skew = Date.now() - JSON.parse(xhr.response);
+		if (Math.abs(skew) > 10000) {
+			elemId("failed-commands-container").style.removeProperty("display");
+			var li = document.createElement("li");
+			setElementText(li, "Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
+			elemId("failed-commands").appendChild(li);
+		}
+	};
+	xhr.open("POST", "get-time.json", true);
+	xhr.responseType = "text";
+	xhr.send(JSON.stringify(""));
+	setTimeout(checkTimeSkew, 100000000);  // About once a day
 }
 
 

@@ -169,6 +169,11 @@ final class MessageHttpServer {
 						break;
 					}
 					
+					case "/get-time.json": {
+						writeJsonResponse(System.currentTimeMillis(), he);
+						break;
+					}
+					
 					case "/get-updates.json": {
 						// Get or wait for new data
 						int startId = Json.getInt(reqData, "nextUpdateId");
@@ -235,6 +240,7 @@ final class MessageHttpServer {
 			}
 		};
 		server.createContext("/get-state.json", apiHandler);
+		server.createContext("/get-time.json", apiHandler);
 		server.createContext("/get-updates.json", apiHandler);
 		server.createContext("/do-actions.json", apiHandler);
 		
