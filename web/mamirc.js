@@ -168,7 +168,7 @@ function redrawWindowList() {
 		if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
 			menuItems.push(["Close window", null]);
 		else
-			menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null, null); }]);
+			menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null); }]);
 		a.oncontextmenu = menuModule.makeOpener(menuItems);
 		
 		var li = document.createElement("li");
@@ -375,10 +375,10 @@ function lineDataToRowElem(line) {
 			inputBoxModule.putText(quoteText);
 		};
 	}
-	menuItems.push(["Mark read to here", function() { sendAction([["mark-read", activeWindow[0], activeWindow[1], sequence + 1]], null, null); }]);
+	menuItems.push(["Mark read to here", function() { sendAction([["mark-read", activeWindow[0], activeWindow[1], sequence + 1]], null); }]);
 	menuItems.push(["Clear to here", function() {
 		if (confirm("Do you want to clear text?"))
-			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null, null);
+			sendAction([["clear-lines", activeWindow[0], activeWindow[1], sequence + 1]], null);
 	}]);
 	td.oncontextmenu = menuModule.makeOpener(menuItems);
 	tr.appendChild(td);
@@ -707,7 +707,7 @@ function openPrivateMessagingWindow(target, onerror) {
 	var profile = activeWindow[0];
 	var windowName = profile + "\n" + target;
 	if (windowNames.indexOf(windowName) == -1)
-		sendAction([["open-window", profile, target]], null, onerror);
+		sendAction([["open-window", profile, target]], onerror);
 	else {
 		setActiveWindow(windowName);
 		inputBoxModule.clearText();
@@ -807,7 +807,7 @@ const inputBoxModule = new function() {
 				var windowName = profile + "\n" + party;
 				var text = nthRemainingPart(inputStr, 2);
 				if (windowNames.indexOf(windowName) == -1) {
-					sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], null, onerror);
+					sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
 				} else {
 					setActiveWindow(windowName);
 					sendMessage(profile, party, text, onerror);
@@ -815,26 +815,26 @@ const inputBoxModule = new function() {
 			} else if (cmd == "/me" && parts.length >= 2) {
 				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 			} else if (cmd == "/notice" && parts.length >= 3) {
-				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + nthRemainingPart(inputStr, 2)]], null, onerror);
+				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + nthRemainingPart(inputStr, 2)]], onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
-				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], null, onerror);
+				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
 				openPrivateMessagingWindow(parts[1], onerror);
 			} else if (cmd == "/topic" && parts.length >= 2) {
-				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], null, onerror);
+				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], onerror);
 			} else if (cmd == "/kick" && parts.length >= 2) {
 				var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
-				sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], null, onerror);
+				sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
 			} else if (cmd == "/names" && parts.length == 1) {
 				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
-				sendAction([["send-line", activeWindow[0], "NAMES" + params]], null, onerror);
+				sendAction([["send-line", activeWindow[0], "NAMES" + params]], onerror);
 			} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
 				// Regular commands
 				var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
 				var numParams = parts.length - 1;
 				if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
 					var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
-					sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], null, onerror);
+					sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], onerror);
 				} else {
 					alert("Invalid command");
 					return false;  // Don't clear the text box
@@ -1122,10 +1122,8 @@ function updateState() {
 
 
 // Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
-function sendAction(payload, onload, ontimeout) {
+function sendAction(payload, ontimeout) {
 	var xhr = new XMLHttpRequest();
-	if (onload != null)
-		xhr.onload = onload;
 	if (ontimeout != null)
 		xhr.ontimeout = ontimeout;
 	xhr.open("POST", "do-actions.json", true);
@@ -1137,7 +1135,7 @@ function sendAction(payload, onload, ontimeout) {
 
 // Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
 function sendMessage(profile, target, text, onerror) {
-	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], null, onerror);
+	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], onerror);
 }
 
 
