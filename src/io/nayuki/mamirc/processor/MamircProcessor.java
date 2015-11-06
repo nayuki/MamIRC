@@ -825,6 +825,11 @@ public final class MamircProcessor {
 	}
 	
 	
+	public synchronized int getNextUpdateId() {
+		return nextUpdateId;
+	}
+	
+	
 	private static long divideAndFloor(long x, long y) {
 		long z = x / y;
 		if (((x >= 0) ^ (y >= 0)) && z * y != x)

@@ -196,6 +196,10 @@ final class MessageHttpServer {
 						String result;
 						if (!equalsTimingSafe(Json.getString(reqData, "csrfToken"), csrfToken)) {
 							result = "CSRF check failed";
+						} else if (Json.getInt(reqData, "nextUpdateId") > master.getNextUpdateId()) {
+							result = "Invalid future update ID";
+						} else if (Json.getInt(reqData, "nextUpdateId") < master.getNextUpdateId() - 10) {
+							result = "Client fell too far behind updates";
 						} else {
 							result = "OK";
 							for (Object row : Json.getList(reqData, "payload")) {

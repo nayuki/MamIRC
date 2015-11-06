@@ -1152,7 +1152,7 @@ function sendAction(payload, onerror) {
 	xhr.open("POST", "do-actions.json", true);
 	xhr.responseType = "text";
 	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken}));
+	xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
 }
 
 
