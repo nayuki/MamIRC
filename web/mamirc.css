@@ -165,23 +165,23 @@ body {
 }
 
 
-/* List of failed commands */
+/* List of error messages */
 
-#failed-commands-container {
+#error-msg-container {
 	margin: 0.6em 0em;
 	padding: 0.1em 1.2em;
 	background: #FFB0B0;
 }
 
-#failed-commands-container p {
+#error-msg-container p {
 	margin: 0.5em 0em;
 }
 
-#failed-commands-container ul {
+#error-msg-container ul {
 	margin-left: 2.0em;
 }
 
-#failed-commands-container li {
+#error-msg-container li {
 	list-style-type: disc;
 }
 

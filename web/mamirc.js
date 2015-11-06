@@ -775,7 +775,7 @@ const inputBoxModule = new function() {
 		}
 		
 		var onerror = function(reason) {
-			alertMsgModule.addMessage("Sending line failed (" + reason + "): " + inputStr);
+			errorMsgModule.addMessage("Sending line failed (" + reason + "): " + inputStr);
 		};
 		
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
@@ -1055,23 +1055,23 @@ const nickColorModule = new function() {
 
 /*---- Alert messages module ----*/
 
-const alertMsgModule = new function() {
-	const failedCommandsContainerElem = elemId("failed-commands-container");
-	const failedCommandsElem          = elemId("failed-commands");
+const errorMsgModule = new function() {
+	const errorMsgContainerElem = elemId("error-msg-container");
+	const errorMsgElem          = elemId("error-msg");
 	
-	removeChildren(failedCommandsElem);
-	failedCommandsContainerElem.getElementsByTagName("a")[0].onclick = function() {
-		failedCommandsContainerElem.style.display = "none";
-		removeChildren(failedCommandsElem);
+	removeChildren(errorMsgElem);
+	errorMsgContainerElem.getElementsByTagName("a")[0].onclick = function() {
+		errorMsgContainerElem.style.display = "none";
+		removeChildren(errorMsgElem);
 		return false;
 	};
 	
 	// Exported members
 	this.addMessage = function(s) {
-		failedCommandsContainerElem.style.removeProperty("display");
+		errorMsgContainerElem.style.removeProperty("display");
 		var li = document.createElement("li");
 		setElementText(li, s);
-		failedCommandsElem.appendChild(li);
+		errorMsgElem.appendChild(li);
 	};
 };
 
@@ -1167,7 +1167,7 @@ function checkTimeSkew() {
 	xhr.onload = function() {
 		var skew = Date.now() - JSON.parse(xhr.response);
 		if (Math.abs(skew) > 10000)
-			alertMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
+			errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
 	};
 	xhr.open("POST", "get-time.json", true);
 	xhr.responseType = "text";
