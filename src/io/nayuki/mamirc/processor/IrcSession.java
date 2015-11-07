@@ -123,6 +123,7 @@ final class IrcSession {
 			throw new IllegalStateException("Current nickname is null");
 		if (registrationState == RegState.REGISTERED)
 			throw new IllegalStateException("Not tracking rejected nicknames when registered");
+		rejectedNicknames.add(currentNickname);
 		currentNickname = null;
 		nickflagDetector = null;
 	}

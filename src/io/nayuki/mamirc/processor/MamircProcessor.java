@@ -300,7 +300,7 @@ public final class MamircProcessor {
 					if (realtime) {
 						boolean found = false;
 						for (String nickname : profile.nicknames) {
-							if (!state.getCurrentNickname().contains(nickname)) {
+							if (!state.isNicknameRejected(nickname)) {
 								sendIrcLine(conId, "NICK", nickname);
 								found = true;
 								break;
