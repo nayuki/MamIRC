@@ -695,10 +695,11 @@ function loadUpdates(inData) {
 			if (activeWindow != null && windowName == activeWindow[2]) {
 				var lines = windowData[windowName].lines;
 				var rows = messageListElem.children;
-				for (var i = 0; i < lines.length; i++) {
-					var row = rows[i];
-					setClasslistItem(row.classList, "read"  , lines[i][0] <  seq);
-					setClasslistItem(row.classList, "unread", lines[i][0] >= seq);
+				for (var i = 0; i < rows.length; i++) {
+					var row = rows[rows.length - 1 - i];
+					var lineseq = lines[lines.length - 1 - i][0];
+					setClasslistItem(row.classList, "read"  , lineseq <  seq);
+					setClasslistItem(row.classList, "unread", lineseq >= seq);
 				}
 				activeWindowUpdated = true;
 			}
