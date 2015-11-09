@@ -575,9 +575,10 @@ function loadUpdates(inData) {
 			}
 			var subtype = line[1] & Flags.TYPE_MASK;
 			if (subtype == Flags.PRIVMSG) {
-				if (activeWindow != null && windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0)
+				if (activeWindow != null && windowName == activeWindow[2] && (line[1] & Flags.OUTGOING) != 0) {
 					windowData[windowName].numNewMessages = 0;
-				else if (!windowData[windowName].isMuted) {
+					windowData[windowName].isNickflagged = false;
+				} else if (!windowData[windowName].isMuted) {
 					windowData[windowName].numNewMessages++;
 					if ((line[1] & Flags.NICKFLAG) != 0)
 						windowData[windowName].isNickflagged = true;
