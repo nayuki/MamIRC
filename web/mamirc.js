@@ -118,8 +118,8 @@ function loadState(inData) {
 		var inState = inWindow[2];
 		var prevTimestamp = 0;
 		inState.lines.forEach(function(line) {
-			line[2] += prevTimestamp;  // Delta decoding
-			prevTimestamp = line[2];
+			prevTimestamp += line[2];  // Delta decoding
+			line[2] = prevTimestamp * 1000;
 		});
 		var outState = createBlankWindow();
 		for (var key in inState)
@@ -266,8 +266,8 @@ function redrawMessagesTable() {
 	for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
 		var line = lines[i];
-		if (!head && areDatesDifferent(line[2] * 1000, lines[i - 1][2] * 1000))
-			messageListElem.appendChild(dateToRowElem(line[2] * 1000));
+		if (!head && areDatesDifferent(line[2], lines[i - 1][2]))
+			messageListElem.appendChild(dateToRowElem(line[2]));
 		messageListElem.appendChild(lineDataToRowElem(line));
 	}
 	reflowMessagesTable();
@@ -380,7 +380,7 @@ function lineDataToRowElem(line) {
 	
 	// Make timestamp cell
 	var td = document.createElement("td");
-	td.appendChild(document.createTextNode(formatDate(timestamp * 1000)));
+	td.appendChild(document.createTextNode(formatDate(timestamp)));
 	tr.appendChild(td);
 	
 	// Make nickname cell
@@ -585,6 +585,7 @@ function loadUpdates(inData) {
 				newWindow = true;
 			}
 			var line = payload.slice(3);
+			line[2] *= 1000;
 			var lines = windowData[windowName].lines;
 			lines.push(line);
 			var numPrefixDel = Math.max(lines.length - maxMessagesPerWindow, 0);
