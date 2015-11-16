@@ -229,6 +229,34 @@ tbody td:nth-child(3) {
 	word-wrap: break-word;
 }
 
+tbody td[colspan="3"] {
+	padding-top: 1.0em;
+	overflow: hidden;
+	text-align: center;
+	font-weight: bold;
+	color: #A0A0A0;
+}
+
+tbody td[colspan="3"] span::before, tbody td[colspan="3"] span::after {
+	display: inline-block;
+	width: 50%;
+	height: 0px;
+	position: relative;
+	border-bottom: 1px dashed #A0A0A0;
+	vertical-align: middle;
+	content: "";
+}
+
+tbody td[colspan="3"] span::before {
+	right: 0.5em;
+	margin-left: -50%;
+}
+
+tbody td[colspan="3"] span::after {
+	left: 0.5em;
+	margin-right: -50%;
+}
+
 #main tfoot td {
 	vertical-align: middle;
 }

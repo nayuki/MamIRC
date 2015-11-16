@@ -263,9 +263,11 @@ function setActiveWindow(name) {
 function redrawMessagesTable() {
 	removeChildren(messageListElem);
 	var lines = windowData[activeWindow[2]].lines;
-	for (var i = Math.max(lines.length - curWindowMaxMessages, 0); i < lines.length; i++) {
+	for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
 		var line = lines[i];
+		if (!head && areDatesDifferent(line[2] * 1000, lines[i - 1][2] * 1000))
+			messageListElem.appendChild(dateToRowElem(line[2] * 1000));
 		messageListElem.appendChild(lineDataToRowElem(line));
 	}
 	reflowMessagesTable();
@@ -541,6 +543,26 @@ const TEXT_COLORS = [
 	"#FFFF00", "#00FC00", "#009393", "#00FFFF",
 	"#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
 ];
+
+
+function dateToRowElem(timestamp) {
+	var tr = document.createElement("tr");
+	var td = document.createElement("td");
+	td.colSpan = 3;
+	var span = document.createElement("span");
+	var d = new Date(timestamp);
+	span.appendChild(document.createTextNode(d.getFullYear() + "\u2012" + twoDigits(d.getMonth() + 1) + "\u2012" + twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()]));
+	td.appendChild(span);
+	tr.appendChild(td);
+	return tr;
+}
+
+
+function areDatesDifferent(ts0, ts1) {
+	var d0 = new Date(ts0);
+	var d1 = new Date(ts1);
+	return d0.getFullYear() != d1.getFullYear() || d0.getMonth() != d1.getMonth() || d0.getDate() != d1.getDate();
+}
 
 
 function loadUpdates(inData) {
