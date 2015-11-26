@@ -182,6 +182,10 @@ final class MessageHttpServer {
 										master.closeWindow(profile, party);
 										break;
 									}
+									case "set-initial-window": {
+										master.setInitialWindow(profile, party);
+										break;
+									}
 									default:
 										throw new AssertionError();
 								}

@@ -61,6 +61,8 @@ var maxMessagesPerWindow = 3000;
 
 var curWindowMaxMessages = null;
 
+var setInitialWindowTimeout = null;
+
 // Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
 var Flags = null;
 
@@ -131,8 +133,14 @@ function loadState(inData) {
 	
 	// Update UI elements
 	redrawWindowList();
-	if (windowNames.length > 0)
-		setActiveWindow(windowNames[0]);
+	if (windowNames.length > 0) {
+		var winName = inData.initialWindow;
+		if (winName != null)
+			winName = winName[0] + "\n" + winName[1];
+		if (winName == null || windowNames.indexOf(winName) == -1)
+			winName = windowNames[0];
+		setActiveWindow(winName);
+	}
 }
 
 
@@ -249,7 +257,9 @@ function setActiveWindow(name) {
 	
 	// Set state, refresh text, refresh window selection
 	activeWindow = name.split("\n").concat(name);
-	setElementText(nicknameElem, (activeWindow[0] in connectionData ? connectionData[activeWindow[0]].currentNickname : ""));
+	var profile = activeWindow[0];
+	var party = activeWindow[1];
+	setElementText(nicknameElem, (profile in connectionData ? connectionData[profile].currentNickname : ""));
 	redrawWindowList();
 	redrawChannelMembers();
 	
@@ -257,6 +267,14 @@ function setActiveWindow(name) {
 	curWindowMaxMessages = 300;
 	redrawMessagesTable();
 	window.scrollTo(0, document.documentElement.scrollHeight);
+	
+	// Tell the processor that this window was selected
+	if (setInitialWindowTimeout != null)
+		clearTimeout(setInitialWindowTimeout);
+	setInitialWindowTimeout = setTimeout(function() {
+		sendAction([["set-initial-window", profile, party]], null);
+		setInitialWindowTimeout = null;
+	}, 10000);
 }
 
 

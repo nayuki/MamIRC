@@ -58,6 +58,7 @@ public final class MamircProcessor {
 	private final Map<Integer,IrcSession> ircSessions;
 	private final Map<String,Map<String,Window>> windows;
 	private final Map<String,String> windowCaseMap;
+	private List<String> initialWindow;  // Either null or {String profile, String party}
 	private final List<Object[]> recentUpdates;  // Payload is {int id, List<Object> update}
 	private int nextUpdateId;
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
@@ -74,6 +75,7 @@ public final class MamircProcessor {
 		ircSessions = new HashMap<>();
 		windows = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
+		initialWindow = null;
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
 		connectionAttemptState = new HashMap<>();
@@ -770,6 +772,7 @@ public final class MamircProcessor {
 		for (Window.Flags flag : Window.Flags.values())
 			flagConst.put(flag.name(), flag.value);
 		result.put("flagsConstants", flagConst);
+		result.put("initialWindow", initialWindow);
 		return result;
 	}
 	
@@ -841,6 +844,11 @@ public final class MamircProcessor {
 		Map<String,Window> inner = windows.get(profile);
 		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
 			addUpdate("CLOSEWIN", profile, party);
+	}
+	
+	
+	public synchronized void setInitialWindow(String profile, String party) {
+		initialWindow = Arrays.asList(profile, party);
 	}
 	
 	
