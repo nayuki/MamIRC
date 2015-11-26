@@ -64,7 +64,6 @@ final class MessageHttpServer {
 						String type = he.getRequestHeaders().getFirst("Content-Type");
 						if (type == null || !type.equals("application/x-www-form-urlencoded"))
 							throw new IllegalArgumentException();
-						
 						byte[] reqBytes = readBounded(he.getRequestBody());
 						Map<String,String> formdata = parseForm(Utils.fromUtf8(reqBytes));
 						Headers respHead = he.getResponseHeaders();
@@ -72,39 +71,35 @@ final class MessageHttpServer {
 						respHead.add("Set-Cookie", "optimize-mobile=" + (formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on")) + "; Max-Age=2500000");
 						respHead.add("Location", "/");
 						he.sendResponseHeaders(303, -1);
-					}
-					
-					if (!he.getRequestMethod().equals("GET"))
-						throw new IllegalArgumentException();
-					
-					Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
-					if (!(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
-						File file = new File("web", "login.html");
-						String s;
-						DataInputStream in = new DataInputStream(new FileInputStream(file));
-						try {
+						
+					} else if (he.getRequestMethod().equals("GET")) {
+						Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
+						if (!(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
+							File file = new File("web", "login.html");
+							String s;
+							try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
+								byte[] b = new byte[(int)file.length()];
+								in.readFully(b);
+								s = Utils.fromUtf8(b);
+							}
+							s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
+							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
+							he.getResponseHeaders().add("Cache-Control", "no-store");
+							writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
+						} else {
+							File file = new File("web", "mamirc.html");
 							byte[] b = new byte[(int)file.length()];
-							in.readFully(b);
-							s = Utils.fromUtf8(b);
-						} finally {
-							in.close();
+							DataInputStream in = new DataInputStream(new FileInputStream(file));
+							try {
+								in.readFully(b);
+							} finally {
+								in.close();
+							}
+							he.getResponseHeaders().add("Cache-Control", "no-store");
+							writeResponse(b, "application/xhtml+xml", true, he);
 						}
-						s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
-						s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
-						he.getResponseHeaders().add("Cache-Control", "no-store");
-						writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
-					} else {
-						File file = new File("web", "mamirc.html");
-						byte[] b = new byte[(int)file.length()];
-						DataInputStream in = new DataInputStream(new FileInputStream(file));
-						try {
-							in.readFully(b);
-						} finally {
-							in.close();
-						}
-						he.getResponseHeaders().add("Cache-Control", "no-store");
-						writeResponse(b, "application/xhtml+xml", true, he);
-					}
+					} else
+						throw new IllegalArgumentException();
 				} catch (IllegalArgumentException e) {
 					he.sendResponseHeaders(404, -1);
 				} finally {
