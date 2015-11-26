@@ -64,7 +64,7 @@ p {
 	margin: 0.8em 0em;
 }
 
-input[type="password"] {
+input[type="password"], input[type="submit"] {
 	font-size: 80%;
 	vertical-align: middle;
 }
