@@ -65,25 +65,8 @@ final class MessageHttpServer {
 						if (type == null || !type.equals("application/x-www-form-urlencoded"))
 							throw new IllegalArgumentException();
 						
-						ByteArrayOutputStream bout = new ByteArrayOutputStream();
-						InputStream in = he.getRequestBody();
-						try {
-							int len = 0;
-							byte[] buf = new byte[1024];
-							while (true) {
-								int n = in.read(buf);
-								if (n == -1)
-									break;
-								bout.write(buf, 0, n);
-								len += n;
-								if (len > MAX_REQUEST_BODY_LEN)
-									throw new RuntimeException("Request body too long");
-							}
-						} finally {
-							in.close();
-						}
-						
-						Map<String,String> formdata = parseForm(Utils.fromUtf8(bout.toByteArray()));
+						byte[] reqBytes = readBounded(he.getRequestBody());
+						Map<String,String> formdata = parseForm(Utils.fromUtf8(reqBytes));
 						Headers respHead = he.getResponseHeaders();
 						respHead.add("Set-Cookie", "password=" + (formdata.containsKey("password") ? formdata.get("password").replaceAll("[^A-Za-z0-9]", "") : "") + "; Max-Age=2500000");
 						respHead.add("Set-Cookie", "optimize-mobile=" + (formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on")) + "; Max-Age=2500000");
@@ -141,24 +124,8 @@ final class MessageHttpServer {
 				}
 				
 				// Read request and parse JSON
-				ByteArrayOutputStream bout = new ByteArrayOutputStream();
-				InputStream in = he.getRequestBody();
-				try {
-					int len = 0;
-					byte[] buf = new byte[1024];
-					while (true) {
-						int n = in.read(buf);
-						if (n == -1)
-							break;
-						bout.write(buf, 0, n);
-						len += n;
-						if (len > MAX_REQUEST_BODY_LEN)
-							throw new RuntimeException("Request body too long");
-					}
-				} finally {
-					in.close();
-				}
-				Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
+				byte[] reqBytes = readBounded(he.getRequestBody());
+				Object reqData = Json.parse(Utils.fromUtf8(reqBytes));
 				
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
@@ -267,9 +234,6 @@ final class MessageHttpServer {
 	};
 	
 	
-	private static final int MAX_REQUEST_BODY_LEN = 10000;
-	
-	
 	
 	/*---- Methods ----*/
 	
@@ -348,6 +312,25 @@ final class MessageHttpServer {
 		}
 		return result;
 	}
+	
+	
+	private static byte[] readBounded(InputStream in) throws IOException {
+		ByteArrayOutputStream bout = new ByteArrayOutputStream();
+		int len = 0;
+		byte[] buf = new byte[2000];
+		while (true) {
+			int n = in.read(buf);
+			if (n == -1)
+				return bout.toByteArray();
+			bout.write(buf, 0, n);
+			len += n;
+			if (len > MAX_REQUEST_BODY_LEN)
+				throw new RuntimeException("Input data too long");
+		}
+	}
+	
+	
+	private static final int MAX_REQUEST_BODY_LEN = 10000;
 	
 	
 	
