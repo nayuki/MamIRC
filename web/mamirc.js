@@ -266,9 +266,16 @@ function redrawMessagesTable() {
 	for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 		// 'line' has type tuple<int seq, int timestamp, str line, int flags>
 		var line = lines[i];
-		if (!head && areDatesDifferent(line[2], lines[i - 1][2]))
-			messageListElem.appendChild(dateToRowElem(line[2]));
-		messageListElem.appendChild(lineDataToRowElem(line));
+		var msgRow = lineDataToRowElem(line);
+		if (!head && areDatesDifferent(line[2], lines[i - 1][2])) {
+			var dateRow = dateToRowElem(line[2]);
+			if (msgRow.classList.contains("unread"))
+				dateRow.classList.add("unread");
+			if (msgRow.classList.contains("read"))
+				dateRow.classList.add("read");
+			messageListElem.appendChild(dateRow);
+		}
+		messageListElem.appendChild(msgRow);
 	}
 	reflowMessagesTable();
 	if (lines.length <= curWindowMaxMessages)
@@ -719,9 +726,14 @@ function loadUpdates(inData) {
 			if (activeWindow != null && windowName == activeWindow[2]) {
 				var lines = windowData[windowName].lines;
 				var rows = messageListElem.children;
-				for (var i = 0; i < rows.length; i++) {
-					var row = rows[rows.length - 1 - i];
-					var lineseq = lines[lines.length - 1 - i][0];
+				for (var i = rows.length - 1, j = lines.length - 1; i >= 0; i--) {
+					var row = rows[i];
+					var lineseq;
+					if (row.firstChild.colSpan == 1) {  // Ordinary message row
+						lineseq = lines[j][0];
+						j--;
+					} else  // colSpan == 3
+						lineseq = lines[j + 1][0];
 					setClasslistItem(row.classList, "read"  , lineseq <  seq);
 					setClasslistItem(row.classList, "unread", lineseq >= seq);
 				}
