@@ -745,8 +745,18 @@ function loadUpdates(inData) {
 			for (i = 0; i < lines.length && lines[i][0] < seq; i++);
 			lines.splice(0, i);
 			if (activeWindow != null && windowName == activeWindow[2]) {
-				for (var j = 0; j < i; j++)
-					messageListElem.removeChild(messageListElem.firstChild);
+				var rows = messageListElem.children;
+				i = lines.length - 1;
+				var j;
+				for (j = rows.length - 1; j >= 0; j--) {
+					var row = rows[j];
+					if (i < 0)
+						messageListElem.removeChild(row);
+					else if (row.firstChild.colSpan == 1)  // Ordinary message row
+						i--;
+				}
+				if (i < 0)
+					showMoreMessagesElem.style.display = "none";
 				activeWindowUpdated = true;
 			}
 		} else if (type == "CONNECTED") {
