@@ -1344,6 +1344,16 @@ function setClasslistItem(clslst, name, enable) {
 }
 
 
+// Monkey patching for Apple Safari and Microsoft Internet Explorer
+if (!("startsWith" in String.prototype)) {
+	String.prototype.startsWith = function(text, pos) {
+		if (pos == undefined)
+			pos = 0;
+		return this.length - pos >= text.length && this.substr(pos, text.length) == text;
+	};
+}
+
+
 
 /*---- Miscellaneous ----*/
 
