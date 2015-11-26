@@ -59,6 +59,7 @@ final class MessageHttpServer {
 				try {
 					if (!he.getRequestURI().getPath().equals("/"))
 						throw new IllegalArgumentException();
+					Headers respHead = he.getResponseHeaders();
 					
 					if (he.getRequestMethod().equals("POST")) {
 						String type = he.getRequestHeaders().getFirst("Content-Type");
@@ -66,7 +67,6 @@ final class MessageHttpServer {
 							throw new IllegalArgumentException();
 						byte[] reqBytes = readBounded(he.getRequestBody());
 						Map<String,String> formdata = parseForm(Utils.fromUtf8(reqBytes));
-						Headers respHead = he.getResponseHeaders();
 						respHead.add("Set-Cookie", "password=" + (formdata.containsKey("password") ? formdata.get("password").replaceAll("[^A-Za-z0-9]", "") : "") + "; Max-Age=2500000");
 						respHead.add("Set-Cookie", "optimize-mobile=" + (formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on")) + "; Max-Age=2500000");
 						respHead.add("Location", "/");
@@ -75,31 +75,18 @@ final class MessageHttpServer {
 					} else if (he.getRequestMethod().equals("GET")) {
 						Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
 						if (password.length() == 0 && (!cookies.containsKey("password") || cookies.get("password").length() != 0))
-							he.getResponseHeaders().add("Set-Cookie", "password=; Max-Age=2500000");
+							respHead.add("Set-Cookie", "password=; Max-Age=2500000");
 						
 						if (password.length() > 0 && !(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
-							File file = new File("web", "login.html");
-							String s;
-							try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
-								byte[] b = new byte[(int)file.length()];
-								in.readFully(b);
-								s = Utils.fromUtf8(b);
-							}
+							// Serve login page
+							String s = Utils.fromUtf8(readFile(new File("web", "login.html")));
 							s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
 							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
-							he.getResponseHeaders().add("Cache-Control", "no-store");
+							respHead.add("Cache-Control", "no-store");
 							writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
-						} else {
-							File file = new File("web", "mamirc.html");
-							byte[] b = new byte[(int)file.length()];
-							DataInputStream in = new DataInputStream(new FileInputStream(file));
-							try {
-								in.readFully(b);
-							} finally {
-								in.close();
-							}
-							he.getResponseHeaders().add("Cache-Control", "no-store");
-							writeResponse(b, "application/xhtml+xml", true, he);
+						} else {  // Serve main page
+							respHead.add("Cache-Control", "no-store");
+							writeResponse(readFile(new File("web", "mamirc.html")), "application/xhtml+xml", true, he);
 						}
 					} else
 						throw new IllegalArgumentException();
@@ -312,6 +299,15 @@ final class MessageHttpServer {
 	}
 	
 	
+	private static byte[] readFile(File file) throws IOException {
+		try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
+			byte[] b = new byte[(int)file.length()];
+			in.readFully(b);
+			return b;
+		}
+	}
+	
+	
 	private static byte[] readBounded(InputStream in) throws IOException {
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		int len = 0;
@@ -368,15 +364,7 @@ final class MessageHttpServer {
 					he.sendResponseHeaders(304, -1);  // Not Modified
 					return;
 				}
-				
-				byte[] b = new byte[(int)file.length()];
-				DataInputStream in = new DataInputStream(new FileInputStream(file));
-				try {
-					in.readFully(b);
-				} finally {
-					in.close();
-				}
-				writeResponse(b, mediaType, isCompressible, he);
+				writeResponse(readFile(file), mediaType, isCompressible, he);
 			} finally {
 				he.close();
 			}
