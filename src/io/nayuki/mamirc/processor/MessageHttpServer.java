@@ -74,7 +74,10 @@ final class MessageHttpServer {
 						
 					} else if (he.getRequestMethod().equals("GET")) {
 						Map<String,String> cookies = parseCookies(he.getRequestHeaders().getFirst("Cookie"));
-						if (!(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
+						if (password.length() == 0 && (!cookies.containsKey("password") || cookies.get("password").length() != 0))
+							he.getResponseHeaders().add("Set-Cookie", "password=; Max-Age=2500000");
+						
+						if (password.length() > 0 && !(cookies.containsKey("password") && equalsTimingSafe(cookies.get("password"), password))) {
 							File file = new File("web", "login.html");
 							String s;
 							try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
