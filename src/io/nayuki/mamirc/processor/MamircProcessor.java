@@ -601,7 +601,7 @@ public final class MamircProcessor {
 		nextUpdateId++;
 		
 		// Clean up the list if it gets too big
-		if (recentUpdates.size() > 1000)
+		if (recentUpdates.size() > 10000)
 			recentUpdates.subList(0, recentUpdates.size() / 2).clear();
 		
 		// Unblock any currently waiting server threads
