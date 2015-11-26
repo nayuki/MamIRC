@@ -599,8 +599,6 @@ function loadUpdates(inData) {
 			lines.splice(0, numPrefixDel);
 			if (activeWindow != null && windowName == activeWindow[2]) {
 				messageListElem.appendChild(lineDataToRowElem(line));
-				while (messageListElem.children.length > curWindowMaxMessages)
-					messageListElem.removeChild(messageListElem.firstChild);
 				activeWindowUpdated = true;
 			}
 			var subtype = line[1] & Flags.TYPE_MASK;
@@ -760,6 +758,13 @@ function loadUpdates(inData) {
 	});
 	
 	if (activeWindowUpdated) {
+		var rows = messageListElem.children;
+		for (var i = rows.length - 1, j = 0; i >= 0; i--) {
+			if (j >= curWindowMaxMessages)
+				messageListElem.removeChild(rows[i]);
+			else if (rows[i].firstChild.colSpan == 1)  // Ordinary message row
+				j++;
+		}
 		reflowMessagesTable();
 		window.scrollTo(0, scrollToBottom ? document.documentElement.scrollHeight : scrollPosition);
 	}
