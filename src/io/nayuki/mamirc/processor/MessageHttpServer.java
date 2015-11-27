@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.DeflaterOutputStream;
@@ -32,6 +35,10 @@ final class MessageHttpServer {
 	private final String password;
 	
 	private String csrfToken;
+	private Set<String> knownStaticFilenames;
+	private long staticFilesLastRefresh;
+	
+	private final File staticFilesDir = new File("web").getAbsoluteFile();
 	
 	
 	
@@ -47,19 +54,44 @@ final class MessageHttpServer {
 		
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
-		// Static files
-		for (String[] entry : STATIC_FILES) {
-			String uriPath = entry[1] == null ? "/" + entry[0] : entry[1];
-			server.createContext(uriPath, new FileHttpHandler(uriPath, new File("web", entry[0]), entry[2], !entry[2].startsWith("image/")));
-		}
-		
 		// Main/login page
 		server.createContext("/", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
 				try {
-					if (!he.getRequestURI().getPath().equals("/"))
-						throw new IllegalArgumentException();
 					Headers respHead = he.getResponseHeaders();
+					String path = he.getRequestURI().getPath().substring(1);
+					
+					// Static files
+					if (knownStaticFilenames == null || System.currentTimeMillis() - staticFilesLastRefresh > 3000) {
+						if (knownStaticFilenames == null)
+							knownStaticFilenames = new HashSet<>();
+						Collections.addAll(knownStaticFilenames, staticFilesDir.list());
+						staticFilesLastRefresh = System.currentTimeMillis();
+					}
+					if (knownStaticFilenames.contains(path)) {
+						File file = new File(staticFilesDir, path);
+						String etag = "\"" + file.lastModified() + "\"";
+						String ifnonematch = he.getRequestHeaders().getFirst("If-None-Match");
+						respHead.set("Cache-Control", "public, max-age=2500000, no-cache");
+						respHead.set("ETag", etag);
+						if (ifnonematch != null && ifnonematch.equals(etag)) {
+							he.sendResponseHeaders(304, -1);  // Not Modified
+							return;
+						}
+						String extension = null;
+						int dotIndex = path.lastIndexOf('.');
+						if (dotIndex != -1)
+							extension = path.substring(dotIndex + 1).toLowerCase();
+						String mediaType = "application/octet-stream";
+						if (EXTENSION_TO_MEDIA_TYPE.containsKey(extension))
+							mediaType = EXTENSION_TO_MEDIA_TYPE.get(extension);
+						writeResponse(readFile(file), mediaType, !mediaType.startsWith("image/"), he);
+						return;
+					}
+					
+					// Root page
+					if (!path.equals(""))
+						throw new IllegalArgumentException();
 					
 					if (he.getRequestMethod().equals("POST")) {
 						String type = he.getRequestHeaders().getFirst("Content-Type");
@@ -212,14 +244,15 @@ final class MessageHttpServer {
 	}
 	
 	
-	private static final String[][] STATIC_FILES = {
-		{"login.css"               , null, "text/css"              },
-		{"mamirc.css"              , null, "text/css"              },
-		{"mamirc.js"               , null, "application/javascript"},
-		{"tomoe-mami.png"          , null, "image/png"             },
-		{"tomoe-mami-2x.png"       , null, "image/png"             },
-		{"tomoe-mami-icon.png"     , null, "image/png"             },
-		{"tomoe-mami-icon-text.png", null, "image/png"             },
+	private static final Map<String,String> EXTENSION_TO_MEDIA_TYPE = new HashMap<>();
+	static {
+		Map<String,String> m = EXTENSION_TO_MEDIA_TYPE;
+		m.put("css" , "text/css");
+		m.put("gif" , "image/gif");
+		m.put("jpg" , "image/jpeg");
+		m.put("jpeg", "image/jpeg");
+		m.put("js"  , "application/javascript");
+		m.put("png" , "image/png");
 	};
 	
 	
@@ -329,51 +362,5 @@ final class MessageHttpServer {
 	
 	
 	private static final int MAX_REQUEST_BODY_LEN = 10000;
-	
-	
-	
-	/*---- Helper class ----*/
-	
-	private static final class FileHttpHandler implements HttpHandler {
-		
-		private final String uriPath;
-		private final File file;
-		private final String mediaType;
-		private final boolean isCompressible;
-		
-		
-		public FileHttpHandler(String uriPath, File file, String mediaType, boolean isCompressible) {
-			if (uriPath == null || file == null || mediaType == null)
-				throw new NullPointerException();
-			this.uriPath = uriPath;
-			this.file = file;
-			this.mediaType = mediaType;
-			this.isCompressible = isCompressible;
-		}
-		
-		
-		public void handle(HttpExchange he) throws IOException {
-			try {
-				if (!he.getRequestURI().getPath().equals(uriPath)) {  // If this handler was called on a subpath
-					he.sendResponseHeaders(404, 0);
-					return;
-				}
-				
-				String etag = "\"" + file.lastModified() + "\"";
-				String ifnonematch = he.getRequestHeaders().getFirst("If-None-Match");
-				Headers respHead = he.getResponseHeaders();
-				respHead.set("Cache-Control", "public, max-age=2500000, no-cache");
-				respHead.set("ETag", etag);
-				if (ifnonematch != null && ifnonematch.equals(etag)) {
-					he.sendResponseHeaders(304, -1);  // Not Modified
-					return;
-				}
-				writeResponse(readFile(file), mediaType, isCompressible, he);
-			} finally {
-				he.close();
-			}
-		}
-		
-	}
 	
 }
