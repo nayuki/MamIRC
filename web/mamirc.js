@@ -1,6 +1,3 @@
-"use strict";
-
-
 /*---- Global variables ----*/
 
 function elemId(s) {  // Abbreviated function name
