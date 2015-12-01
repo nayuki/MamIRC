@@ -849,7 +849,7 @@ const inputBoxModule = new function() {
 	elemId("main").getElementsByTagName("form")[0].onsubmit = handleLine;
 	inputBoxElem.oninput = colorizeLine;
 	inputBoxElem.onblur = clearTabCompletion;
-	inputBoxElem.onkeypress = function(ev) {
+	inputBoxElem.onkeydown = function(ev) {
 		if (ev.keyCode == 9) {
 			doTabCompletion();
 			return false;
