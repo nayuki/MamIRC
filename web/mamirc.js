@@ -304,7 +304,7 @@ function reflowMessagesTable() {
 	var tableElem = messageListElem.parentNode;
 	tableElem.style.tableLayout = "auto";
 	if (messageListElem.children.length > 0) {
-		var cols = messageListElem.firstChild.children;
+		var cols = elemId("column-width-setter").children;
 		var widths = [cols[0].clientWidth, cols[1].clientWidth];
 		tableElem.style.tableLayout = "fixed";
 		cols[0].style.width = widths[0] + "px";
