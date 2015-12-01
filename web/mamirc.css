@@ -208,7 +208,7 @@ td {
 	vertical-align: top;
 }
 
-#message-list td:nth-child(1) {
+td:nth-child(1) {
 	width: 1%;
 	text-align: right;
 	white-space: pre;
@@ -216,20 +216,20 @@ td {
 	color: #A0A0A0;
 }
 
-#message-list td:nth-child(2) {
+td:nth-child(2) {
 	width: 1%;
 	text-align: right;
 	white-space: pre;
 }
 
-#message-list td:nth-child(3) {
+tbody td:nth-child(3) {
 	width: 98%;
 	text-align: left;
 	white-space: pre-wrap;
 	word-wrap: break-word;
 }
 
-#message-list td[colspan="3"] {
+tbody td[colspan="3"] {
 	padding-top: 1.0em;
 	overflow: hidden;
 	text-align: center;
@@ -237,7 +237,7 @@ td {
 	color: #A0A0A0;
 }
 
-#message-list td[colspan="3"] span::before, tbody td[colspan="3"] span::after {
+tbody td[colspan="3"] span::before, tbody td[colspan="3"] span::after {
 	display: inline-block;
 	width: 50%;
 	height: 0px;
@@ -247,12 +247,12 @@ td {
 	content: "";
 }
 
-#message-list td[colspan="3"] span::before {
+tbody td[colspan="3"] span::before {
 	right: 0.5em;
 	margin-left: -50%;
 }
 
-#message-list td[colspan="3"] span::after {
+tbody td[colspan="3"] span::after {
 	left: 0.5em;
 	margin-right: -50%;
 }
@@ -363,16 +363,11 @@ td span a:link, td span a:visited {
 
 /* Miscellaneous */
 
-#column-width-setter td {
-	padding-top: 0em;
-	padding-bottom: 0em;
-}
-
 #show-more-messages {
+	margin: 0.5em 0em;
 	text-align: center;
 }
 
 #show-more-messages a {
-	display: inline-block;
-	padding: 0.7em 1.0em;
+	padding: 1.0em 1.0em;
 }
