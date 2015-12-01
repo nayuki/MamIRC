@@ -257,10 +257,6 @@ tbody td[colspan="3"] span::after {
 	margin-right: -50%;
 }
 
-#main tfoot td {
-	vertical-align: middle;
-}
-
 tr.outgoing td:nth-child(2)::before {
 	content: "\25A0\00A0";
 }
@@ -315,18 +311,32 @@ td span a:link, td span a:visited {
 }
 
 
-/* Main input text box */
+/* Text box line */
 
-#main input[type="text"] {
+form {
+	display: table;
 	width: 100%;
+	margin-top: 0.5em;
+}
+
+#nickname {
+	display: table-cell;
+	width: 1%;
+	padding-left: 1.0em;
+	padding-right: 1.0em;
+}
+
+#input-box {
+	display: table-cell;
+	width: 99%;
 	font-size: inherit;
 }
 
-#main input.is-command {
+#input-box.is-command {
 	color: #2060FF;
 }
 
-#main input.is-overlong {
+#input-box.is-overlong {
 	color: #FF0000;
 }
 
