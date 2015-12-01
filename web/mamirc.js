@@ -718,7 +718,7 @@ function loadUpdates(inData) {
 				windowNames.sort();
 				windowData[windowName] = createBlankWindow();
 				redrawWindowList();
-				inputBoxModule.clearText();
+				inputBoxModule.putText("");
 				setActiveWindow(windowName);
 			}
 		} else if (type == "CLOSEWIN") {
@@ -807,7 +807,7 @@ function openPrivateMessagingWindow(target, onerror) {
 		sendAction([["open-window", profile, target]], onerror);
 	else {
 		setActiveWindow(windowName);
-		inputBoxModule.clearText();
+		inputBoxModule.putText("");
 	}
 }
 
