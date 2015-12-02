@@ -11,11 +11,14 @@
 	</head>
 	
 	<body>
+		<header>
+			<h1>MamIRC</h1>
+		</header>
+		
 		<article id="main">
-			<section>
-				<h1>MamIRC</h1>
-				<h2>Messages</h2>
+			<div>
 				<div>
+					<h2>Messages</h2>
 					<div id="show-more-messages"><a href="#">↑ Show more messages ↑</a></div>
 					<table>
 						<thead>
@@ -31,32 +34,32 @@
 							</tr>
 						</tbody>
 					</table>
+					<div id="member-list-container">
+						<p></p><ul id="member-list">
+							<li>(None)</li>
+						</ul>
+					</div>
 				</div>
-			</section>
-			<section>
-				<div id="member-list-container">
-					<ul id="member-list">
-						<li>(None)</li>
-					</ul>
-				</div>
-				<form action="#" method="get">
-					<span id="nickname"></span>
-					<span><input type="text" id="input-box" autocomplete="off"/></span>
-				</form>
-				<div id="error-msg-container" style="display:none">
-					<p>Errors / warnings:</p>
-					<ul id="error-msg">
-						<li>(None)</li>
-					</ul>
-					<p><a href="#">Clear all</a></p>
-				</div>
-				<h2>Windows</h2>
-				<ul id="window-list">
-					<li>(None)</li>
-				</ul>
-			</section>
+			</div>
 		</article>
 		
+		<footer id="footer">
+			<form action="#" method="get">
+				<span id="nickname"></span>
+				<span><input type="text" id="input-box" autocomplete="off"/></span>
+			</form>
+			<div id="error-msg-container" style="display:none">
+				<p>Errors / warnings:</p>
+				<ul id="error-msg">
+					<li>(None)</li>
+				</ul>
+				<p><a href="#">Clear all</a></p>
+			</div>
+			<h2>Windows</h2>
+			<ul id="window-list">
+				<li>(None)</li>
+			</ul>
+		</footer>
 		<script type="application/javascript" src="mamirc.js"></script>
 	</body>
 </html>

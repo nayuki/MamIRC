@@ -237,6 +237,7 @@ function redrawChannelMembers() {
 		memberListContainerElem.style.removeProperty("display");
 	} else
 		memberListContainerElem.style.display = "none";
+	elemId("main").style.height = (window.innerHeight - elemId("footer").clientHeight - 1) + "px";
 }
 
 
@@ -846,7 +847,7 @@ const inputBoxModule = new function() {
 	};
 	
 	// Initialization
-	elemId("main").getElementsByTagName("form")[0].onsubmit = handleLine;
+	elemId("footer").getElementsByTagName("form")[0].onsubmit = handleLine;
 	inputBoxElem.oninput = colorizeLine;
 	inputBoxElem.onblur = clearTabCompletion;
 	inputBoxElem.onkeydown = function(ev) {
