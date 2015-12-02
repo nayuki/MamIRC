@@ -237,7 +237,6 @@ function redrawChannelMembers() {
 		memberListContainerElem.style.removeProperty("display");
 	} else
 		memberListContainerElem.style.display = "none";
-	elemId("main").style.height = (window.innerHeight - elemId("footer").clientHeight - 1) + "px";
 }
 
 
@@ -264,7 +263,8 @@ function setActiveWindow(name) {
 	// Redraw all message lines in this window
 	curWindowMaxMessages = 300;
 	redrawMessagesTable();
-	window.scrollTo(0, document.documentElement.scrollHeight);
+	var messagesElem = elemId("messages");
+	messagesElem.scrollTo(0, messagesElem.scrollHeight);
 	
 	// Tell the processor that this window was selected
 	if (setInitialWindowTimeout != null)
@@ -595,8 +595,9 @@ function areDatesDifferent(ts0, ts1) {
 function loadUpdates(inData) {
 	nextUpdateId = inData.nextUpdateId;
 	
-	const scrollToBottom = elemId("input-box").getBoundingClientRect().bottom < document.documentElement.clientHeight;
-	const scrollPosition = document.documentElement.scrollTop;
+	const messagesElem = elemId("messages");
+	const scrollPosition = messagesElem.scrollTop;
+	const scrollToBottom = scrollPosition + messagesElem.clientHeight > messagesElem.scrollHeight - 30;
 	var activeWindowUpdated = false;
 	inData.updates.forEach(function(payload) {
 		var type = payload[0];
@@ -796,7 +797,7 @@ function loadUpdates(inData) {
 				j++;
 		}
 		reflowMessagesTable();
-		window.scrollTo(0, scrollToBottom ? document.documentElement.scrollHeight : scrollPosition);
+		messagesElem.scrollTo(0, scrollToBottom ? messagesElem.scrollHeight : scrollPosition);
 	}
 }
 

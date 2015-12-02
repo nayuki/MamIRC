@@ -15,8 +15,29 @@
 			<h1>MamIRC</h1>
 		</header>
 		
-		<article id="main">
-			<div>
+		<nav id="left-sidebar">
+			<div class="align-bottom">
+				<div>
+					<div id="member-list-container">
+						<h2>Channel members</h2>
+						<ul id="member-list">
+							<li>(None)</li>
+						</ul>
+					</div>
+					<hr/>
+					<div id="window-list-container">
+						<h2>Windows</h2>
+						<ul id="window-list">
+							<li>(None)</li>
+						</ul>
+					</div>
+					<hr/>
+				</div>
+			</div>
+		</nav>
+		
+		<article id="messages">
+			<div class="align-bottom">
 				<div>
 					<h2>Messages</h2>
 					<div id="show-more-messages"><a href="#">↑ Show more messages ↑</a></div>
@@ -34,11 +55,6 @@
 							</tr>
 						</tbody>
 					</table>
-					<div id="member-list-container">
-						<p></p><ul id="member-list">
-							<li>(None)</li>
-						</ul>
-					</div>
 				</div>
 			</div>
 		</article>
@@ -55,10 +71,7 @@
 				</ul>
 				<p><a href="#">Clear all</a></p>
 			</div>
-			<h2>Windows</h2>
-			<ul id="window-list">
-				<li>(None)</li>
-			</ul>
+
 		</footer>
 		<script type="application/javascript" src="mamirc.js"></script>
 	</body>

@@ -17,6 +17,7 @@ input {
 /*---- Major elements ----*/
 
 html {
+	height: 100%;
 	background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami.png");
 	background-repeat: no-repeat;
 	background-attachment: fixed;
@@ -36,44 +37,75 @@ html {
 }
 
 body {
-	max-width: 80em;
+	max-width: 90em;
+	height: 100%;
 	margin-left: auto;
 	margin-right: auto;
 }
 
-#main {
+#left-sidebar {
+	position: absolute;
+	width: 13em;
+	height: 100%;
+	padding: 1.0em 0.5em 0.5em 1.0em;
+	box-sizing: border-box;
+	background-color: rgba(0,0,0,0.03);
 	overflow-y: auto;
 }
 
-#main > div {
+#messages {
+	position: relative;
+	width: calc(100% - 13em);
+	left: 13em;
+	height: calc(100% - 3em);
+	overflow-y: scroll;
+}
+
+div.align-bottom {
 	display: table;
+	width: 100%;
 	height: 100%;
 }
 
-#main > div > div {
+div.align-bottom > div {
 	display: table-cell;
+	width: 100%;
 	height: 100%;
 	vertical-align: bottom;
+}
+
+#footer {
+	position: relative;
+	width: calc(100% - 13em);
+	left: 13em;
 }
 
 
 /*---- Detailed elements ----*/
 
-header h1, #main h2, #footer h2 {
+header h1, #messages h2 {
 	display: none;
+}
+
+#left-sidebar hr {
+	margin: 1.0em 2.0em;
+	border: none;
+	border-bottom: 1px dashed #A0A0A0;
 }
 
 
 /* List of chat windows */
 
-#window-list {
-	margin-top: 0.5em;
-	background-color: #FFFFFF;
+#window-list-container h2 {
+	margin-bottom: 0.3em;
+	font-weight: bold;
+	font-size: 120%;
+	color: #D0D0D0;
 }
 
 #window-list li {
-	display: inline-block;
-	padding-left: 0.1em;
+	word-wrap: break-word;
+	word-break: break-all;
 }
 
 #window-list li.profile {
@@ -81,16 +113,21 @@ header h1, #main h2, #footer h2 {
 }
 
 #window-list li + li.profile {
-	padding-left: 1.2em;
+	margin-top: 0.5em;
 }
 
 #window-list a {
-	display: inline-block;
-	border: 1px solid #909090;
-	padding: 0.3em 1.0em;
+	display: block;
+	padding-top: 0.3em;
+	padding-bottom: 0.3em;
+	padding-left: 1.5em;
 	border-radius: 0.3em;
 	color: inherit;
 	text-decoration: none;
+}
+
+#window-list li.profile a {
+	padding-left: 0.2em;
 }
 
 #window-list li.selected a {
@@ -107,7 +144,7 @@ header h1, #main h2, #footer h2 {
 
 #window-list li span:nth-child(2) {
 	display: inline;
-	margin-left: 0.3em;
+	margin-left: 0.6em;
 	padding: 0em 0.4em;
 	border-radius: 1em;
 	background-color: #A0A0E0;
@@ -125,31 +162,27 @@ header h1, #main h2, #footer h2 {
 
 /* List of channel members */
 
-#member-list-container {
-	margin-bottom: 0.5em;
-	padding: 0.3em 1.0em;
-	background-color: #F4F4F4;
-	border-radius: 0.8em;
-	padding-left: 3.0em;
-	text-indent: -2.0em;
-	font-size: 85%;
-	color: #808080;
+#member-list-container h2 {
+	margin-bottom: 0.3em;
+	font-weight: bold;
+	font-size: 120%;
+	color: #D0D0D0;
 }
 
-#member-list-container p, #member-list, #member-list li {
-	display: inline;
+#member-list {
+	margin-left: 1.5em;
+	cursor: default;
 }
 
-#member-list-container p::after {
-	content: "Channel members: ";
+#member-list li {
+	list-style-type: disc;
+	line-height: 1.4;
+	word-wrap: break-word;
+	word-break: break-all;
 }
 
-#member-list li:first-child::before {
-	content: none;
-}
-
-#member-list li::before {
-	content: ", ";
+#member-list li:hover {
+	background-color: #F0F0F0;
 }
 
 
