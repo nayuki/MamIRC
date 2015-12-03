@@ -209,17 +209,17 @@ header h1, #messages h2 {
 
 /* Main table of messages */
 
-#main table {
+table {
 	margin-top: 0.5em;
 	width: 100%;
 	border-collapse: collapse;
 }
 
-#main thead {
+thead {
 	display: none;
 }
 
-#main tr:hover {
+tr:hover {
 	background-color: #F6F6F6;
 }
 
