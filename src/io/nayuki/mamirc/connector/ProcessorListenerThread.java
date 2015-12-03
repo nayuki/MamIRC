@@ -34,7 +34,7 @@ final class ProcessorListenerThread extends Thread {
 		this.master = master;
 		this.password = password.clone();  // Defensive copy
 		serverSocket = new ServerSocket();
-		serverSocket.bind(new InetSocketAddress("localhost", port), 2);
+		serverSocket.bind(new InetSocketAddress("localhost", port), 4);  // Limit the number of waiting connections
 	}
 	
 	
@@ -45,7 +45,7 @@ final class ProcessorListenerThread extends Thread {
 			while (true) {
 				Socket sock = serverSocket.accept();
 				new ProcessorReaderThread(master, sock, password).start();
-				Thread.sleep(1000);  // Safety delay
+				Thread.sleep(100);  // Safety delay
 			}
 		} catch (IOException e) {}
 		catch (InterruptedException e) {}
