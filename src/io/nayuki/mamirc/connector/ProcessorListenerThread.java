@@ -6,8 +6,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 
-// Manages a server socket to listen for incoming processor connections,
-// and launches a new ProcessorReaderThread on each connection received.
+/* 
+ * Manages a local server socket to listen for incoming processor connections,
+ * and launches a new ProcessorReaderThread on each connection received.
+ * This class implements rate-limiting to prevent denial-of-service attacks (but because the socket only listens
+ * to localhost, the attacker would be another process running by this user, or another user on this machine).
+ */
 final class ProcessorListenerThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -19,6 +23,7 @@ final class ProcessorListenerThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
+	// The server socket is created on the caller's thread, to make the caller deal with an I/O exception immediately.
 	public ProcessorListenerThread(MamircConnector master, int port, byte[] password) throws IOException {
 		super("ProcessorListenerThread");
 		if (master == null || password == null)
@@ -42,11 +47,9 @@ final class ProcessorListenerThread extends Thread {
 				new ProcessorReaderThread(master, sock, password).start();
 				Thread.sleep(1000);  // Safety delay
 			}
-			
-		// Clean up
 		} catch (IOException e) {}
 		catch (InterruptedException e) {}
-		finally {
+		finally {  // Clean up
 			try {
 				serverSocket.close();
 			} catch (IOException e) {}

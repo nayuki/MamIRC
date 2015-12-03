@@ -5,14 +5,18 @@ import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 
 
+/* 
+ * Miscellaneous helper functions that are used in numerous places and don't have a common theme.
+ */
 public final class Utils {
 	
-	
+	// Returns a new array of bytes from encoding the given string in UTF-8.
 	public static byte[] toUtf8(String s) {
 		return s.getBytes(UTF8_CHARSET);
 	}
 	
 	
+	// Returns the string from decoding the given bytes in UTF-8.
 	public static String fromUtf8(byte[] b) {
 		return new String(b, UTF8_CHARSET);
 	}
@@ -28,6 +32,7 @@ public final class Utils {
 	}
 	
 	
+	// Character set object for UTF-8.
 	private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	
 }

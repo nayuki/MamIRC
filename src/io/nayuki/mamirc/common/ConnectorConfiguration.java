@@ -5,12 +5,15 @@ import java.io.IOException;
 import io.nayuki.json.Json;
 
 
-// Represents the connector configuration data. Immutable structure.
+/* 
+ * Represents configuration data for the connector itself, and for
+ * the processor to access the connector. Immutable structure.
+ */
 public final class ConnectorConfiguration {
 	
 	/*---- Fields ----*/
 	
-	// Not null. This is an uninterpreted string, and file existence isn't checked.
+	// Not null. This is an uninterpreted string, and file existence is not checked.
 	public final File databaseFile;
 	
 	// Not null, and at least 0 bytes long.
@@ -22,9 +25,9 @@ public final class ConnectorConfiguration {
 	
 	/*---- Constructor ----*/
 	
-	// Reads the given JSON file and initializes this data structure.
+	// Constructs an object by reading the file at the given path.
 	public ConnectorConfiguration(File file) throws IOException {
-		// Parse and do basic check
+		// Parse JSON data and check signature
 		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-connector-config"))
 			throw new IllegalArgumentException("Invalid configuration file type");

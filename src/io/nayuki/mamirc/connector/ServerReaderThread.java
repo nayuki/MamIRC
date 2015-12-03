@@ -15,23 +15,32 @@ import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 
 
-// Reads each line from a socket and relays it back to the master.
-// Also handles the connection initialization and clean-up.
+/* 
+ * A worker thread that connects to an IRC server, reads lines, and relays them back to the master.
+ * Additional functionality provided:
+ * - Creates new socket, relays socket opened/closed events
+ * - Creates and terminates a writer thread
+ * - Handles SSL functionality
+ */
 final class ServerReaderThread extends Thread {
 	
 	/*---- Fields ----*/
 	
+	// Outbound information
 	private final MamircConnector master;
 	private final int connectionId;
+	// Connection parameters
 	private final String hostname;
 	private final int port;
 	private final boolean useSsl;
+	// My state
 	private Socket socket;
 	
 	
 	/*---- Constructor ----*/
 	
-	// Note: The socket is created on the new thread, not on the caller's thread.
+	// Note: This constructor only sets fields, and does not perform I/O.
+	// The actual socket is created when the new worker thread executes run().
 	public ServerReaderThread(MamircConnector master, int conId, String hostname, int port, boolean useSsl) {
 		super("ServerReaderThread " + conId);
 		if (master == null || hostname == null)
@@ -59,13 +68,13 @@ final class ServerReaderThread extends Thread {
 			else
 				socket = new Socket(hostname, port);
 			
-			// Initialize stuff
+			// Successfully connected; make a writer worker thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
 			writer.setName("OutputWriterThread : " + getName());
 			writer.start();
 			master.connectionOpened(connectionId, socket.getInetAddress(), this, writer);
 			
-			// Read and forward lines
+			// Read and relay lines
 			LineReader reader = new LineReader(socket.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();
@@ -74,22 +83,23 @@ final class ServerReaderThread extends Thread {
 				boolean valid = true;
 				for (byte b : line)
 					valid &= b != '\0';
-				if (valid)
+				if (valid)  // Ignore lines containing NUL character, disallowed by IRC RFC 1459
 					master.receiveMessage(connectionId, new CleanLine(line, false));
 			}
-			
-		// Clean up
 		} catch (IOException e) {}
-		finally {
+		finally {  // Clean up the connection
 			master.connectionClosed(connectionId);
 			terminate();
+			socket = null;
 			if (writer != null)
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
 		}
 	}
 	
 	
-	// Can be called from any thread.
+	// Aborts the current read operation (if any), closes the socket immediately, and causes the ServerReaderThread
+	// and OutputWriterThread to terminate cleanly very soon. Can be called from any thread, and is idempotent.
+	// However, this method must not be called if this worker has not called master.connectionOpened().
 	public void terminate() {
 		try {
 			if (socket != null)
@@ -98,7 +108,10 @@ final class ServerReaderThread extends Thread {
 	}
 	
 	
-	// Initialization-on-demand holder idiom
+	/*---- Helper definitions ----*/
+	
+	// This class provides a singleton object that is initialized only if needed,
+	// using the initialization-on-demand holder design pattern.
 	private static final class SsfHolder {
 		public static final SSLSocketFactory SSL_SOCKET_FACTORY;  // Singleton
 		static {

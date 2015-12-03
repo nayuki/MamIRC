@@ -5,8 +5,9 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 
-// Returns a byte array for each line parsed from an input stream.
-// Not thread-safe. Parent is responsible for closing the stream.
+/* 
+ * Returns a byte array for each line parsed from an input stream.
+ */
 public final class LineReader {
 	
 	/*---- Fields ----*/
@@ -18,6 +19,7 @@ public final class LineReader {
 	private int lineLength;
 	private final int maxLineLength;
 	
+	// Read buffering
 	private byte[] readBuffer;
 	private int readLength;
 	private int readOffset;
@@ -26,11 +28,15 @@ public final class LineReader {
 	
 	/*---- Constructor ----*/
 	
+	// Constructs a line reader over the given input stream with the default maximum line length of 1000 bytes.
+	// The caller is responsible for closing the input stream after it is no longer needed.
 	public LineReader(InputStream in) {
 		this(in, 1000);
 	}
-		
 	
+	
+	// Constructs a line reader over the given input stream with the given maximum line length in bytes.
+	// The caller is responsible for closing the input stream after it is no longer needed.
 	public LineReader(InputStream in, int maxLen) {
 		if (in == null)
 			throw new NullPointerException();
@@ -49,8 +55,9 @@ public final class LineReader {
 	
 	/*---- Methods ----*/
 	
-	// Has universal newline detection. Each returned array is a unique instance,
-	// and contains no '\r' or '\n' characters. Lines have 0 or more characters.
+	// Returns the next line of bytes read from the input stream. Has universal newline detection. Not thread-safe.
+	// Each returned array is a unique object, contains no '\r' or '\n' characters (but may contain '\0'),
+	// and has length in the range [0, maxLen]. Lines in the input that exceed maxLen are skipped.
 	// Newlines are treated as separators rather than terminators, which means at least 1 line
 	// is always returned for any stream, and the stream need not end with a newline sequence.
 	public byte[] readLine() throws IOException {
@@ -137,7 +144,7 @@ public final class LineReader {
 	}
 	
 	
-	// Same content as just byte[0], but usefully indicates that the next call will return null
+	// Same content as just byte[0], but usefully indicates that the next call will return null.
 	public static final byte[] BLANK_EOF = new byte[0];
 	
 }

@@ -6,7 +6,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 
-// Receives lines from other threads and writes them to an output stream until terminated.
+/* 
+ * A worker thread that receives line objects from other threads, and writes bytes to an output stream until terminated.
+ * This class exists because write operations might block with large and varying delay (especially in low-bandwidth or
+ * high-loss environments), but the thread that requested the write operation wants to continue processing more data.
+ */
 public final class OutputWriterThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -47,11 +51,9 @@ public final class OutputWriterThread extends Thread {
 				System.arraycopy(newline, 0, buf, b.length, newline.length);
 				output.write(buf, 0, totalLen);
 			}
-			
-		// Clean up
 		} catch (IOException e) {}
 		catch (InterruptedException e) {}
-		finally {
+		finally {  // Clean up
 			queue = null;  // Not thread-safe, but is a best-effort attempt to detect invalid usage
 			try {
 				output.close();
@@ -60,7 +62,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread. Must not be called after terminate().
+	// Can be called from any thread. Must not be called after terminate().
 	// Caller must never change the values inside the array after it is passed into this method.
 	public void postWrite(CleanLine line) {
 		if (line == null)

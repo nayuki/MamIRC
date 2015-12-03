@@ -261,7 +261,7 @@ public final class MamircConnector {
 	
 	
 	
-	/*---- Nested classes ----*/
+	/*---- Helper class ----*/
 	
 	private static final class ConnectionInfo {
 		

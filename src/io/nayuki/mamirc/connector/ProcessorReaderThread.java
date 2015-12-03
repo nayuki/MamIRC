@@ -9,6 +9,31 @@ import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
 
 
+/* 
+ * Handles lines of commands from a processor connection and calls appropriate methods on MamircConnector.
+ * Additional functionality:
+ * - Reads and checks the password before doing anything
+ * - Explicitly terminates the connection if the correct password is not received within a few seconds
+ * - Creates and terminates a writer thread for the socket
+ * 
+ * These and only these line formats are allowed coming from the processor:
+ * - "connect <hostname> <port> <useSsl> <metadata>"
+ *   where hostname is in UTF-8, port is an integer in [0,65535], useSsl is true/false;
+ *   metadata is in UTF-8 and can contain spaces.
+ * - "disconnect <connectionId>"
+ *   where connectionId is a non-negative integer.
+ * - "send <connectionId> <payload>"
+ *   where connectionId is a non-negative integer,
+ *   and payload is a byte sequence (not necessarily UTF-8).
+ * - "terminate"
+ *   which requests the connector to shut down cleanly.
+ * Notes:
+ * - The line formats above are parsed as strictly as possible.
+ *   For example: case-sensitive, no double spaces between fields, no ignoring trailing spaces.
+ * - No line can contain any '\0' (NUL) characters.
+ * - Because fields are space-separated, only the last field might contain spaces.
+ *   Even then, it needs to be explicitly allowed by the documentation above.
+ */
 final class ProcessorReaderThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -20,9 +45,9 @@ final class ProcessorReaderThread extends Thread {
 	
 	/*---- Constructor ----*/
 	
-	// Should only be called from ProcessorListenerThread.
+	// This constructor must only be called from ProcessorListenerThread.
 	public ProcessorReaderThread(MamircConnector master, Socket sock, byte[] password) {
-		super("ProcessorReaderThread " + (System.nanoTime() % 997));
+		super("ProcessorReaderThread " + (System.nanoTime() % 997));  // Generate a short, random-ish ID
 		if (master == null || sock == null || password == null)
 			throw new NullPointerException();
 		this.master = master;
@@ -60,10 +85,8 @@ final class ProcessorReaderThread extends Thread {
 					break;
 				handleLine(line);
 			}
-			
-		// Clean up
 		} catch (IOException e) {}
-		finally {
+		finally {  // Clean up
 			if (writer != null) {
 				master.detachProcessor(this);
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
@@ -73,29 +96,9 @@ final class ProcessorReaderThread extends Thread {
 	}
 	
 	
-	/* 
-	 * These and only these line formats are allowed coming from the processor:
-	 * 
-	 * - "connect <hostname> <port> <useSsl> <metadata>"
-	 *   where hostname is in UTF-8, port is in [0, 65535], useSsl is true/false,
-	 *   and metadata is in UTF-8 and does not contain the character '\0'.
-	 * 
-	 * - "disconnect <connectionId>"
-	 *   where connectionId is a non-negative integer.
-	 * 
-	 * - "send <connectionId> <payload>"
-	 *   where connectionId is a non-negative integer, and payload is an
-	 *   arbitrary byte sequence (not necessarily UTF-8) not containing '\0'.
-	 * 
-	 * - "terminate"
-	 *   which requests the connector to shut down.
-	 * 
-	 * The format described above is parsed as strictly as possible. For example,
-	 * the commands are case-sensitive, trailing spaces are disallowed, etc.
-	 */
 	private void handleLine(byte[] line) {
 		String lineStr = Utils.fromUtf8(line);
-		String[] parts = lineStr.split(" ", 5);  // At most 5 parts
+		String[] parts = lineStr.split(" ", 5);  // At most 5 parts in the current format
 		String cmd = parts[0];
 		
 		try {
@@ -121,7 +124,7 @@ final class ProcessorReaderThread extends Thread {
 	}
 	
 	
-	// Thread-safe, should only be called from MamircConnector or this class itself.
+	// Thread-safe, and should only be called from MamircConnector or this class itself.
 	public void terminate() {
 		try {
 			socket.close();
@@ -131,7 +134,8 @@ final class ProcessorReaderThread extends Thread {
 	
 	/*---- Helper definitions ----*/
 	
-	// Performs a constant-time equality comparison if both arrays are the same length.
+	// Performs a constant-time equality check, if both arrays are the same length.
+	// This prevents the use of timing attacks to guess passwords.
 	private static boolean equalsTimingSafe(byte[] a, byte[] b) {
 		if (a.length != b.length)
 			return false;

@@ -13,21 +13,23 @@ import java.util.TreeSet;
 import io.nayuki.json.Json;
 
 
-// Represents the processor configuration data. Immutable structure.
+/* 
+ * Represents configuration data for the processor. Immutable structure.
+ */
 final class ProcessorConfiguration {
 	
 	/*---- Fields ----*/
 	
 	public final int webServerPort;  // In the range [0, 65535].
 	public final String webUiPassword;  // Not null
-	public final Map<String,IrcNetwork> ircNetworks;  // Not null, keys/values not null, immutable.
+	public final Map<String,IrcNetwork> ircNetworks;  // Not null; keys and values not null; immutable.
 	
 	
 	/*---- Constructor ----*/
 	
-	// Reads the given JSON file and initializes this data structure.
+	// Constructs an object by reading the file at the given path.
 	public ProcessorConfiguration(File file) throws IOException {
-		// Parse and do basic check
+		// Parse JSON data and check signature
 		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-processor-config"))
 			throw new IllegalArgumentException("Invalid configuration file type");
@@ -38,7 +40,8 @@ final class ProcessorConfiguration {
 			throw new IllegalStateException("Invalid TCP port number");
 		webUiPassword = Json.getString(data, "web-ui-password");
 		
-		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format
+		// 'In'-suffixed variables have data in JSON-Java format;
+		// 'Out'-suffixed variables are in this data structure's desired format.
 		Map<String,Object> netsIn = Json.getMap(data, "irc-networks");
 		Map<String,IrcNetwork> netsOut = new HashMap<>();
 		for (String name : netsIn.keySet())
@@ -47,7 +50,7 @@ final class ProcessorConfiguration {
 	}
 	
 	
-	/*---- Helper methods ----*/
+	/*---- Helper functions ----*/
 	
 	private void convertNetwork(String name, Map<String,Object> netIn, Map<String,IrcNetwork> netsOut) {
 		String username = Json.getString(netIn, "username");
@@ -81,23 +84,22 @@ final class ProcessorConfiguration {
 	}
 	
 	
-	
-	/* ---- Immutable data structure classes ----*/
+	/*---- Enclosing immutable types ----*/
 	
 	public static final class IrcNetwork {
 		// Name of this IRC network profile. Not null.
 		public final String name;
-		// List of servers to try to connect to, in priority sequence. Not null; immutable, length at least 1, elements not null.
+		// List of servers to try to connect to, in priority order. Not null; immutable, length at least 1, elements not null.
 		public final List<Server> servers;
-		// List of nicknames to try to use, in priority sequence. Not null; immutable, length at least 1, elements not null.
+		// List of nicknames to try to use, in priority order. Not null; immutable, length at least 1, elements not null.
 		public final List<String> nicknames;
-		// Username at USER registration. Not null.
+		// User name at USER registration. Not null. Must not contain any spaces.
 		public final String username;
-		// Real name at USER registration. Not null.
+		// Real name at USER registration. Not null. Can contain spaces.
 		public final String realname;
 		// Password for "/msg NickServ IDENTIFY <password>" immediately after USER registration. Can be null.
 		public final String nickservPassword;
-		// Initial set of channels to join. Not null; immutable, size at least 0, elements not null.
+		// Names of channels to join when processor starts. Not null; immutable, size at least 0, elements not null.
 		public final Set<String> channels;
 		
 		
