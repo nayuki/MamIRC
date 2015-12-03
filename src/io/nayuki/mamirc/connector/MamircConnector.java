@@ -161,7 +161,10 @@ public final class MamircConnector {
 	
 	// Should only be called from ServerReaderThread.
 	public synchronized void receiveMessage(int conId, CleanLine line) {
-		postEvent(serverConnections.get(conId), Event.Type.RECEIVE, line);
+		ConnectionInfo info = serverConnections.get(conId);
+		if (info == null)
+			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
+		postEvent(info, Event.Type.RECEIVE, line);
 		byte[] pong = makePongIfPing(line.getDataNoCopy());
 		if (pong != null)
 			sendMessage(conId, new CleanLine(pong, false), processorReader);
@@ -183,11 +186,10 @@ public final class MamircConnector {
 	
 	// Should only be called from ProcessorReaderThread.
 	public void terminateConnector(ProcessorReaderThread reader) {
-		if (reader != processorReader)
-			return;
-		
 		Thread[] toWait;
 		synchronized(this) {
+			if (reader != processorReader)
+				return;
 			System.err.println("Connector terminating");
 			
 			toWait = new ServerReaderThread[serverConnections.size()];
@@ -268,6 +270,8 @@ public final class MamircConnector {
 		
 		
 		public ConnectionInfo(int conId) {
+			if (conId < 0)
+				throw new IllegalArgumentException("Connection ID must be positive");
 			connectionId = conId;
 			nextSequence = 0;
 			reader = null;
