@@ -34,7 +34,7 @@ final class ServerReaderThread extends Thread {
 	private final int port;
 	private final boolean useSsl;
 	// My state
-	private Socket socket;
+	private volatile Socket socket;
 	
 	
 	/*---- Constructor ----*/
