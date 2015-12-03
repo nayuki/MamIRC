@@ -166,7 +166,9 @@ public final class MamircConnector {
 	// Should only be called from ServerReaderThread.
 	public synchronized void receiveMessage(int conId, CleanLine line) {
 		postEvent(conId, serverConnections.get(conId), Event.Type.RECEIVE, line);
-		handlePotentialPing(conId, line);
+		byte[] pong = makePongIfPing(line.getDataNoCopy());
+		if (pong != null)
+			sendMessage(conId, new CleanLine(pong, false), processorReader);
 	}
 	
 	
@@ -233,27 +235,28 @@ public final class MamircConnector {
 	}
 	
 	
-	// Must only be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
-	private void handlePotentialPing(int conId, CleanLine line) {
+	// If the given line is a PING command, then this returns a new byte array containing an appropriate PONG response.
+	// Otherwise this function returns null. This handles all inputs correctly, and safely ignores lines with illegal IRC syntax.
+	static byte[] makePongIfPing(byte[] line) {
 		// Skip prefix, if any
-		byte[] b = line.getDataNoCopy();
 		int i = 0;
-		if (b.length >= 1 && b[i] == ':') {
+		if (line.length >= 1 && line[i] == ':') {
 			i++;
-			while (i < b.length && b[i] != ' ')
+			while (i < line.length && line[i] != ' ')
 				i++;
-			while (i < b.length && b[i] == ' ')
+			while (i < line.length && line[i] == ' ')
 				i++;
 		}
 		
 		// Check that next 4 characters are "PING" case-insensitively, followed by space or end of string
-		if (b.length - i >= 4 && (b[i + 0] & 0xDF) == 'P' && (b[i + 1] & 0xDF) == 'I' && (b[i + 2] & 0xDF) == 'N' && (b[i + 3] & 0xDF) == 'G'
-				&& (b.length - i == 4 || b[i + 4] == ' ')) {
-			// Create reply by dropping prefix, changing PING to PONG, and copying parameters
-			byte[] reply = Arrays.copyOfRange(b, i, b.length);
-			reply[1] += 6;
-			sendMessage(conId, new CleanLine(reply, false), processorReader);
+		byte[] reply = null;
+		if (line.length - i >= 4 && (line[i + 0] & 0xDF) == 'P' && (line[i + 1] & 0xDF) == 'I' && (line[i + 2] & 0xDF) == 'N' && (line[i + 3] & 0xDF) == 'G'
+				&& (line.length - i == 4 || line[i + 4] == ' ')) {
+			// Create reply by dropping prefix, changing PING to PONG, and copying all parameters
+			reply = Arrays.copyOfRange(line, i, line.length);
+			reply[1] += 'O' - 'I';
 		}
+		return reply;
 	}
 	
 	
