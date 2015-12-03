@@ -13,17 +13,15 @@ public final class LineReader {
 	/*---- Fields ----*/
 	
 	private final InputStream input;
-	
-	// Current accumulating line
-	private byte[] lineBuffer;
-	private int lineLength;
-	private final int maxLineLength;
-	
 	// Read buffering
 	private byte[] readBuffer;
 	private int readLength;
 	private int readOffset;
 	private boolean prevWasCr;
+	// Current accumulating line
+	private byte[] lineBuffer;
+	private int lineLength;
+	private final int maxLineLength;
 	
 	
 	/*---- Constructor ----*/
@@ -43,13 +41,13 @@ public final class LineReader {
 		if (maxLen <= 0)
 			throw new IllegalArgumentException("Maximum line length must be positive");
 		input = in;
-		lineBuffer = new byte[Math.min(1024, maxLen)];
-		lineLength = 0;
-		maxLineLength = maxLen;
 		readBuffer = new byte[4096];
 		readLength = 0;
 		readOffset = 0;
 		prevWasCr = false;
+		lineBuffer = new byte[Math.min(1024, maxLen)];
+		lineLength = 0;
+		maxLineLength = maxLen;
 	}
 	
 	

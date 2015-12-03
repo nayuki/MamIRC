@@ -70,7 +70,7 @@ final class ServerReaderThread extends Thread {
 			
 			// Successfully connected; make a writer worker thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
-			writer.setName("OutputWriterThread : " + getName());
+			writer.setName("OutputWriterThread : " + this.getName());
 			writer.start();
 			master.connectionOpened(connectionId, socket.getInetAddress(), this, writer);
 			

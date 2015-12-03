@@ -17,7 +17,7 @@ final class ProcessorListenerThread extends Thread {
 	/*---- Fields ----*/
 	
 	private final MamircConnector master;
-	public final ServerSocket serverSocket;
+	private final ServerSocket serverSocket;
 	private final byte[] password;
 	
 	
@@ -50,10 +50,16 @@ final class ProcessorListenerThread extends Thread {
 		} catch (IOException e) {}
 		catch (InterruptedException e) {}
 		finally {  // Clean up
-			try {
-				serverSocket.close();
-			} catch (IOException e) {}
+			terminate();
 		}
+	}
+	
+	
+	// Can be called from any thread, and is idempotent.
+	public void terminate() {
+		try {
+			serverSocket.close();
+		} catch (IOException e) {}
 	}
 	
 }

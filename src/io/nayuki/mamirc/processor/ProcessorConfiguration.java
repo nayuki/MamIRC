@@ -45,38 +45,38 @@ final class ProcessorConfiguration {
 		Map<String,Object> netsIn = Json.getMap(data, "irc-networks");
 		Map<String,IrcNetwork> netsOut = new HashMap<>();
 		for (String name : netsIn.keySet())
-			convertNetwork(name, Json.getMap(netsIn, name), netsOut);
+			netsOut.put(name, convertNetwork(name, Json.getMap(netsIn, name)));
 		ircNetworks = Collections.unmodifiableMap(netsOut);
 	}
 	
 	
 	/*---- Helper functions ----*/
 	
-	private void convertNetwork(String name, Map<String,Object> netIn, Map<String,IrcNetwork> netsOut) {
+	private static IrcNetwork convertNetwork(String name, Map<String,Object> netIn) {
 		String username = Json.getString(netIn, "username");
 		String realname = Json.getString(netIn, "realname");
 		String nspass = netIn.containsKey("nickserv-password") ? Json.getString(netIn, "nickserv-password") : null;
 		
-		List<Object> nicknamesIn = Json.getList(netIn, "nicknames");
-		List<String> nicknamesOut = new ArrayList<>();
-		for (Object o : nicknamesIn)
-			nicknamesOut.add((String)o);
+		List<Object> nicksIn = Json.getList(netIn, "nicknames");
+		List<String> nicksOut = new ArrayList<>();
+		for (Object nick : nicksIn)
+			nicksOut.add((String)nick);
 		
-		List<Object> channelsIn = Json.getList(netIn, "channels");
-		Set<String> channelsOut = new TreeSet<>();
-		for (Object o : channelsIn)
-			channelsOut.add((String)o);
+		List<Object> chansIn = Json.getList(netIn, "channels");
+		Set<String> chansOut = new TreeSet<>();
+		for (Object chan : chansIn)
+			chansOut.add((String)chan);
 		
 		List<Object> serversIn = Json.getList(netIn, "servers");
 		List<IrcNetwork.Server> serversOut = new ArrayList<>();
 		for (Object servIn : serversIn)
 			serversOut.add(convertServer(servIn));
 		
-		netsOut.put(name, new IrcNetwork(name, serversOut, nicknamesOut, username, realname, nspass, channelsOut));
+		return new IrcNetwork(name, serversOut, nicksOut, username, realname, nspass, chansOut);
 	}
 	
 	
-	private IrcNetwork.Server convertServer(Object servIn) {
+	private static IrcNetwork.Server convertServer(Object servIn) {
 		String hostname = Json.getString(servIn, "hostname");
 		int port = Json.getInt(servIn, "port");
 		boolean ssl = Json.getBoolean(servIn, "ssl");

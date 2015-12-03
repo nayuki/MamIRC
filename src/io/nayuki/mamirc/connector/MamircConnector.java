@@ -205,10 +205,7 @@ public final class MamircConnector {
 				processorReader = null;
 				processorWriter = null;
 			}
-			
-			try {
-				processorListener.serverSocket.close();
-			} catch (IOException e) {}
+			processorListener.terminate();
 		}
 		
 		try {

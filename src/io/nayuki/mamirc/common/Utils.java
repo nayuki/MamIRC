@@ -35,4 +35,8 @@ public final class Utils {
 	// Character set object for UTF-8.
 	private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	
+	
+	// Not instantiable.
+	private Utils() {}
+	
 }

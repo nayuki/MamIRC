@@ -74,7 +74,7 @@ final class ProcessorReaderThread extends Thread {
 			
 			// Launch writer thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
-			writer.setName("OutputWriterThread : " + getName());
+			writer.setName("OutputWriterThread : " + this.getName());
 			writer.start();
 			master.attachProcessor(this, writer);
 			
@@ -106,7 +106,7 @@ final class ProcessorReaderThread extends Thread {
 				master.terminateConnector(this);
 				
 			} else if (cmd.equals("connect") && parts.length == 5) {
-				if (!(parts[3].equals("true") || parts[3].equals("false")) || parts[4].contains("\0"))
+				if (!(parts[3].equals("true") || parts[3].equals("false")))
 					throw new IllegalArgumentException();
 				master.connectServer(parts[1], Integer.parseInt(parts[2]), Boolean.parseBoolean(parts[3]), parts[4], this);
 				
