@@ -27,14 +27,14 @@ public final class ConnectorConfiguration {
 		// Parse and do basic check
 		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-connector-config"))
-			throw new IllegalArgumentException("Invalid configuration file");
+			throw new IllegalArgumentException("Invalid configuration file type");
 		
 		// Retrieve each field
 		databaseFile = new File(Json.getString(data, "database-file"));
 		connectorPassword = Utils.toUtf8(Json.getString(data, "processor-password"));
 		serverPort = Json.getInt(data, "server-port");
 		if ((serverPort & 0xFFFF) != serverPort)
-			throw new IllegalStateException("Invalid configuration file");
+			throw new IllegalStateException("Invalid TCP port number");
 	}
 	
 	

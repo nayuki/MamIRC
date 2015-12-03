@@ -37,7 +37,7 @@ final class ServerReaderThread extends Thread {
 		if (master == null || hostname == null)
 			throw new NullPointerException();
 		if ((port & 0xFFFF) != port)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Invalid TCP port number");
 		
 		this.master = master;
 		connectionId = conId;

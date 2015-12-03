@@ -30,12 +30,12 @@ final class ProcessorConfiguration {
 		// Parse and do basic check
 		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-processor-config"))
-			throw new IllegalArgumentException("Invalid configuration file");
+			throw new IllegalArgumentException("Invalid configuration file type");
 		
 		// Convert to internal data format
 		webServerPort = Json.getInt(data, "web-server-port");
 		if ((webServerPort & 0xFFFF) != webServerPort)
-			throw new IllegalStateException("Invalid configuration file");
+			throw new IllegalStateException("Invalid TCP port number");
 		webUiPassword = Json.getString(data, "web-ui-password");
 		
 		// 'In' variables have data in JSON-Java format; 'Out' variables are in this data structure's desired format

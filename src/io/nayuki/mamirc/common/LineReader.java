@@ -35,7 +35,7 @@ public final class LineReader {
 		if (in == null)
 			throw new NullPointerException();
 		if (maxLen <= 0)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Maximum line length must be positive");
 		input = in;
 		lineBuffer = new byte[Math.min(1024, maxLen)];
 		lineLength = 0;

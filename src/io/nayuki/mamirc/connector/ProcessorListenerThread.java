@@ -24,7 +24,7 @@ final class ProcessorListenerThread extends Thread {
 		if (master == null || password == null)
 			throw new NullPointerException();
 		if ((port & 0xFFFF) != port)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Invalid TCP port number");
 		
 		this.master = master;
 		this.password = password.clone();  // Defensive copy
