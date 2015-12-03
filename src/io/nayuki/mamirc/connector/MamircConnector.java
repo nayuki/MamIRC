@@ -64,23 +64,20 @@ public final class MamircConnector {
 	public MamircConnector(ConnectorConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
+		processorReader = null;
+		processorWriter = null;
 		
 		// Initialize database logger and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.databaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
-		databaseLogger.start();
 		System.err.println("Database opened");
 		
 		// Listen for an incoming processor
-		processorReader = null;
-		processorWriter = null;
-		try {
-			processorListener = new ProcessorListenerThread(this, config.serverPort, config.getConnectorPassword());
-			System.err.println("Listening on port " + config.serverPort);
-		} catch (IOException e) {
-			databaseLogger.terminate();
-			throw e;
-		}
+		processorListener = new ProcessorListenerThread(this, config.serverPort, config.getConnectorPassword());
+		System.err.println("Listening on port " + config.serverPort);
+		
+		// Finish the start-up
+		databaseLogger.start();
 		processorListener.start();
 		System.err.println("Connector ready");
 	}
@@ -100,8 +97,8 @@ public final class MamircConnector {
 		// Dump current connection info to processor
 		databaseLogger.flushQueue();
 		processorWriter.postWrite("active-connections");
-		for (int conId : serverConnections.keySet())
-			processorWriter.postWrite(conId + " " + serverConnections.get(conId).nextSequence);
+		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())
+			processorWriter.postWrite(entry.getKey() + " " + entry.getValue().nextSequence);
 		processorWriter.postWrite("live-events");
 	}
 	
@@ -119,13 +116,12 @@ public final class MamircConnector {
 	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
-		int conId = nextConnectionId;
-		ConnectionInfo info = new ConnectionInfo();
-		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
-		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine(str));
-		serverConnections.put(conId, info);
-		new ServerReaderThread(this, conId, hostname, port, useSsl).start();
+		ConnectionInfo info = new ConnectionInfo(nextConnectionId);
 		nextConnectionId++;
+		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
+		postEvent(info, Event.Type.CONNECTION, new CleanLine(str));
+		serverConnections.put(info.connectionId, info);
+		new ServerReaderThread(this, info.connectionId, hostname, port, useSsl).start();
 	}
 	
 	
@@ -137,7 +133,7 @@ public final class MamircConnector {
 		if (info == null)
 			System.err.println("Warning: Connection " + conId + " does not exist");
 		else {
-			postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("disconnect"));
+			postEvent(info, Event.Type.CONNECTION, new CleanLine("disconnect"));
 			info.reader.terminate();
 		}
 	}
@@ -148,7 +144,7 @@ public final class MamircConnector {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
-		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("opened " + addr.getHostAddress()));
+		postEvent(info, Event.Type.CONNECTION, new CleanLine("opened " + addr.getHostAddress()));
 		info.reader = reader;
 		info.writer = writer;
 	}
@@ -159,13 +155,13 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
-		postEvent(conId, info, Event.Type.CONNECTION, new CleanLine("closed"));
+		postEvent(info, Event.Type.CONNECTION, new CleanLine("closed"));
 	}
 	
 	
 	// Should only be called from ServerReaderThread.
 	public synchronized void receiveMessage(int conId, CleanLine line) {
-		postEvent(conId, serverConnections.get(conId), Event.Type.RECEIVE, line);
+		postEvent(serverConnections.get(conId), Event.Type.RECEIVE, line);
 		byte[] pong = makePongIfPing(line.getDataNoCopy());
 		if (pong != null)
 			sendMessage(conId, new CleanLine(pong, false), processorReader);
@@ -178,7 +174,7 @@ public final class MamircConnector {
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info != null && info.writer != null) {
-			postEvent(conId, info, Event.Type.SEND, line);
+			postEvent(info, Event.Type.SEND, line);
 			info.writer.postWrite(line);
 		} else
 			System.err.println("Warning: Connection " + conId + " does not exist");
@@ -219,8 +215,8 @@ public final class MamircConnector {
 	
 	
 	// Must only be called from one of the synchronized methods above.
-	private void postEvent(int conId, ConnectionInfo info, Event.Type type, CleanLine line) {
-		Event ev = new Event(conId, info.nextSequence(), type, line);
+	private void postEvent(ConnectionInfo info, Event.Type type, CleanLine line) {
+		Event ev = new Event(info.connectionId, info.nextSequence(), type, line);
 		if (processorWriter != null) {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -265,12 +261,14 @@ public final class MamircConnector {
 	
 	private static final class ConnectionInfo {
 		
+		public final int connectionId;
 		public int nextSequence;
 		public ServerReaderThread reader;
 		public OutputWriterThread writer;
 		
 		
-		public ConnectionInfo() {
+		public ConnectionInfo(int conId) {
+			connectionId = conId;
 			nextSequence = 0;
 			reader = null;
 			writer = null;
