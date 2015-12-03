@@ -619,7 +619,16 @@ function loadUpdates(inData) {
 			var numPrefixDel = Math.max(lines.length - maxMessagesPerWindow, 0);
 			lines.splice(0, numPrefixDel);
 			if (activeWindow != null && windowName == activeWindow[2]) {
-				messageListElem.appendChild(lineDataToRowElem(line));
+				var msgRow = lineDataToRowElem(line);
+				if (messageListElem.firstChild != null && lines.length >= 2 && areDatesDifferent(line[2], lines[lines.length - 2][2])) {
+					var dateRow = dateToRowElem(line[2]);
+					if (msgRow.classList.contains("unread"))
+						dateRow.classList.add("unread");
+					if (msgRow.classList.contains("read"))
+						dateRow.classList.add("read");
+					messageListElem.appendChild(dateRow);
+				}
+				messageListElem.appendChild(msgRow);
 				activeWindowUpdated = true;
 			}
 			var subtype = line[1] & Flags.TYPE_MASK;
