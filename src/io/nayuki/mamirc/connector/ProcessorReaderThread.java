@@ -112,7 +112,7 @@ final class ProcessorReaderThread extends Thread {
 				
 			} else if (cmd.equals("send") && parts.length >= 3) {
 				byte[] payload = Arrays.copyOfRange(line, cmd.length() + parts[1].length() + 2, line.length);
-				master.sendMessage(Integer.parseInt(parts[1]), new CleanLine(payload), this);
+				master.sendMessage(Integer.parseInt(parts[1]), new CleanLine(payload, false), this);
 				
 			} else {
 				System.err.println("Unknown line from processor: " + lineStr);

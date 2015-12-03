@@ -19,7 +19,6 @@ import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
-import io.nayuki.mamirc.common.Utils;
 import io.nayuki.mamirc.processor.IrcSession.RegState;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
@@ -136,7 +135,7 @@ public final class MamircProcessor {
 	private void processConnection(Event ev, boolean realtime) {
 		int conId = ev.connectionId;
 		IrcSession state = ircSessions.get(conId);  // Possibly null
-		String line = Utils.fromUtf8(ev.line.getData());
+		String line = ev.line.getString();
 		
 		if (line.startsWith("connect ")) {
 			String metadata = line.split(" ", 5)[4];
@@ -170,7 +169,7 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		IrcSession state = ircSessions.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
+		IrcLine msg = new IrcLine(ev.line.getString());
 		Map<String,IrcSession.ChannelState> curchans = state.getCurrentChannels();
 		switch (msg.command.toUpperCase()) {
 			
@@ -421,7 +420,7 @@ public final class MamircProcessor {
 		int conId = ev.connectionId;
 		IrcSession state = ircSessions.get(conId);  // Not null
 		IrcNetwork profile = state.profile;
-		IrcLine msg = new IrcLine(Utils.fromUtf8(ev.line.getData()));
+		IrcLine msg = new IrcLine(ev.line.getString());
 		switch (msg.command.toUpperCase()) {
 			
 			case "NICK": {

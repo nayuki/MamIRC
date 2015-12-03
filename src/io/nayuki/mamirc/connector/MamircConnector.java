@@ -226,8 +226,8 @@ public final class MamircConnector {
 			try {
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				bout.write(Utils.toUtf8(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal())));
-				bout.write(line.getData());
-				processorWriter.postWrite(new CleanLine(bout.toByteArray()));
+				bout.write(line.getDataNoCopy());
+				processorWriter.postWrite(new CleanLine(bout.toByteArray(), false));
 			} catch (IOException e) {
 				throw new AssertionError(e);
 			}
@@ -239,7 +239,7 @@ public final class MamircConnector {
 	// Must only be called from receiveMessage(). Safely ignores illegal syntax lines instead of throwing an exception.
 	private void handlePotentialPing(int conId, CleanLine line) {
 		// Skip prefix, if any
-		byte[] b = line.getData();
+		byte[] b = line.getDataNoCopy();
 		int i = 0;
 		if (b.length >= 1 && b[i] == ':') {
 			i++;
@@ -255,7 +255,7 @@ public final class MamircConnector {
 			// Create reply by dropping prefix, changing PING to PONG, and copying parameters
 			byte[] reply = Arrays.copyOfRange(b, i, b.length);
 			reply[1] += 6;
-			sendMessage(conId, new CleanLine(reply), processorReader);
+			sendMessage(conId, new CleanLine(reply, false), processorReader);
 		}
 	}
 	

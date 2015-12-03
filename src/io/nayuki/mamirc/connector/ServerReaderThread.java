@@ -75,7 +75,7 @@ final class ServerReaderThread extends Thread {
 				for (byte b : line)
 					valid &= b != '\0';
 				if (valid)
-					master.receiveMessage(connectionId, new CleanLine(line));
+					master.receiveMessage(connectionId, new CleanLine(line, false));
 			}
 			
 		// Clean up

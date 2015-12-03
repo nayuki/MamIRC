@@ -193,7 +193,7 @@ final class DatabaseLoggerThread extends Thread {
 		insertEvent.bind(2, ev.sequence);
 		insertEvent.bind(3, ev.timestamp);
 		insertEvent.bind(4, ev.type.ordinal());
-		insertEvent.bind(5, ev.line.getData());
+		insertEvent.bind(5, ev.line.getDataNoCopy());
 		Utils.stepStatement(insertEvent, false);
 		insertEvent.reset();
 	}

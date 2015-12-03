@@ -41,7 +41,7 @@ public final class Event {
 	
 	public String toString() {
 		return String.format("Event(conId=%d, seq=%d, time=%d, type=%s, line=%s)",
-			connectionId, sequence, timestamp, type.toString(), Utils.fromUtf8(line.getData()));
+			connectionId, sequence, timestamp, type.toString(), line.getString());
 	}
 	
 	

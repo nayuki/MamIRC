@@ -80,7 +80,7 @@ final class ConnectorReaderThread extends Thread {
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		master.attachConnectorWriter(writer);
 		writer.start();
-		writer.postWrite(new CleanLine(configuration.getConnectorPassword()));
+		writer.postWrite(new CleanLine(configuration.getConnectorPassword(), false));
 		
 		LineReader reader = new LineReader(socket.getInputStream());
 		String line = readStringLine(reader);
@@ -108,7 +108,7 @@ final class ConnectorReaderThread extends Thread {
 			query.bind(1, conId);
 			query.bind(2, nextSeq);
 			while (query.step()) {
-				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), new CleanLine(query.columnBlob(3)));
+				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), new CleanLine(query.columnBlob(3), false));
 				master.processEvent(ev, false);  // Non-real-time
 			}
 			query.reset();

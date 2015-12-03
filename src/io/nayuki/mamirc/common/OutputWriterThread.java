@@ -39,7 +39,7 @@ public final class OutputWriterThread extends Thread {
 					break;
 				
 				// Ugly logic for merely: output.write(line + newline)
-				byte[] b = line.getData();
+				byte[] b = line.getDataNoCopy();
 				int totalLen = b.length + newline.length;
 				if (totalLen > buf.length)
 					buf = new byte[totalLen];
