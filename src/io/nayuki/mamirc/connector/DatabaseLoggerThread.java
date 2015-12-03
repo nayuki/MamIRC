@@ -144,11 +144,9 @@ final class DatabaseLoggerThread extends Thread {
 		} else if (flushRequested) {
 			// Drain the queue straightforwardly
 			Utils.stepStatement(beginTransaction, false);
-			beginTransaction.reset();
 			while (!queue.isEmpty())
 				insertEventIntoDb(queue.remove());
 			Utils.stepStatement(commitTransaction, false);
-			commitTransaction.reset();
 			flushRequested = false;
 			condFlushed.signal();
 			return !terminateRequested;
@@ -171,11 +169,9 @@ final class DatabaseLoggerThread extends Thread {
 			lock.unlock();
 			try {
 				Utils.stepStatement(beginTransaction, false);
-				beginTransaction.reset();
 				for (Event ev : events)
 					insertEventIntoDb(ev);
 				Utils.stepStatement(commitTransaction, false);
-				commitTransaction.reset();
 			} finally {
 				lock.lock();
 			}
@@ -195,7 +191,6 @@ final class DatabaseLoggerThread extends Thread {
 		insertEvent.bind(4, ev.type.ordinal());
 		insertEvent.bind(5, ev.line.getDataNoCopy());
 		Utils.stepStatement(insertEvent, false);
-		insertEvent.reset();
 	}
 	
 	
