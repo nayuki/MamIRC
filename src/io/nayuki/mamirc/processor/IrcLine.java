@@ -7,21 +7,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-// Represents a line received from IRC server or sent from IRC client. Immutable data structure.
-// A raw IRC line can look like these examples (with no leading spaces):
-//   :server.example.com 001 UserNickname :Welcome to IRC!
-//   JOIN #channel
-//   :Oldname NICK Newname
-//   :nickname!username@hostname PRIVMSG #channel :Hello!
-//   :optionalPrefix COMMAND noSpaceParam anotherparam :Trailing parameter with spaces allowed
+/*
+ * Represents a line received from IRC server or sent from IRC client. Immutable data structure.
+ * A raw IRC line can look like these examples (with no leading spaces):
+ *   :server.example.com 001 UserNickname :Welcome to IRC!
+ *   JOIN #channel
+ *   :Oldname NICK Newname
+ *   :nickname!username@hostname PRIVMSG #channel :Hello!
+ *   :optionalPrefix COMMAND noSpaceParam anotherparam :Trailing parameter with spaces allowed
+ */
 final class IrcLine {
 	
 	/*---- Fields ----*/
 	
-	public final String prefixName;      // Can be null
-	public final String prefixHostname;  // Can be null, but would require prefixName to be null
-	public final String prefixUsername;  // Can be null, but would require prefixHostname to be null
-	public final String command;  // Not null
+	public final String prefixName;        // Can be null
+	public final String prefixHostname;    // Can be null, but would require prefixName to be null
+	public final String prefixUsername;    // Can be null, but would require prefixHostname to be null
+	public final String command;           // Not null
 	public final List<String> parameters;  // Not null; immutable, length at least 0, elements not null.
 	
 	
@@ -87,6 +89,9 @@ final class IrcLine {
 	
 	/*---- Methods ----*/
 	
+	// Returns the parameter at the given index if possible. Throws IrcSyntaxException if the index is greater than or
+	// equal to the highest available parameter index (which means a parameter at the index was expected but not present),
+	// or throws IndexOutOfBoundsException if index < 0 (which is always a programming error),
 	public String getParameter(int index) {
 		if (index < 0)
 			throw new IndexOutOfBoundsException();

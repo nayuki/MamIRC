@@ -15,6 +15,14 @@ import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
 
 
+/* 
+ * A worker thread that reads event lines from a socket connection to the MamIRC connector.
+ * Additional functionality:
+ * - Authenticates with the connector
+ * - Parses the list of current active connections
+ * - Reads database to catch up on all past events in the active connections
+ * - Creates and terminates a writer thread for the socket
+ */
 final class ConnectorReaderThread extends Thread {
 	
 	/*---- Fields ----*/
@@ -56,13 +64,11 @@ final class ConnectorReaderThread extends Thread {
 					new CleanLine(parts[4]));
 				master.processEvent(ev, true);
 			}
-		
-		// Clean up
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (SQLiteException e) {
 			e.printStackTrace();
-		} finally {
+		} finally {  // Clean up
 			if (writer != null)
 				writer.terminate();
 			if (socket != null) {
@@ -76,12 +82,14 @@ final class ConnectorReaderThread extends Thread {
 	
 	
 	private LineReader init() throws IOException, SQLiteException {
+		// Connect and authenticate
 		socket = new Socket("localhost", configuration.serverPort);
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		master.attachConnectorWriter(writer);
 		writer.start();
 		writer.postWrite(new CleanLine(configuration.getConnectorPassword(), false));
 		
+		// Read first line
 		LineReader reader = new LineReader(socket.getInputStream());
 		String line = readStringLine(reader);
 		if (line == null)
@@ -99,7 +107,7 @@ final class ConnectorReaderThread extends Thread {
 			connectionSequences.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
 		}
 		
-		// Read archived events from database and process
+		// Read archived events from database and process them
 		SQLiteConnection database = new SQLiteConnection(configuration.databaseFile);
 		database.open(false);
 		SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
@@ -121,6 +129,7 @@ final class ConnectorReaderThread extends Thread {
 	}
 	
 	
+	// Returns the next line from the given reader decoded as UTF-8, or null if the end of stream is reached.
 	private static String readStringLine(LineReader reader) throws IOException {
 		byte[] line = reader.readLine();
 		if (line == LineReader.BLANK_EOF || line == null)

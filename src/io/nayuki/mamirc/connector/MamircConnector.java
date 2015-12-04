@@ -17,6 +17,11 @@ import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
 
 
+/* 
+ * The MamIRC connector main program class. The main thread creates a new MamircConnector object, launches a handful
+ * of worker threads, and returns. Thereafter, the MamircConnector object holds the global state of the application,
+ * always accessed with a mutex ('synchronized') from any one of the worker threads.
+ */
 public final class MamircConnector {
 	
 	/*---- Stub main program ----*/
@@ -41,7 +46,7 @@ public final class MamircConnector {
 	
 	/*---- Fields ----*/
 	
-	// All of these fields are global state. Any read/write access
+	// All of these fields are shared global state. Any read/write access
 	// must be done while synchronized on this MamircConnector object!
 	
 	// Connections to remote IRC servers
@@ -60,7 +65,8 @@ public final class MamircConnector {
 	
 	/*---- Constructor ----*/
 	
-	// This launches a bunch of threads and returns immediately.
+	// This constructor launches a bunch of worker threads and returns immediately.
+	// If initialization failed, the new threads are terminated and an exception is thrown.
 	public MamircConnector(ConnectorConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
@@ -69,7 +75,7 @@ public final class MamircConnector {
 		
 		// Initialize database logger and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.databaseFile);
-		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
+		nextConnectionId = databaseLogger.initAndGetNextConnectionId();  // Execute on current thread, not new thread
 		System.err.println("Database opened");
 		
 		// Listen for an incoming processor
@@ -94,7 +100,7 @@ public final class MamircConnector {
 		processorReader = reader;
 		processorWriter = writer;
 		
-		// Dump current connection info to processor
+		// Dump current connection IDs and sequences to processor
 		databaseLogger.flushQueue();
 		processorWriter.postWrite("active-connections");
 		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())
@@ -103,7 +109,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread. Caller is responsible for closing its socket.
+	// Should only be called from ProcessorReaderThread. Caller is responsible for its own termination.
 	public synchronized void detachProcessor(ProcessorReaderThread reader) {
 		if (reader == processorReader) {
 			processorReader = null;
@@ -112,7 +118,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread. Metadata must not contain '\0', '\r', or '\n'.
+	// Should only be called from ProcessorReaderThread. Hostname and metadata must not contain '\0', '\r', or '\n'.
 	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -171,7 +177,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread and handlePotentialPing().
+	// Should only be called from ProcessorReaderThread or receiveMessage().
 	public synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -216,6 +222,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Logs the event to the database, and relays another copy to the currently attached processor.
 	// Must only be called from one of the synchronized methods above.
 	private void postEvent(ConnectionInfo info, Event.Type type, CleanLine line) {
 		Event ev = new Event(info.connectionId, info.nextSequence(), type, line);
@@ -263,10 +270,10 @@ public final class MamircConnector {
 	
 	private static final class ConnectionInfo {
 		
-		public final int connectionId;
-		public int nextSequence;
-		public ServerReaderThread reader;
-		public OutputWriterThread writer;
+		public final int connectionId;     // Non-negative
+		public int nextSequence;           // Non-negative
+		public ServerReaderThread reader;  // Initially null, but non-null after connectionOpened() is called
+		public OutputWriterThread writer;  // Initially null, but non-null after connectionOpened() is called
 		
 		
 		public ConnectionInfo(int conId) {

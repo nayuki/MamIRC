@@ -23,6 +23,11 @@ import io.nayuki.mamirc.processor.IrcSession.RegState;
 import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 
 
+/* 
+ * The MamIRC processor main program class. The main thread creates a new MamircProcessor object, launches a handful
+ * of worker threads, and returns. Thereafter, the MamircProcessor object holds the global state of the application,
+ * always accessed with a mutex ('synchronized') from any one of the worker threads.
+ */
 public final class MamircProcessor {
 	
 	/*---- Stub main program ----*/
