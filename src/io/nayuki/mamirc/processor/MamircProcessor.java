@@ -295,6 +295,7 @@ public final class MamircProcessor {
 				break;
 			}
 			
+			case "432": // ERR_ERRONEUSNICKNAME
 			case "433": {  // ERR_NICKNAMEINUSE
 				if (state.getRegistrationState() != RegState.REGISTERED) {
 					state.moveNicknameToRejected();
