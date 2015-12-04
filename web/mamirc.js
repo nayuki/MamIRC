@@ -13,6 +13,8 @@ const memberListElem          = elemId("member-list");
 const nicknameElem            = elemId("nickname");
 const showMoreMessagesElem    = elemId("show-more-messages");
 
+const messagesScrollbar = new GeminiScrollbar({element:elemId("messages")}).create();
+
 
 /* Main state */
 
@@ -311,6 +313,7 @@ function reflowMessagesTable() {
 		cols[0].style.width = widths[0] + "px";
 		cols[1].style.width = widths[1] + "px";
 	}
+	messagesScrollbar.update();
 }
 
 
