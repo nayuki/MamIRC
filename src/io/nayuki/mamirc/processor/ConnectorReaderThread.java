@@ -36,6 +36,9 @@ final class ConnectorReaderThread extends Thread {
 	/*---- Constructor ----*/
 	
 	public ConnectorReaderThread(MamircProcessor master, ConnectorConfiguration config) {
+		super("ConnectorReaderThread");
+		if (master == null || config == null)
+			throw new NullPointerException();
 		this.master = master;
 		configuration = config;
 		socket = null;
@@ -83,6 +86,8 @@ final class ConnectorReaderThread extends Thread {
 	
 	private LineReader init() throws IOException, SQLiteException {
 		// Connect and authenticate
+		if (socket != null)
+			throw new IllegalStateException();
 		socket = new Socket("localhost", configuration.serverPort);
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		master.attachConnectorWriter(writer);
@@ -94,10 +99,10 @@ final class ConnectorReaderThread extends Thread {
 		String line = readStringLine(reader);
 		if (line == null)
 			throw new RuntimeException("Authentication failure");
+		if (!line.equals("active-connections"))
+			throw new RuntimeException("Invalid data format");
 		
 		// Get set of current connections
-		if (!line.equals("active-connections"))
-			throw new RuntimeException("Invalid data received");
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		while (true) {
 			line = readStringLine(reader);
@@ -109,20 +114,22 @@ final class ConnectorReaderThread extends Thread {
 		
 		// Read archived events from database and process them
 		SQLiteConnection database = new SQLiteConnection(configuration.databaseFile);
-		database.open(false);
-		SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
-		for (int conId : connectionSequences.keySet()) {
-			int nextSeq = connectionSequences.get(conId);
-			query.bind(1, conId);
-			query.bind(2, nextSeq);
-			while (query.step()) {
-				Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), new CleanLine(query.columnBlob(3), false));
-				master.processEvent(ev, false);  // Non-real-time
+		try {
+			database.open(false);
+			SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");
+			for (int conId : connectionSequences.keySet()) {
+				int nextSeq = connectionSequences.get(conId);
+				query.bind(1, conId);
+				query.bind(2, nextSeq);
+				while (query.step()) {
+					Event ev = new Event(conId, query.columnInt(0), query.columnLong(1), Event.Type.fromOrdinal(query.columnInt(2)), new CleanLine(query.columnBlob(3), false));
+					master.processEvent(ev, false);  // Non-real-time
+				}
+				query.reset();
 			}
-			query.reset();
+		} finally {
+			database.dispose();  // Automatically disposes its associated statements
 		}
-		query.dispose();
-		database.dispose();
 		
 		master.finishCatchup();  // Fire off queued actions just before starting real-time processing
 		return reader;
