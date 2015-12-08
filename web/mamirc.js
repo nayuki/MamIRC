@@ -266,7 +266,7 @@ function setActiveWindow(name) {
 	curWindowMaxMessages = 300;
 	redrawMessagesTable();
 	var messagesElem = elemId("messages");
-	messagesElem.scrollTo(0, messagesElem.scrollHeight);
+	messagesElem.scrollTop = messagesElem.scrollHeight;
 	
 	// Tell the processor that this window was selected
 	if (setInitialWindowTimeout != null)
@@ -809,7 +809,7 @@ function loadUpdates(inData) {
 				j++;
 		}
 		reflowMessagesTable();
-		messagesElem.scrollTo(0, scrollToBottom ? messagesElem.scrollHeight : scrollPosition);
+		messagesElem.scrollTop = scrollToBottom ? messagesElem.scrollHeight : scrollPosition;
 	}
 }
 
