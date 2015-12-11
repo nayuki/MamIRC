@@ -692,7 +692,7 @@ function loadUpdates(inData) {
 				connectionData[payload[1]].channels[payload[2]].topic = null;
 			} else if (subtype == Flags.INITTOPIC) {
 				connectionData[payload[1]].channels[payload[2]].topic = line[3];
-			} else if (subtype == Flags.SERVERREPLY) {
+			} else if (subtype == Flags.NOTICE || subtype == Flags.SERVERREPLY) {
 				if (!windowData[windowName].isMuted) {
 					windowData[windowName].numNewMessages++;
 					redrawWindowList();
