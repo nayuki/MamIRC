@@ -58,23 +58,23 @@ final class Window {
 	
 	public enum Flags {
 		RESERVED(0),
-		DISCONNECTED(1),
-		INITTOPIC(2),
-		INITNOTOPIC(3),
-		JOIN(4),
-		KICK(5),
-		MODE(6),
-		NAMES(7),
-		NICK(8),
-		NOTICE(9),
-		PART(10),
-		PRIVMSG(11),
-		QUIT(12),
-		SERVERREPLY(13),
-		TOPIC(14),
-		TYPE_MASK((1 << 4) - 1),
-		OUTGOING(1 << 4),
-		NICKFLAG(1 << 5);
+		DISCONNECTED(3),
+		INITTOPIC(4),
+		INITNOTOPIC(5),
+		JOIN(6),
+		KICK(7),
+		MODE(8),
+		NAMES(9),
+		NICK(10),
+		NOTICE(11),
+		PART(12),
+		PRIVMSG(13),
+		QUIT(14),
+		SERVERREPLY(15),
+		TOPIC(16),
+		TYPE_MASK((1 << 5) - 1),
+		OUTGOING(1 << 5),
+		NICKFLAG(1 << 6);
 		
 		public final int value;
 		private Flags(int val) {
