@@ -13,6 +13,9 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import io.nayuki.mamirc.common.CleanLine;
@@ -26,7 +29,7 @@ import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
 /* 
  * The MamIRC processor main program class. The main thread creates a new MamircProcessor object, launches a handful
  * of worker threads, and returns. Thereafter, the MamircProcessor object holds the global state of the application,
- * always accessed with a mutex ('synchronized') from any one of the worker threads.
+ * always accessed from any one of the worker threads while the thread holds the lock.
  */
 public final class MamircProcessor {
 	
@@ -67,6 +70,10 @@ public final class MamircProcessor {
 	private int nextUpdateId;
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	
+	// Concurrency
+	final Lock lock;
+	final Condition condNewUpdates;
+	
 	
 	
 	/*---- Constructor ----*/
@@ -83,6 +90,8 @@ public final class MamircProcessor {
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
 		connectionAttemptState = new HashMap<>();
+		lock = new ReentrantLock();
+		condNewUpdates = lock.newCondition();
 		
 		writer = null;
 		reader = new ConnectorReaderThread(this, conConfig);
@@ -98,12 +107,15 @@ public final class MamircProcessor {
 		namesRefresher = new Timer();
 		namesRefresher.schedule(new TimerTask() {
 			public void run() {
-				synchronized (MamircProcessor.this) {
+				lock.lock();
+				try {
 					for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
 						int conId = entry.getKey();
 						for (String chan : entry.getValue().getCurrentChannels().keySet())
 							sendIrcLine(conId, "NAMES", chan);
 					}
+				} finally {
+					lock.unlock();
 				}
 			}
 		}, 86400000, 86400000);
@@ -113,9 +125,10 @@ public final class MamircProcessor {
 	
 	/*---- Methods for manipulating global state ----*/
 	
-	public synchronized void processEvent(Event ev, boolean realtime) {
+	public void processEvent(Event ev, boolean realtime) {
 		if (ev == null)
 			throw new NullPointerException();
+		lock.lock();
 		try {
 			switch (ev.type) {
 				case CONNECTION:
@@ -132,6 +145,8 @@ public final class MamircProcessor {
 			}
 		} catch (IrcSyntaxException e) {
 			e.printStackTrace();
+		} finally {
+			lock.unlock();
 		}
 	}
 	
@@ -475,64 +490,69 @@ public final class MamircProcessor {
 	
 	
 	// Must only be called from ConnectorReaderThread, and only called once.
-	public synchronized void finishCatchup() {
-		Set<IrcNetwork> activeProfiles = new HashSet<>();
-		for (int conId : ircSessions.keySet()) {
-			IrcSession state = ircSessions.get(conId);
-			IrcNetwork profile = state.profile;
-			if (!activeProfiles.add(profile))
-				throw new IllegalStateException("Multiple active connections for profile: " + profile.name);
-			switch (state.getRegistrationState()) {
-				case CONNECTING:
-					break;
-				
-				case OPENED: {
-					sendIrcLine(conId, "NICK", profile.nicknames.get(0));
-					break;
-				}
-				
-				case NICK_SENT:
-				case USER_SENT: {
-					if (state.getCurrentNickname() == null) {
-						boolean found = false;
-						for (String nickname : profile.nicknames) {
-							if (!state.isNicknameRejected(nickname)) {
-								sendIrcLine(conId, "NICK", nickname);
-								found = true;
-								break;
-							}
-						}
-						if (!found)
-							writer.postWrite("disconnect " + conId);
-					} else if (state.getRegistrationState() == RegState.NICK_SENT)
-						sendIrcLine(conId, "USER", profile.username, "0", "*", profile.realname);
-					break;
-				}
-				
-				case REGISTERED: {
-					if (profile.nickservPassword != null && !state.getSentNickservPassword())
-						sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
-					for (String chan : profile.channels) {
-						if (!state.getCurrentChannels().containsKey(chan))
-							sendIrcLine(conId, "JOIN", chan);
+	public void finishCatchup() {
+		lock.lock();
+		try {
+			Set<IrcNetwork> activeProfiles = new HashSet<>();
+			for (int conId : ircSessions.keySet()) {
+				IrcSession state = ircSessions.get(conId);
+				IrcNetwork profile = state.profile;
+				if (!activeProfiles.add(profile))
+					throw new IllegalStateException("Multiple active connections for profile: " + profile.name);
+				switch (state.getRegistrationState()) {
+					case CONNECTING:
+						break;
+						
+					case OPENED: {
+						sendIrcLine(conId, "NICK", profile.nicknames.get(0));
+						break;
 					}
-					break;
+					
+					case NICK_SENT:
+					case USER_SENT: {
+						if (state.getCurrentNickname() == null) {
+							boolean found = false;
+							for (String nickname : profile.nicknames) {
+								if (!state.isNicknameRejected(nickname)) {
+									sendIrcLine(conId, "NICK", nickname);
+									found = true;
+									break;
+								}
+							}
+							if (!found)
+								writer.postWrite("disconnect " + conId);
+						} else if (state.getRegistrationState() == RegState.NICK_SENT)
+							sendIrcLine(conId, "USER", profile.username, "0", "*", profile.realname);
+						break;
+					}
+					
+					case REGISTERED: {
+						if (profile.nickservPassword != null && !state.getSentNickservPassword())
+							sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
+						for (String chan : profile.channels) {
+							if (!state.getCurrentChannels().containsKey(chan))
+								sendIrcLine(conId, "JOIN", chan);
+						}
+						break;
+					}
+					
+					default:
+						throw new AssertionError();
 				}
-				
-				default:
-					throw new AssertionError();
 			}
-		}
-		
-		// Connect to networks
-		for (IrcNetwork net : myConfiguration.ircNetworks.values()) {
-			if (!activeProfiles.contains(net))
-				tryConnect(net);
+			
+			// Connect to networks
+			for (IrcNetwork net : myConfiguration.ircNetworks.values()) {
+				if (!activeProfiles.contains(net))
+					tryConnect(net);
+			}
+		} finally {
+			lock.unlock();
 		}
 	}
 	
 	
-	// Must be called from one of the synchronized methods above.
+	// Must be called from one of the locking methods above.
 	private void tryConnect(final IrcNetwork net) {
 		final int delay;
 		if (!connectionAttemptState.containsKey(net)) {
@@ -547,7 +567,8 @@ public final class MamircProcessor {
 					Thread.sleep(delay);
 				} catch (InterruptedException e) {}
 				
-				synchronized(MamircProcessor.this) {
+				lock.lock();
+				try {
 					for (IrcSession state : ircSessions.values()) {
 						if (state.profile == net)
 							break;
@@ -566,13 +587,15 @@ public final class MamircProcessor {
 						if (attemptState[1] == 1000)
 							attemptState[1] *= 2;
 					}
+				} finally {
+					lock.unlock();
 				}
 			}
 		}.start();
 	}
 	
 	
-	// Must be called from one of the synchronized methods.
+	// Must be called from one of the locking methods.
 	private void sendIrcLine(int conId, String cmd, String... params) {
 		StringBuilder sb = new StringBuilder("send ").append(conId).append(' ').append(cmd);
 		for (int i = 0; i < params.length; i++) {
@@ -586,22 +609,32 @@ public final class MamircProcessor {
 	
 	
 	// Must only be called from ConnectorReaderThread, and only called once.
-	public synchronized void attachConnectorWriter(OutputWriterThread writer) {
-		if (this.writer != null)
-			throw new IllegalStateException();
-		this.writer = writer;
+	public void attachConnectorWriter(OutputWriterThread writer) {
+		lock.lock();
+		try {
+			if (this.writer != null)
+				throw new IllegalStateException();
+			this.writer = writer;
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized void terminate() {
-		if (server != null)
-			server.terminate();
-		if (namesRefresher != null)
-			namesRefresher.cancel();
+	public void terminate() {
+		lock.lock();
+		try {
+			if (server != null)
+				server.terminate();
+			if (namesRefresher != null)
+				namesRefresher.cancel();
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	// Must be called from one of the synchronized methods.
+	// Must be called from one of the locking methods.
 	private void addUpdate(Object... update) {
 		if (update == null)
 			throw new NullPointerException();
@@ -615,13 +648,13 @@ public final class MamircProcessor {
 			recentUpdates.subList(0, recentUpdates.size() / 2).clear();
 		
 		// Unblock any currently waiting server threads
-		this.notifyAll();
+		condNewUpdates.signalAll();
 	}
 	
 	
 	/*---- Window line adding methods ----*/
 	
-	// Must be called in a synchronized context. Should only be called by the stub methods below, not directly by any methods above.
+	// Must be called in a locked context. Should only be called by the stub methods below, not directly by any methods above.
 	private void addWindowLine(String profile, String target, int flags, long timestamp, Object... payload) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
@@ -655,7 +688,7 @@ public final class MamircProcessor {
 	}
 	
 	
-	// All of these addXxxLine methods must only be called from a synchronized method above.
+	// All of these addXxxLine methods must only be called from a locking method above.
 	
 	private void addConnectingLine(String profile, long timestamp, String hostname, int port, boolean ssl) {
 		addWindowLine(profile, "", Window.Flags.CONNECTING.value, timestamp, hostname, port, ssl);
@@ -726,150 +759,195 @@ public final class MamircProcessor {
 	
 	// The methods below should only be called from MessageHttpServer.
 	
-	public synchronized Map<String,Object> getState(int maxMsgPerWin) {
-		Map<String,Object> result = new HashMap<>();
-		
-		// States of current connections
-		Map<String,Map<String,Object>> outConnections = new HashMap<>();
-		for (Map.Entry<Integer,IrcSession> conEntry : ircSessions.entrySet()) {
-			IrcSession inConState = conEntry.getValue();
-			Map<String,Object> outConState = new HashMap<>();
-			outConState.put("currentNickname", inConState.getCurrentNickname());
+	public Map<String,Object> getState(int maxMsgPerWin) {
+		lock.lock();
+		try {
+			Map<String,Object> result = new HashMap<>();
 			
-			Map<String,IrcSession.ChannelState> inChannels = inConState.getCurrentChannels();
-			Map<String,Map<String,Object>> outChannels = new HashMap<>();
-			for (Map.Entry<String,IrcSession.ChannelState> chanEntry : inChannels.entrySet()) {
-				Map<String,Object> outChanState = new HashMap<>();
-				outChanState.put("members", new ArrayList<>(chanEntry.getValue().members));
-				outChanState.put("topic", chanEntry.getValue().topic);
-				outChannels.put(chanEntry.getKey(), outChanState);
-			}
-			outConState.put("channels", outChannels);
-			
-			outConnections.put(inConState.profile.name, outConState);
-		}
-		result.put("connections", outConnections);
-		
-		// States of current windows
-		List<List<Object>> outWindows = new ArrayList<>();
-		for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
-			for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
-				List<Object> outWindow = new ArrayList<>();
-				outWindow.add(profileEntry.getKey());
-				outWindow.add(targetEntry.getKey());
+			// States of current connections
+			Map<String,Map<String,Object>> outConnections = new HashMap<>();
+			for (Map.Entry<Integer,IrcSession> conEntry : ircSessions.entrySet()) {
+				IrcSession inConState = conEntry.getValue();
+				Map<String,Object> outConState = new HashMap<>();
+				outConState.put("currentNickname", inConState.getCurrentNickname());
 				
-				Window inWindow = targetEntry.getValue();
-				List<List<Object>> outLines = new ArrayList<>();
-				long prevTimestamp = 0;
-				List<Window.Line> inLines = inWindow.lines;
-				inLines = inLines.subList(Math.max(inLines.size() - maxMsgPerWin, 0), inLines.size());
-				for (Window.Line line : inLines) {
-					List<Object> lst = new ArrayList<>();
-					lst.add(line.sequence);
-					lst.add(line.flags);
-					lst.add(line.timestamp - prevTimestamp);  // Delta encoding
-					prevTimestamp = line.timestamp;
-					Collections.addAll(lst, line.payload);
-					outLines.add(lst);
+				Map<String,IrcSession.ChannelState> inChannels = inConState.getCurrentChannels();
+				Map<String,Map<String,Object>> outChannels = new HashMap<>();
+				for (Map.Entry<String,IrcSession.ChannelState> chanEntry : inChannels.entrySet()) {
+					Map<String,Object> outChanState = new HashMap<>();
+					outChanState.put("members", new ArrayList<>(chanEntry.getValue().members));
+					outChanState.put("topic", chanEntry.getValue().topic);
+					outChannels.put(chanEntry.getKey(), outChanState);
 				}
+				outConState.put("channels", outChannels);
 				
-				Map<String,Object> outWinState = new HashMap<>();
-				outWinState.put("lines", outLines);
-				outWinState.put("markedReadUntil", inWindow.markedReadUntil);
-				outWindow.add(outWinState);
-				outWindows.add(outWindow);
+				outConnections.put(inConState.profile.name, outConState);
 			}
+			result.put("connections", outConnections);
+			
+			// States of current windows
+			List<List<Object>> outWindows = new ArrayList<>();
+			for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
+				for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
+					List<Object> outWindow = new ArrayList<>();
+					outWindow.add(profileEntry.getKey());
+					outWindow.add(targetEntry.getKey());
+					
+					Window inWindow = targetEntry.getValue();
+					List<List<Object>> outLines = new ArrayList<>();
+					long prevTimestamp = 0;
+					List<Window.Line> inLines = inWindow.lines;
+					inLines = inLines.subList(Math.max(inLines.size() - maxMsgPerWin, 0), inLines.size());
+					for (Window.Line line : inLines) {
+						List<Object> lst = new ArrayList<>();
+						lst.add(line.sequence);
+						lst.add(line.flags);
+						lst.add(line.timestamp - prevTimestamp);  // Delta encoding
+						prevTimestamp = line.timestamp;
+						Collections.addAll(lst, line.payload);
+						outLines.add(lst);
+					}
+					
+					Map<String,Object> outWinState = new HashMap<>();
+					outWinState.put("lines", outLines);
+					outWinState.put("markedReadUntil", inWindow.markedReadUntil);
+					outWindow.add(outWinState);
+					outWindows.add(outWindow);
+				}
+			}
+			result.put("windows", outWindows);
+			
+			// Miscellaneous
+			result.put("nextUpdateId", nextUpdateId);
+			Map<String,Integer> flagConst = new HashMap<>();
+			for (Window.Flags flag : Window.Flags.values())
+				flagConst.put(flag.name(), flag.value);
+			result.put("flagsConstants", flagConst);
+			result.put("initialWindow", initialWindow);
+			return result;
+		} finally {
+			lock.unlock();
 		}
-		result.put("windows", outWindows);
-		
-		// Miscellaneous
-		result.put("nextUpdateId", nextUpdateId);
-		Map<String,Integer> flagConst = new HashMap<>();
-		for (Window.Flags flag : Window.Flags.values())
-			flagConst.put(flag.name(), flag.value);
-		result.put("flagsConstants", flagConst);
-		result.put("initialWindow", initialWindow);
-		return result;
 	}
 	
 	
 	// Returns a JSON object containing updates with id >= startId (the list might be empty),
 	// or null to indicate that the request is invalid and the client must request the full state.
 	@SuppressWarnings("unchecked")
-	public synchronized Map<String,Object> getUpdates(int startId) {
-		if (startId < 0 || startId > nextUpdateId)
-			return null;
-		
-		int i = recentUpdates.size();
-		while (i >= 1 && (Integer)recentUpdates.get(i - 1)[0] >= startId)
-			i--;
-		
-		if (i == 0)
-			return null;  // No overlap
-		else {
-			Map<String,Object> result = new HashMap<>();
-			List<List<Object>> updates = new ArrayList<>();
-			while (i < recentUpdates.size()) {
-				updates.add((List<Object>)recentUpdates.get(i)[1]);
-				i++;
+	public Map<String,Object> getUpdates(int startId) {
+		lock.lock();
+		try {
+			if (startId < 0 || startId > nextUpdateId)
+				return null;
+			
+			int i = recentUpdates.size();
+			while (i >= 1 && (Integer)recentUpdates.get(i - 1)[0] >= startId)
+				i--;
+			
+			if (i == 0)
+				return null;  // No overlap
+			else {
+				Map<String,Object> result = new HashMap<>();
+				List<List<Object>> updates = new ArrayList<>();
+				while (i < recentUpdates.size()) {
+					updates.add((List<Object>)recentUpdates.get(i)[1]);
+					i++;
+				}
+				result.put("updates", updates);
+				result.put("nextUpdateId", nextUpdateId);
+				return result;
 			}
-			result.put("updates", updates);
-			result.put("nextUpdateId", nextUpdateId);
-			return result;
+		} finally {
+			lock.unlock();
 		}
 	}
 	
 	
-	public synchronized boolean sendLine(String profile, String line) {
-		for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
-			if (entry.getValue().profile.name.equals(profile)) {
-				writer.postWrite("send " + entry.getKey() + " " + line);
-				return true;
+	public boolean sendLine(String profile, String line) {
+		lock.lock();
+		try {
+			for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
+				if (entry.getValue().profile.name.equals(profile)) {
+					writer.postWrite("send " + entry.getKey() + " " + line);
+					return true;
+				}
 			}
+			return false;
+		} finally {
+			lock.unlock();
 		}
-		return false;
 	}
 	
 	
-	public synchronized void markRead(String profile, String party, int sequence) {
-		windows.get(profile).get(party).markedReadUntil = sequence;
-		addUpdate("MARKREAD", profile, party, sequence);
+	public void markRead(String profile, String party, int sequence) {
+		lock.lock();
+		try {
+			windows.get(profile).get(party).markedReadUntil = sequence;
+			addUpdate("MARKREAD", profile, party, sequence);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized void clearLines(String profile, String party, int sequence) {
-		windows.get(profile).get(party).clearUntil(sequence);
-		addUpdate("CLEARLINES", profile, party, sequence);
+	public void clearLines(String profile, String party, int sequence) {
+		lock.lock();
+		try {
+			windows.get(profile).get(party).clearUntil(sequence);
+			addUpdate("CLEARLINES", profile, party, sequence);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized void openWindow(String profile, String party) {
-		String lower = profile + "\n" + party.toLowerCase();
-		if (windowCaseMap.containsKey(lower))
-			return;
-		if (!windows.containsKey(profile))
-			windows.put(profile, new TreeMap<String,Window>());
-		Map<String,Window> inner = windows.get(profile);
-		inner.put(party, new Window());
-		windowCaseMap.put(lower, profile + "\n" + party);
-		addUpdate("OPENWIN", profile, party);
+	public void openWindow(String profile, String party) {
+		lock.lock();
+		try {
+			String lower = profile + "\n" + party.toLowerCase();
+			if (windowCaseMap.containsKey(lower))
+				return;
+			if (!windows.containsKey(profile))
+				windows.put(profile, new TreeMap<String,Window>());
+			Map<String,Window> inner = windows.get(profile);
+			inner.put(party, new Window());
+			windowCaseMap.put(lower, profile + "\n" + party);
+			addUpdate("OPENWIN", profile, party);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized void closeWindow(String profile, String party) {
-		Map<String,Window> inner = windows.get(profile);
-		if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
-			addUpdate("CLOSEWIN", profile, party);
+	public void closeWindow(String profile, String party) {
+		lock.lock();
+		try {
+			Map<String,Window> inner = windows.get(profile);
+			if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
+				addUpdate("CLOSEWIN", profile, party);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized void setInitialWindow(String profile, String party) {
-		initialWindow = Arrays.asList(profile, party);
+	public void setInitialWindow(String profile, String party) {
+		lock.lock();
+		try {
+			initialWindow = Arrays.asList(profile, party);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	public synchronized int getNextUpdateId() {
-		return nextUpdateId;
+	public int getNextUpdateId() {
+		lock.lock();
+		try {
+			return nextUpdateId;
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
