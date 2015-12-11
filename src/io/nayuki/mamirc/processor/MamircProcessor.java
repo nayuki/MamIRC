@@ -70,10 +70,12 @@ public final class MamircProcessor {
 	private final List<Object[]> recentUpdates;  // Payload is {int id, List<Object> update}
 	private int nextUpdateId;
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
+	private boolean isTerminating;
 	
 	// Concurrency
 	private final Lock lock;
 	private final Condition condNewUpdates;
+	private final Condition condTerminate;
 	
 	
 	
@@ -91,8 +93,10 @@ public final class MamircProcessor {
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
 		connectionAttemptState = new HashMap<>();
+		isTerminating = false;
 		lock = new ReentrantLock();
 		condNewUpdates = lock.newCondition();
+		condTerminate = lock.newCondition();
 		
 		writer = null;
 		reader = new ConnectorReaderThread(this, conConfig);
@@ -564,12 +568,13 @@ public final class MamircProcessor {
 		
 		new Thread() {
 			public void run() {
-				try {
-					Thread.sleep(delay);
-				} catch (InterruptedException e) {}
-				
 				lock.lock();
 				try {
+					// Sleep for the full amount of time unless terminating
+					condTerminate.await(delay, TimeUnit.MILLISECONDS);
+					if (isTerminating)
+						return;
+					
 					for (IrcSession state : ircSessions.values()) {
 						if (state.profile == net)
 							break;
@@ -588,7 +593,8 @@ public final class MamircProcessor {
 						if (attemptState[1] == 1000)
 							attemptState[1] *= 2;
 					}
-				} finally {
+				} catch (InterruptedException e) {}
+				finally {
 					lock.unlock();
 				}
 			}
@@ -629,6 +635,9 @@ public final class MamircProcessor {
 				server.terminate();
 			if (namesRefresher != null)
 				namesRefresher.cancel();
+			isTerminating = true;
+			condTerminate.signalAll();
+			condNewUpdates.signalAll();
 		} finally {
 			lock.unlock();
 		}
