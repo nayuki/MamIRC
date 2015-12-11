@@ -17,7 +17,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.DeflaterOutputStream;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -164,19 +163,8 @@ final class MessageHttpServer {
 						int startId = Json.getInt(reqData, "nextUpdateId");
 						int maxWait = Json.getInt(reqData, "maxWait");
 						maxWait = Math.max(Math.min(maxWait, 300000), 1);
-						master.lock.lock();
-						try {
-							Map<String,Object> data = master.getUpdates(startId);
-							if (data != null && Json.getList(data, "updates").size() == 0) {
-								try {
-									master.condNewUpdates.await(maxWait, TimeUnit.MILLISECONDS);
-								} catch (InterruptedException e) {}
-								data = master.getUpdates(startId);
-							}
-							writeJsonResponse(data, he);
-						} finally {
-							master.lock.unlock();
-						}
+						Map<String,Object> data = master.getUpdates(startId, maxWait);
+						writeJsonResponse(data, he);
 						break;
 					}
 					

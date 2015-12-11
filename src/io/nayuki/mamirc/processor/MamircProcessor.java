@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -71,8 +72,8 @@ public final class MamircProcessor {
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	
 	// Concurrency
-	final Lock lock;
-	final Condition condNewUpdates;
+	private final Lock lock;
+	private final Condition condNewUpdates;
 	
 	
 	
@@ -834,7 +835,9 @@ public final class MamircProcessor {
 	// Returns a JSON object containing updates with id >= startId (the list might be empty),
 	// or null to indicate that the request is invalid and the client must request the full state.
 	@SuppressWarnings("unchecked")
-	public Map<String,Object> getUpdates(int startId) {
+		public Map<String,Object> getUpdates(int startId, int maxWait) {
+		if (maxWait < 0)
+			throw new IllegalArgumentException();
 		lock.lock();
 		try {
 			if (startId < 0 || startId > nextUpdateId)
@@ -846,7 +849,12 @@ public final class MamircProcessor {
 			
 			if (i == 0)
 				return null;  // No overlap
-			else {
+			else if (i == recentUpdates.size() && maxWait > 0) {  // Result currently empty, wait for more
+				try {
+					condNewUpdates.await(maxWait, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {}
+				return getUpdates(startId, 0);
+			} else {
 				Map<String,Object> result = new HashMap<>();
 				List<List<Object>> updates = new ArrayList<>();
 				while (i < recentUpdates.size()) {
