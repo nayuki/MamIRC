@@ -619,7 +619,7 @@ public final class MamircProcessor {
 	/*---- Window line adding methods ----*/
 	
 	// Must be called in a synchronized context. Should only be called by the stub methods below, not directly by any methods above.
-	private void addWindowLine(String profile, String target, int flags, long timestamp, String... payload) {
+	private void addWindowLine(String profile, String target, int flags, long timestamp, Object... payload) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
 		Map<String,Window> innerMap = windows.get(profile);
@@ -679,7 +679,7 @@ public final class MamircProcessor {
 	}
 	
 	private void addNamesLine(String profile, String target, long timestamp, String[] names) {
-		addWindowLine(profile, target, Window.Flags.NAMES.value, timestamp, names);
+		addWindowLine(profile, target, Window.Flags.NAMES.value, timestamp, (Object[])names);
 	}
 	
 	private void addNickLine(String profile, String target, long timestamp, String oldNick, String newNick) {
