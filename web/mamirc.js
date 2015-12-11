@@ -394,6 +394,11 @@ function lineDataToRowElem(line) {
 	} else if (type == Flags.MODE) {
 		lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
 		tr.classList.add("mode-change");
+	} else if (type == Flags.CONNECTING) {
+		var str = "Connecting to server at " + payload[0] + ", port " + payload[1] + ", " + (payload[2] ? "SSL" : "no SSL") + "...";
+		lineElems.push(document.createTextNode(str));
+	} else if (type == Flags.CONNECTED) {
+		lineElems.push(document.createTextNode("Socket opened to IP address " + payload[0]));
 	} else if (type == Flags.DISCONNECTED) {
 		lineElems.push(document.createTextNode("Disconnected from server"));
 	} else {

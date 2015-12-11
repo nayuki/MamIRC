@@ -58,6 +58,8 @@ final class Window {
 	
 	public enum Flags {
 		RESERVED(0),
+		CONNECTING(1),
+		CONNECTED(2),
 		DISCONNECTED(3),
 		INITTOPIC(4),
 		INITNOTOPIC(5),

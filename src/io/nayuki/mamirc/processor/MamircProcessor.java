@@ -143,16 +143,19 @@ public final class MamircProcessor {
 		String line = ev.line.getString();
 		
 		if (line.startsWith("connect ")) {
-			String metadata = line.split(" ", 5)[4];
+			String[] parts = line.split(" ", 5);
+			String metadata = parts[4];
 			if (!myConfiguration.ircNetworks.containsKey(metadata))
 				throw new IllegalStateException("No profile: " + metadata);
 			ircSessions.put(conId, new IrcSession(myConfiguration.ircNetworks.get(metadata)));
+			addConnectingLine(metadata, ev.timestamp, parts[1], Integer.parseInt(parts[2]), parts[3].equals("ssl"));
 			
 		} else if (line.startsWith("opened ")) {
 			state.setRegistrationState(RegState.OPENED);
 			if (realtime)
 				sendIrcLine(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED", state.profile.name);
+			addConnectedLine(state.profile.name, ev.timestamp, line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
 			// Do nothing
@@ -653,6 +656,14 @@ public final class MamircProcessor {
 	
 	
 	// All of these addXxxLine methods must only be called from a synchronized method above.
+	
+	private void addConnectingLine(String profile, long timestamp, String hostname, int port, boolean ssl) {
+		addWindowLine(profile, "", Window.Flags.CONNECTING.value, timestamp, hostname, port, ssl);
+	}
+	
+	private void addConnectedLine(String profile, long timestamp, String ipAddr) {
+		addWindowLine(profile, "", Window.Flags.CONNECTED.value, timestamp, ipAddr);
+	}
 	
 	private void addDisconnectedLine(String profile, String target, long timestamp) {
 		addWindowLine(profile, target, Window.Flags.DISCONNECTED.value, timestamp);
