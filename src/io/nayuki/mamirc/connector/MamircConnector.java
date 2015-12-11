@@ -60,6 +60,7 @@ public final class MamircConnector {
 	// Singleton threads
 	private final DatabaseLoggerThread databaseLogger;
 	private final ProcessorListenerThread processorListener;
+	private final Thread connectionPinger;
 	
 	
 	
@@ -85,6 +86,17 @@ public final class MamircConnector {
 		// Finish the start-up
 		databaseLogger.start();
 		processorListener.start();
+		connectionPinger = new Thread("connectionPinger") {
+			public void run() {
+				try {
+					while (true) {
+						pingConnections();
+						Thread.sleep(20000);
+					}
+				} catch (InterruptedException e) {}
+			}
+		};
+		connectionPinger.start();
 		System.err.println("Connector ready");
 	}
 	
@@ -193,6 +205,7 @@ public final class MamircConnector {
 	// Should only be called from ProcessorReaderThread.
 	public void terminateConnector(ProcessorReaderThread reader) {
 		Thread[] toWait;
+		connectionPinger.interrupt();
 		synchronized(this) {
 			if (reader != processorReader)
 				return;
@@ -238,6 +251,25 @@ public final class MamircConnector {
 		}
 		databaseLogger.postEvent(ev);
 	}
+	
+	
+	// Scans all currently active connections and sends a ping to each one. If a connection is bad, this write
+	// soon causes the socket read() to throw an IOException, due to a reset packet or lack of acknowledgement.
+	// This write is necessary because without it, the read() might keep silently blocking for minutes or hours
+	// on a bad connection, depending on how the underlying platform handles socket keepalives.
+	// Note that these pings are not logged to the database or relayed to the processor.
+	// This method should only be called from the connectionPinger thread.
+	private synchronized void pingConnections() {
+		// From surveying ~5 different IRC servers, it appears that sending a blank line is always safely ignored.
+		// (However, some servers give an error response to a whitespace-only line consisting of one or more spaces.)
+		// This pseudo-ping is more lightweight than sending a real IRC PING command, and justifies the lack of logging.
+		for (ConnectionInfo info : serverConnections.values()) {
+			if (info.writer != null)
+				info.writer.postWrite(BLANK_LINE);
+		}
+	}
+	
+	private static final CleanLine BLANK_LINE = new CleanLine("");
 	
 	
 	// If the given line is a PING command, then this returns a new byte array containing an appropriate PONG response.
