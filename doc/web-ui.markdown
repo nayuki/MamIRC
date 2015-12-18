@@ -20,6 +20,11 @@ Main screen
 <dd><p>The MamIRC screen is divided into the left sidebar and main pane. The left sidebar always shows the list of windows at the bottom of the pane. A window is either an IRC channel, private messaging session, or server messages. If the current window is a channel that you are currently joined in, then the left sidebar also shows the list of channel users, positioned above the list of windows. The main pane contains a large scrollable pane of IRC messages, and a slim input text box at the bottom.</p></dd>
 <dt>Input text box</dt>
 <dd><p>Type in here to send a message or an IRC slash-command. The text in the input box is normally colored black, but becomes blue for slash-commands or red for an over-long line. Note that to send an ordinary message beginning with a slash, change it to a double slash. The text box accepts slash-commands such as "/msg Jane Text here", "/nick Bob", "/me slaps John with trout", "/join #channel", et cetera, implemented in <a href="https://github.com/nayuki/MamIRC/blob/master/web/mamirc.js">mamirc.js</a> in <code>inputBoxModule handleLine()</code>.</p></dd>
+<dt>Full Unicode text support</dt>
+<dd>
+<p>Arbitrary Unicode text can be sent and received. Feel free to use accented characters, symbols, Chinese ideographs, and even emoji. (Characters beyond the Basic Multilingual Plane are supported.)</p>
+<p>The character encoding is currently hard-coded to UTF-8, but the Processor code can be changed to support other encodings. (Only the Processor is responsible for encoding/decoding strings; the Connector only deals with raw bytes and the web UI only deals with Unicode strings.)</p>
+</dd>
 <dt>Right-click menus</dt>
 <dd>
 <p>In the channel users list, right-click on a user name to open a context menu, containing a command to open a private messaging window with the user. In the messages pane, right-clicking on a nickname in the second column will open a menu with a PM command too.</p>
