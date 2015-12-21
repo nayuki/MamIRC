@@ -1167,12 +1167,31 @@ const notificationModule = new function() {
 	this.notifyRaw = function(windowName, text) {
 		if (enabled) {
 			var opts = {icon: "tomoe-mami-icon-text.png"};
-			var notif = new Notification(text, opts);
+			var notif = new Notification(truncateLongText(text), opts);
 			notif.onclick = function() {
 				setActiveWindow(windowName);
 			};
+			setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
 		}
 	};
+	
+	// Private functions
+	// Returns either str if short enough, or some prefix of str with "..." appended.
+	// The function is needed because Mozilla Firefox allows ridiculously long lines to be displayed.
+	function truncateLongText(str) {
+		var LIMIT = 5;
+		var i = 0;
+		// count is the number of Unicode code points seen, not UTF-16 code units
+		for (var count = 0; i < str.length && count < LIMIT; i++) {
+			var cc = str.charCodeAt(i);
+			if (cc < 0xD800 || cc >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
+				count++;
+		}
+		if (i == str.length)
+			return str;
+		else
+			return str.substr(0, i) + "...";
+	}
 };
 
 
