@@ -89,7 +89,6 @@ function init() {
 		return false;
 	};
 	
-	Notification.requestPermission();
 	getState();
 	checkTimeSkew();
 }
@@ -651,23 +650,9 @@ function loadUpdates(inData) {
 					var notiftext = null;
 					if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 						// New private messaging window popped open, or nickflagged in one
-						var match = ME_INCOMING_REGEX.exec(line[4]);
-						if (match == null)
-							notiftext = "<" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
-						else
-							notiftext = "* " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
-					} else if ((line[1] & Flags.NICKFLAG) != 0) {
-						var match = ME_INCOMING_REGEX.exec(line[4]);
-						if (match == null)
-							notiftext = payload[2] + " <" + line[3] + "> " + line[4].replace(REMOVE_FORMATTING_REGEX, "");
-						else
-							notiftext = payload[2] + " * " + line[3] + " " + match[1].replace(REMOVE_FORMATTING_REGEX, "");
-					}
-					if (notiftext != null) {
-						var opts = {icon: "tomoe-mami-icon-text.png"};
-						var notif = new Notification(notiftext, opts);
-						notif.onclick = function() { setActiveWindow(windowName); };
-					}
+						notificationModule.notifyMessage(windowName, null, line[3], line[4]);
+					} else if ((line[1] & Flags.NICKFLAG) != 0)
+						notificationModule.notifyMessage(windowName, payload[2], line[3], line[4]);
 				}
 			} else if (subtype == Flags.JOIN || subtype == Flags.PART || subtype == Flags.QUIT || subtype == Flags.KICK || subtype == Flags.NICK) {
 				var members = connectionData[payload[1]].channels[payload[2]].members;
@@ -721,11 +706,8 @@ function loadUpdates(inData) {
 			delete connectionData[payload[1]].channels[payload[2]];
 			if (activeWindow != null && activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
 				redrawChannelMembers();
-			if (type == "KICKED") {
-				var opts = {icon:"tomoe-mami-icon-text.png"};
-				var notif = new Notification("You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4].replace(REMOVE_FORMATTING_REGEX, ""), opts);
-				notif.onclick = function() { setActiveWindow(windowName); };
-			}
+			if (type == "KICKED")
+				notificationModule.notifyRaw(windowName, "You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4].replace(REMOVE_FORMATTING_REGEX, ""));
 		} else if (type == "OPENWIN") {
 			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
@@ -1158,6 +1140,40 @@ const nickColorModule = new function() {
 	};
 };
 
+
+
+/*---- Toast notifications module ----*/
+
+const notificationModule = new function() {
+	// Variables
+	var enabled = "Notification" in window;
+	
+	// Initialization
+	if (enabled)
+		Notification.requestPermission();
+	
+	// Exported members
+	
+	// windowName is str (in the format profile + "\n" + party), 'channel' is str or null, user is str, meAction is bool, message is str and will have '/me' auto-detected and formatting codes automatically stripped.
+	this.notifyMessage = function(windowName, channel, user, message) {
+		var s = (channel != null) ? (channel + " ") : "";
+		var match = ME_INCOMING_REGEX.exec(message);
+		s += (match == null) ? ("<" + user + ">") : ("* " + user);
+		s += " " + ((match == null) ? message : match[1]).replace(REMOVE_FORMATTING_REGEX, "");
+		this.notifyRaw(windowName, s);
+	};
+	
+	// windowName is str (in the format profile + "\n" + party), text is str.
+	this.notifyRaw = function(windowName, text) {
+		if (enabled) {
+			var opts = {icon: "tomoe-mami-icon-text.png"};
+			var notif = new Notification(text, opts);
+			notif.onclick = function() {
+				setActiveWindow(windowName);
+			};
+		}
+	};
+};
 
 
 /*---- Alert messages module ----*/
