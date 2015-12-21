@@ -958,6 +958,25 @@ const inputBoxModule = new function() {
 		return countUtf8Bytes(checktext) > maxBytesPerLine;
 	}
 	
+	// Returns the number of bytes it takes to encode the given string in UTF-8.
+	function countUtf8Bytes(s) {
+		var result = 0;
+		for (var i = 0; i < s.length; i++) {
+			var c = s.charCodeAt(i);
+			if (c < 0x80)
+				result += 1;
+			else if (c < 0x800)
+				result += 2;
+			else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // Check for properly paired UTF-16 high and low surrogates
+					&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
+				result += 4;
+				i++;
+			} else
+				result += 3;
+		}
+		return result;
+	}
+	
 	function doTabCompletion() {
 		do {  // Simulate goto
 			if (document.activeElement != inputBoxElem)
@@ -1376,25 +1395,6 @@ function nthRemainingPart(s, n) {
 		j++;
 	}
 	return s.substring(j);
-}
-
-
-function countUtf8Bytes(s) {
-	var result = 0;
-	for (var i = 0; i < s.length; i++) {
-		var c = s.charCodeAt(i);
-		if (c < 0x80)
-			result += 1;
-		else if (c < 0x800)
-			result += 2;
-		else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // UTF-16 high and low surrogates
-				&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
-			result += 4;
-			i++;
-		} else
-			result += 3;
-	}
-	return result;
 }
 
 
