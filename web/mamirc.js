@@ -423,19 +423,12 @@ var windowModule = new function() {
 			var party = parts[1];
 			
 			// Create the anchor element
-			var a = document.createElement("a");
-			utilsModule.setElementText(a, party != "" ? party : profile);
+			var a = utilsModule.createElementWithText("a", party != "" ? party : profile);
 			var n = windowData[windowName].numNewMessages;
 			if (n > 0) {
-				var span = document.createElement("span");
-				utilsModule.setElementText(span, " (");
-				a.appendChild(span);
-				span = document.createElement("span");
-				utilsModule.setElementText(span, n.toString());
-				a.appendChild(span);
-				span = document.createElement("span");
-				utilsModule.setElementText(span, ")");
-				a.appendChild(span);
+				a.appendChild(utilsModule.createElementWithText("span", " ("));
+				a.appendChild(utilsModule.createElementWithText("span", n.toString()));
+				a.appendChild(utilsModule.createElementWithText("span", ")"));
 			}
 			if (windowData[windowName].isNickflagged)
 				a.classList.add("nickflag");
@@ -500,8 +493,7 @@ var windowModule = new function() {
 				return s.toLowerCase().localeCompare(t.toLowerCase());
 			});
 			members.forEach(function(name) {
-				var li = document.createElement("li");
-				utilsModule.setElementText(li, name);
+				var li = utilsModule.createElementWithText("li", name);
 				li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(name, null); }]]);
 				memberListElem.appendChild(li);
 			});
@@ -642,13 +634,11 @@ var windowModule = new function() {
 		}
 		
 		// Make timestamp cell
-		var td = document.createElement("td");
-		td.appendChild(document.createTextNode(formatDate(timestamp)));
+		var td = utilsModule.createElementWithText("td", formatDate(timestamp));
 		tr.appendChild(td);
 		
 		// Make nickname cell
-		td = document.createElement("td");
-		td.appendChild(document.createTextNode(who));
+		td = utilsModule.createElementWithText("td", who);
 		if (who != "\u25CF" && who != "\u2190" && who != "\u2192" && who != "RAW")
 			td.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(who, null); }]]);
 		if (nameColor != null)
@@ -691,9 +681,9 @@ var windowModule = new function() {
 		var tr = document.createElement("tr");
 		var td = document.createElement("td");
 		td.colSpan = 3;
-		var span = document.createElement("span");
 		var d = new Date(timestamp);
-		span.appendChild(document.createTextNode(d.getFullYear() + "\u2012" + utilsModule.twoDigits(d.getMonth() + 1) + "\u2012" + utilsModule.twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()]));
+		var text = d.getFullYear() + "\u2012" + utilsModule.twoDigits(d.getMonth() + 1) + "\u2012" + utilsModule.twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()];
+		var span = utilsModule.createElementWithText("span", text);
 		td.appendChild(span);
 		tr.appendChild(td);
 		return tr;
@@ -783,11 +773,10 @@ const formatTextModule = new function() {
 						elems.push(document.createTextNode(chunk.substr(0, chunkPartEnd)));
 					if (urlMatch == null)
 						break;
-					var a = document.createElement("a");
+					var a = utilsModule.createElementWithText("a", urlMatch[2]);
 					a.href = urlMatch[2];
 					a.target = "_blank";
 					a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
-					utilsModule.setElementText(a, urlMatch[2]);
 					elems.push(a);
 					chunk = chunk.substring(urlMatch[0].length);
 				}
@@ -1311,6 +1300,14 @@ const utilsModule = new function() {
 		elem.appendChild(document.createTextNode(str));
 	};
 	
+	// Returns a new DOM element with the given tag name, with a text node of the given content as its only child.
+	// Types: tagName is str, text is str, result is HTMLElement.
+	this.createElementWithText = function(tagName, text) {
+		var result = document.createElement(tagName);
+		result.appendChild(document.createTextNode(text));
+		return result;
+	};
+	
 	this.setClasslistItem = function(clslst, name, enable) {
 		if (clslst.contains(name) != enable)
 			clslst.toggle(name);
@@ -1335,8 +1332,7 @@ const errorMsgModule = new function() {
 	// Exported members
 	this.addMessage = function(s) {
 		errorMsgContainerElem.style.removeProperty("display");
-		var li = document.createElement("li");
-		utilsModule.setElementText(li, s);
+		var li = utilsModule.createElementWithText("li", s);
 		errorMsgElem.appendChild(li);
 	};
 };
@@ -1357,8 +1353,7 @@ function getState() {
 		}
 	};
 	xhr.ontimeout = xhr.onerror = function() {
-		var li = document.createElement("li");
-		utilsModule.setElementText(li, "(Unable to connect to data provider)");
+		var li = utilsModule.createElementWithText("li", "(Unable to connect to data provider)");
 		windowListElem.appendChild(li);
 	};
 	xhr.open("POST", "get-state.json", true);
