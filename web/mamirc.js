@@ -1,10 +1,3 @@
-/*---- Global variables ----*/
-
-function elemId(s) {  // Abbreviated function name
-	return document.getElementById(s);
-}
-
-
 /* Main state */
 
 // Type int. At least 0.
@@ -33,7 +26,8 @@ var setInitialWindowTimeout = null;
 var Flags = null;
 
 
-// Called once after the script and page are loaded.
+// Global initialization function - called once after the script and page are loaded.
+// Note that each module has its own initialization logic as well.
 function init() {
 	var cookieParts = document.cookie.split(";");
 	cookieParts.forEach(function(s) {
@@ -52,19 +46,20 @@ function init() {
 /*---- Window display and data module ----*/
 
 var windowModule = new function() {
-	/* Variables and constants */
-	
-	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
-	
-	// Document nodes (elements)
+	/* Constants */
+	// Document nodes
 	const windowListElem          = elemId("window-list");
 	const messageListElem         = elemId("message-list");
 	const memberListContainerElem = elemId("member-list-container");
 	const memberListElem          = elemId("member-list");
 	const showMoreMessagesElem    = elemId("show-more-messages");
 	const nicknameText = document.createTextNode("");
-	elemId("nickname").appendChild(nicknameText);
+	// Miscellaneous
+	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
+	const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
+	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	
+	/* Variables */
 	// These variables are null before getState() returns successfully. Thereafter, most of them are non-null.
 	
 	// Type tuple<str profile, str party, str concatenated>.
@@ -87,10 +82,9 @@ var windowModule = new function() {
 	// - map<str,object> channels, with values having {"members" -> list<str>, "topic" -> str or null}
 	this.connectionData = null;
 	
-	// Constants
-	const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
-	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	
+	/* Initialization */
+	elemId("nickname").appendChild(nicknameText);
 	init();
 	
 	
@@ -392,6 +386,9 @@ var windowModule = new function() {
 	};
 	
 	
+	// Attempts to match the given string agaist the '/me' action regex, returning
+	// an array of capture group strings if successful or null if there is no match.
+	// Types: str is string, result is (list<string> with extra properties due to RegExp.exec()) / null. Pure function.
 	this.matchMeMessage = function(str) {
 		return ME_INCOMING_REGEX.exec(str);
 	};
@@ -726,6 +723,7 @@ var windowModule = new function() {
 
 /*---- Text formatting module ----*/
 
+// Handles formatting codes and URLs in raw IRC message strings. Stateless module.
 const formatTextModule = new function() {
 	/* Constants */
 	const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
@@ -734,16 +732,16 @@ const formatTextModule = new function() {
 	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
 	const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
 	const TEXT_COLORS = [
-		"#FFFFFF", "#000000", "#00007F", "#009300",
-		"#FF0000", "#7F0000", "#9C009C", "#FC7F00",
-		"#FFFF00", "#00FC00", "#009393", "#00FFFF",
-		"#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
+		// The 16 mIRC colors: http://www.mirc.com/colors.html ; http://en.wikichip.org/wiki/irc/colors
+		"#FFFFFF", "#000000", "#00007F", "#009300", "#FF0000", "#7F0000", "#9C009C", "#FC7F00",
+		"#FFFF00", "#00FC00", "#009393", "#00FFFF", "#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
 	];
 	
 	/* Exported functions */
 	
 	// Given a string with possible IRC formatting control codes and plain text URLs,
 	// this returns an array of DOM nodes representing text with formatting and anchor links.
+	// Types: str is string, result is list<HTMLElement>. Pure function.
 	this.fancyTextToElems = function(str) {
 		// Take fast path if string contains no formatting or potential URLs
 		if (!SPECIAL_FORMATTING_REGEX.test(str))
@@ -851,6 +849,8 @@ const formatTextModule = new function() {
 		return result;
 	}
 	
+	// Returns a new string representing the given string with all IRC formatting codes removed.
+	// Types: str is string, result is string. Pure function.
 	this.fancyToPlainText = function(str) {
 		return str.replace(REMOVE_FORMATTING_REGEX, "");
 	};
@@ -860,17 +860,15 @@ const formatTextModule = new function() {
 
 /*---- Input text box module ----*/
 
+// Handles the input text box - command parsing, tab completion, and text setting.
 const inputBoxModule = new function() {
-	// Elements
+	/* Constants */
 	const inputBoxElem = elemId("input-box");
-	
-	// Variables
-	var prevTabCompletion = null;  // Type tuple<int begin, int end, str prefix, str name> or null.
-	
-	// Constants
+	// The default of 400 is a safe number to use, because an IRC protocol line
+	// is generally limited to 512 bytes, including prefix and parameters and newline
+	const maxBytesPerLine = 400;  // Type integer
+	// For grabbing the prefix to perform tab completion
 	const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
-	// Type int. The default of 400 is a safe number to use, because an IRC protocol line is generally limited to 512 bytes, including prefix and parameters and newline.
-	const maxBytesPerLine = 400;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
 	// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
 	const OUTGOING_COMMAND_PARAM_COUNTS = {
@@ -890,7 +888,10 @@ const inputBoxModule = new function() {
 		"/whowas" : [1, 3],
 	};
 	
-	// Initialization
+	/* Variables */
+	var prevTabCompletion = null;  // Type tuple<begin:integer, end:integer, prefix:string, name:string> / null.
+	
+	/* Initialization */
 	elemId("footer").getElementsByTagName("form")[0].onsubmit = handleLine;
 	inputBoxElem.oninput = colorizeLine;
 	inputBoxElem.onblur = clearTabCompletion;
@@ -905,7 +906,7 @@ const inputBoxModule = new function() {
 	};
 	inputBoxElem.value = "";
 	
-	// Private functions
+	/* Private functions */
 	
 	function handleLine() {
 		var inputStr = inputBoxElem.value;
@@ -1071,12 +1072,18 @@ const inputBoxModule = new function() {
 		prevTabCompletion = null;
 	}
 	
-	// Exported members
-	this.putText = function(s) {
-		inputBoxElem.value = s;
+	/* Exported functions */
+	
+	// Sets the text box to the given string, gives input focus, and puts the caret at the end.
+	// Types: str is string, result is void.
+	this.putText = function(str) {
+		inputBoxElem.value = str;
 		inputBoxElem.focus();
-		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = s.length;
+		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = str.length;
 	};
+	
+	// Clears the text in the text box. Returns nothing.
+	// Types: result is void.
 	this.clearText = function() {
 		inputBoxElem.value = "";
 	};
@@ -1086,15 +1093,9 @@ const inputBoxModule = new function() {
 
 /*---- Context menu module ----*/
 
+// Manages a singleton context menu that can be shown with specific menu items or hidden.
 const menuModule = new function() {
-	// Deletes the context menu <div> element, if one is present.
-	function closeMenu() {
-		var elem = elemId("menu");
-		if (elem != null)
-			elem.parentNode.removeChild(elem);
-	}
-	
-	// Initialization
+	/* Initialization */
 	const htmlElem = document.documentElement;
 	htmlElem.onmousedown = closeMenu;
 	htmlElem.onkeydown = function(ev) {
@@ -1102,14 +1103,15 @@ const menuModule = new function() {
 			closeMenu();
 	};
 	
-	// Exported members
-	this.closeMenu = closeMenu;
-	
-	// 'items' has type list<pair<str text, func onclick/null>>. Returns an event handler function.
+	/* Exported functions */
+	// Based on the given list of menu items, this returns an event handler function to pop open the context menu.
+	// Types: items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is function(ev:Event)->Boolean.
 	this.makeOpener = function(items) {
 		return function(ev) {
+			// If text is currently selected, show the native context menu instead -
+			// this allows the user to copy the highlight text, search the web, etc.
 			if (window.getSelection().toString() != "")
-				return;  // To show the native context menu - allows the user to copy the highlight text, to search the web, etc.
+				return;
 			closeMenu();
 			var div = document.createElement("div");
 			div.id = "menu";
@@ -1142,13 +1144,24 @@ const menuModule = new function() {
 			return false;
 		};
 	};
+	
+	/* Private functions */
+	// Deletes the single global context menu <div> element if one is present.
+	// Returns nothing. Types: result is void.
+	function closeMenu() {
+		var elem = elemId("menu");
+		if (elem != null)
+			elem.parentNode.removeChild(elem);
+	}
 };
 
 
 
 /*---- Nickname colorization module ----*/
 
+// Associates each nickname with a color. The mapping is based on hashing, and thus is stateless and consistent.
 const nickColorModule = new function() {
+	/* Constants */
 	const colorTable = [
 		// 8 hand-tuned colors that are fairly perceptually uniform
 		"DC7979", "E1A056", "C6CA34", "5EA34D", "62B5C6", "7274CF", "B97DC2", "949494",
@@ -1162,10 +1175,14 @@ const nickColorModule = new function() {
 		"A889AD", "BD8787", "C09A7A", "AFB271", "7D9C77", "7EA6AF", "8485B5", "A889AD",
 	];
 	
+	/* Variables */
 	var nickColorCache = {};
 	var nickColorCacheSize = 0;
 	
-	// Exported members
+	/* Exported functions */
+	// Returns the color associated with the given nickname, based on a hashing algorithm.
+	// 'name' is an arbitrary string, and the result is a CSS hexadecimal color in the format "#ABC012".
+	// Types: name is string, result is string.
 	this.getNickColor = function(name) {
 		if (!(name in nickColorCache)) {
 			var hash = 1;  // Signed 32-bit integer
@@ -1191,17 +1208,20 @@ const nickColorModule = new function() {
 
 /*---- Toast notifications module ----*/
 
+// Manages desktop toast notifications and allows new ones to be posted.
 const notificationModule = new function() {
-	// Variables
+	/* Variables */
 	var enabled = "Notification" in window;
 	
-	// Initialization
+	/* Initialization */
 	if (enabled)
 		Notification.requestPermission();
 	
-	// Exported members
+	/* Exported functions */
 	
-	// windowName is str (in the format profile + "\n" + party), 'channel' is str or null, user is str, meAction is bool, message is str and will have '/me' auto-detected and formatting codes automatically stripped.
+	// Posts a notification of the given message text in the given window on the given channel by the given user.
+	// 'windowName' is in the format 'profile+"\n"+party'. 'message' has '/me' auto-detected and formatting codes automatically stripped.
+	// Types: windowName is string, channel is string/null, user is string, message is string, result is void.
 	this.notifyMessage = function(windowName, channel, user, message) {
 		var s = (channel != null) ? (channel + " ") : "";
 		var match = windowModule.matchMeMessage(message);
@@ -1210,7 +1230,8 @@ const notificationModule = new function() {
 		this.notifyRaw(windowName, s);
 	};
 	
-	// windowName is str (in the format profile + "\n" + party), text is str.
+	// Posts a notification of the given raw text in the given window. 'windowName' is in the format 'profile+"\n"+party'.
+	// Types: windowName is string, text is string, result is void.
 	this.notifyRaw = function(windowName, text) {
 		if (enabled) {
 			var opts = {icon: "tomoe-mami-icon-text.png"};
@@ -1222,9 +1243,11 @@ const notificationModule = new function() {
 		}
 	};
 	
-	// Private functions
+	/* Private functions */
+	
 	// Returns either str if short enough, or some prefix of str with "..." appended.
-	// The function is needed because Mozilla Firefox allows ridiculously long lines to be displayed.
+	// The function is needed because Mozilla Firefox allows ridiculously long notification lines to be displayed.
+	// Types: str is string, result is string.
 	function truncateLongText(str) {
 		var LIMIT = 5;
 		var i = 0;
@@ -1251,30 +1274,31 @@ const notificationModule = new function() {
 const utilsModule = new function() {
 	/* Exported functions */
 	
-	// Finds the first n spaces in the string and returns the rest of the string after the last space found.
-	// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
-	this.nthRemainingPart = function(s, n) {
+	// Returns the rest of the string after exactly n spaces. For example: nthRemainingPart("a b c", 0) -> "a b c";
+	// nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> throws exception.
+	// Types: str is string, n is integer, result is string. Pure function.
+	this.nthRemainingPart = function(str, n) {
 		var j = 0;
 		for (var i = 0; i < n; i++) {
-			j = s.indexOf(" ", j);
-			if (j == -1)
+			j = str.indexOf(" ", j) + 1;
+			if (j == 0)
 				throw "Space not found";
-			j++;
 		}
-		return s.substring(j);
+		return str.substring(j);
 	};
 	
-	// Returns the number of bytes it takes to encode the given string in UTF-8.
-	this.countUtf8Bytes = function(s) {
+	// Returns the number of bytes in the UTF-8 encoded representation of the given string. Handles paired
+	// and unpaired UTF-16 surrogates correctly. Types: str is string, result is integer. Pure function.
+	this.countUtf8Bytes = function(str) {
 		var result = 0;
-		for (var i = 0; i < s.length; i++) {
-			var c = s.charCodeAt(i);
+		for (var i = 0; i < str.length; i++) {
+			var c = str.charCodeAt(i);
 			if (c < 0x80)
 				result += 1;
 			else if (c < 0x800)
 				result += 2;
-			else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // Check for properly paired UTF-16 high and low surrogates
-					&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
+			else if (0xD800 <= c && c < 0xDC00 && i + 1 < str.length  // Check for properly paired UTF-16 high and low surrogates
+					&& 0xDC00 <= str.charCodeAt(i + 1) && str.charCodeAt(i + 1) < 0xE000) {
 				result += 4;
 				i++;
 			} else
@@ -1283,26 +1307,29 @@ const utilsModule = new function() {
 		return result;
 	};
 	
-	// Converts an integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
+	// Converts the given integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
+	// Types: n is integer, result is string. Pure function.
 	this.twoDigits = function(n) {
 		return (n < 10 ? "0" : "") + n;
 	};
 	
-	// Removes all children of the given DOM element. Returns nothing.
-	// Types: elem is HTMLElement, result is void.
+	// Removes all the children of the given DOM element. Returns nothing.
+	// Types: elem is HTMLElement (mutable), result is void.
 	this.clearChildren = function(elem) {
 		while (elem.firstChild != null)
 			elem.removeChild(elem.firstChild);
 	};
 	
-	// Returns a new DOM element with the given tag name, with a text node of the given content as its only child.
-	// Types: tagName is str, text is str, result is HTMLElement.
+	// Returns a new DOM element with the given tag name, with a text node of the given content
+	// as its only child. Types: tagName is string, text is string, result is HTMLElement. Pure function.
 	this.createElementWithText = function(tagName, text) {
 		var result = document.createElement(tagName);
 		result.appendChild(document.createTextNode(text));
 		return result;
 	};
 	
+	// Modifies the given class list so that it contains / does not contain the given token name. Returns nothing.
+	// Types: clslst is DOMTokenList (mutable), name is string, enable is Boolean, result is void.
 	this.setClasslistItem = function(clslst, name, enable) {
 		if (clslst.contains(name) != enable)
 			clslst.toggle(name);
@@ -1313,10 +1340,13 @@ const utilsModule = new function() {
 
 /*---- Alert messages module ----*/
 
+// Manages the panel of error messages and allows new lines to be added.
 const errorMsgModule = new function() {
+	/* Constants */
 	const errorMsgContainerElem = elemId("error-msg-container");
 	const errorMsgElem          = elemId("error-msg");
 	
+	/* Initialization */
 	utilsModule.clearChildren(errorMsgElem);
 	errorMsgContainerElem.getElementsByTagName("a")[0].onclick = function() {
 		errorMsgContainerElem.style.display = "none";
@@ -1324,10 +1354,12 @@ const errorMsgModule = new function() {
 		return false;
 	};
 	
-	// Exported members
-	this.addMessage = function(s) {
+	/* Exported functions */
+	// Appends the given text to the list of error messages, showing the panel if hidden.
+	// Types: str is string, result is void.
+	this.addMessage = function(str) {
 		errorMsgContainerElem.style.removeProperty("display");
-		var li = utilsModule.createElementWithText("li", s);
+		var li = utilsModule.createElementWithText("li", str);
 		errorMsgElem.appendChild(li);
 	};
 };
@@ -1435,7 +1467,14 @@ function checkTimeSkew() {
 
 /*---- Miscellaneous ----*/
 
-// Monkey patching for Apple Safari and Microsoft Internet Explorer
+// This definition exists only for the purpose of abbreviation, because it is used so many times.
+// Types: name is string, result is HTMLElement/null.
+function elemId(name) {
+	return document.getElementById(name);
+}
+
+
+// Polyfill for Apple Safari and Microsoft Internet Explorer.
 if (!("startsWith" in String.prototype)) {
 	String.prototype.startsWith = function(text, pos) {
 		if (pos == undefined)
