@@ -12,18 +12,8 @@ var retryTimeout = 1000;
 // Type str.
 var csrfToken = null;
 
-
-/* Miscellaneous values */
-
 // Configurable parameter. Used by getState().
 var maxMessagesPerWindow = 3000;
-
-var curWindowMaxMessages = null;
-
-var setInitialWindowTimeout = null;
-
-// Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
-var Flags = null;
 
 
 // Global initialization function - called once after the script and page are loaded.
@@ -81,6 +71,15 @@ const windowModule = new function() {
 	// - map<str,object> channels, with values having {"members" -> list<str>, "topic" -> str or null}
 	this.connectionData = null;
 	
+	// Type integer (returned by window.setTimeout()).
+	var setInitialWindowTimeout = null;
+	
+	// Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
+	var Flags = null;
+	
+	// Type integer.
+	var curWindowMaxMessages = null;
+	
 	
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
@@ -92,10 +91,8 @@ const windowModule = new function() {
 	// Called only by getState(). inData is a object parsed from JSON text.
 	this.loadState = function(inData) {
 		// Set simple fields
-		nextUpdateId = inData.nextUpdateId;
 		this.connectionData = inData.connections;
 		Flags = inData.flagsConstants;
-		csrfToken = inData.csrfToken;
 		
 		// Handle the windows
 		this.windowNames = [];
@@ -172,8 +169,6 @@ const windowModule = new function() {
 	
 	
 	this.loadUpdates = function(inData) {
-		nextUpdateId = inData.nextUpdateId;
-		
 		const messagesElem = elemId("messages");
 		const scrollPosition = messagesElem.scrollTop;
 		const scrollToBottom = scrollPosition + messagesElem.clientHeight > messagesElem.scrollHeight - 30;
@@ -1374,6 +1369,8 @@ function getState() {
 	xhr.onload = function() {
 		var data = JSON.parse(xhr.response);
 		if (typeof data != "string") {  // Good data
+			nextUpdateId = data.nextUpdateId;
+			csrfToken = data.csrfToken;
 			windowModule.loadState(data);  // Process data and update UI
 			updateState();  // Start polling
 		}
@@ -1397,6 +1394,7 @@ function updateState() {
 		else {
 			var data = JSON.parse(xhr.response);
 			if (data != null) {  // Success
+				nextUpdateId = data.nextUpdateId;
 				windowModule.loadUpdates(data);
 				retryTimeout = 1000;
 				updateState();
