@@ -343,8 +343,8 @@ function lineDataToRowElem(line) {
 			tr.classList.add("outgoing");
 		if ((flags & Flags.NICKFLAG) != 0)
 			tr.classList.add("nickflag");
-		quoteText = s.replace(/\t/g, " ").replace(REMOVE_FORMATTING_REGEX, "");
-		lineElems = fancyTextToElems(s);
+		quoteText = formatTextModule.fancyToPlainText(s.replace(/\t/g, " "));
+		lineElems = formatTextModule.fancyTextToElems(s);
 		if (mematch != null) {
 			tr.classList.add("me-action");
 			quoteText = "* " + who + " " + quoteText;
@@ -354,7 +354,7 @@ function lineDataToRowElem(line) {
 		
 	} else if (type == Flags.NOTICE) {
 		who = "(" + payload[0] + ")";
-		lineElems = fancyTextToElems(payload[1]);
+		lineElems = formatTextModule.fancyTextToElems(payload[1]);
 	} else if (type == Flags.NICK) {
 		lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
 		tr.classList.add("nick-change");
@@ -368,24 +368,24 @@ function lineDataToRowElem(line) {
 		tr.classList.add("user-exit");
 	} else if (type == Flags.QUIT) {
 		who = "\u2190";  // Leftwards arrow
-		lineElems = fancyTextToElems(payload[1]);
+		lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		lineElems.splice(0, 0, document.createTextNode(payload[0] + " has quit: "));
 		tr.classList.add("user-exit");
 	} else if (type == Flags.KICK) {
 		who = "\u2190";  // Leftwards arrow
-		lineElems = fancyTextToElems(payload[2]);
+		lineElems = formatTextModule.fancyTextToElems(payload[2]);
 		lineElems.splice(0, 0, document.createTextNode(payload[0] + " was kicked by " + payload[1] + ": "));
 		tr.classList.add("user-exit");
 	} else if (type == Flags.TOPIC) {
-		lineElems = fancyTextToElems(payload[1]);
+		lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		lineElems.splice(0, 0, document.createTextNode(payload[0] + " set the channel topic to: "));
 	} else if (type == Flags.INITNOTOPIC) {
 		lineElems.push(document.createTextNode("No channel topic is set"));
 	} else if (type == Flags.INITTOPIC) {
-		lineElems = fancyTextToElems(payload[0]);
+		lineElems = formatTextModule.fancyTextToElems(payload[0]);
 		lineElems.splice(0, 0, document.createTextNode("The channel topic is: "));
 	} else if (type == Flags.SERVERREPLY) {
-		lineElems = fancyTextToElems(payload[1]);
+		lineElems = formatTextModule.fancyTextToElems(payload[1]);
 	} else if (type == Flags.NAMES) {
 		lineElems.push(document.createTextNode("Users in channel: " + payload.join(", ")));
 		tr.classList.add("user-list");
@@ -450,129 +450,6 @@ function lineDataToRowElem(line) {
 }
 
 const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
-const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
-
-
-// Given a string with possible IRC formatting control codes and plain text URLs,
-// this returns an array of DOM nodes representing text with formatting and anchor links.
-function fancyTextToElems(str) {
-	// Take fast path if string contains no formatting or potential URLs
-	if (!SPECIAL_FORMATTING_REGEX.test(str))
-		return [document.createTextNode(str)];
-	
-	// Current formatting state
-	var bold = false;
-	var italic = false;
-	var underline = false;
-	var background = 0;
-	var foreground = 1;
-	
-	// Process formatting commands and chunks of text
-	var result = [];
-	while (str != "") {
-		var formatMatch = FORMAT_CODE_REGEX.exec(str);
-		var strPartEnd = formatMatch != null ? formatMatch[1].length : str.length;
-		if (strPartEnd > 0) {
-			// Process text
-			var chunk = str.substr(0, strPartEnd);
-			var elems = [];
-			while (chunk != "") {
-				var urlMatch = URL_REGEX0.exec(chunk);
-				if (urlMatch == null)
-					urlMatch = URL_REGEX1.exec(chunk);
-				var chunkPartEnd = urlMatch != null ? urlMatch[1].length : chunk.length;
-				if (chunkPartEnd > 0)
-					elems.push(document.createTextNode(chunk.substr(0, chunkPartEnd)));
-				if (urlMatch == null)
-					break;
-				var a = document.createElement("a");
-				a.href = urlMatch[2];
-				a.target = "_blank";
-				a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
-				setElementText(a, urlMatch[2]);
-				elems.push(a);
-				chunk = chunk.substring(urlMatch[0].length);
-			}
-			
-			if (background != 0 || foreground != 1) {
-				var elem = document.createElement("span");
-				if (background != 0)
-					elem.style.backgroundColor = TEXT_COLORS[background];
-				if (foreground != 1)
-					elem.style.color = TEXT_COLORS[foreground];
-				elems.forEach(function(e) {
-					elem.appendChild(e);
-				});
-				elems = [elem];
-			}
-			var temp = [[bold, "b"], [italic, "i"], [underline, "u"]];
-			temp.forEach(function(pair) {
-				if (pair[0]) {
-					var elem = document.createElement(pair[1]);
-					elems.forEach(function(e) {
-						elem.appendChild(e);
-					});
-					elems = [elem];
-				}
-			});
-			elems.forEach(function(e) {
-				result.push(e);
-			});
-		}
-		if (formatMatch == null)
-			break;
-		
-		// Process format code
-		switch (str.charCodeAt(strPartEnd)) {
-			case 0x02:
-				bold = !bold;
-				break;
-			case 0x1D:
-				italic = !italic;
-				break;
-			case 0x1F:
-				underline = !underline;
-				break;
-			case 0x16:  // Reverse
-				var temp = foreground;
-				foreground = background;
-				background = temp;
-				break;
-			case 0x0F:  // Plain
-				bold = false;
-				italic = false;
-				underline = false;
-				background = 0;
-				foreground = 1;
-				break;
-			case 0x03:  // Color
-				var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : 1;
-				var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : 0;
-				if (fore < TEXT_COLORS.length) foreground = fore;
-				if (back < TEXT_COLORS.length) background = back;
-				break;
-			default:
-				throw "Assertion error";
-		}
-		str = str.substring(formatMatch[0].length);
-	}
-	
-	// Epilog
-	if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
-		result.push(document.createTextNode(""));
-	return result;
-}
-
-const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
-const FORMAT_CODE_REGEX = /^(.*?)(?:[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?)/;
-const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
-const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
-const TEXT_COLORS = [
-	"#FFFFFF", "#000000", "#00007F", "#009300",
-	"#FF0000", "#7F0000", "#9C009C", "#FC7F00",
-	"#FFFF00", "#00FC00", "#009393", "#00FFFF",
-	"#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
-];
 
 
 function dateToRowElem(timestamp) {
@@ -706,7 +583,7 @@ function loadUpdates(inData) {
 			if (activeWindow != null && activeWindow[0] == payload[1] && activeWindow[1] == payload[2])
 				redrawChannelMembers();
 			if (type == "KICKED")
-				notificationModule.notifyRaw(windowName, "You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4].replace(REMOVE_FORMATTING_REGEX, ""));
+				notificationModule.notifyRaw(windowName, "You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4]);
 		} else if (type == "OPENWIN") {
 			var windowName = payload[1] + "\n" + payload[2];
 			var index = windowNames.indexOf(windowName);
@@ -807,6 +684,141 @@ function openPrivateMessagingWindow(target, onerror) {
 		inputBoxModule.putText("");
 	}
 }
+
+
+
+/*---- Text formatting module ----*/
+
+const formatTextModule = new function() {
+	/* Constants */
+	const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
+	const FORMAT_CODE_REGEX = /^(.*?)(?:[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?)/;
+	const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
+	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
+	const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
+	const TEXT_COLORS = [
+		"#FFFFFF", "#000000", "#00007F", "#009300",
+		"#FF0000", "#7F0000", "#9C009C", "#FC7F00",
+		"#FFFF00", "#00FC00", "#009393", "#00FFFF",
+		"#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
+	];
+	
+	/* Exported functions */
+	
+	// Given a string with possible IRC formatting control codes and plain text URLs,
+	// this returns an array of DOM nodes representing text with formatting and anchor links.
+	this.fancyTextToElems = function(str) {
+		// Take fast path if string contains no formatting or potential URLs
+		if (!SPECIAL_FORMATTING_REGEX.test(str))
+			return [document.createTextNode(str)];
+		
+		// Current formatting state
+		var bold = false;
+		var italic = false;
+		var underline = false;
+		var background = 0;
+		var foreground = 1;
+		
+		// Process formatting commands and chunks of text
+		var result = [];
+		while (str != "") {
+			var formatMatch = FORMAT_CODE_REGEX.exec(str);
+			var strPartEnd = formatMatch != null ? formatMatch[1].length : str.length;
+			if (strPartEnd > 0) {
+				// Process text
+				var chunk = str.substr(0, strPartEnd);
+				var elems = [];
+				while (chunk != "") {
+					var urlMatch = URL_REGEX0.exec(chunk);
+					if (urlMatch == null)
+						urlMatch = URL_REGEX1.exec(chunk);
+					var chunkPartEnd = urlMatch != null ? urlMatch[1].length : chunk.length;
+					if (chunkPartEnd > 0)
+						elems.push(document.createTextNode(chunk.substr(0, chunkPartEnd)));
+					if (urlMatch == null)
+						break;
+					var a = document.createElement("a");
+					a.href = urlMatch[2];
+					a.target = "_blank";
+					a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
+					setElementText(a, urlMatch[2]);
+					elems.push(a);
+					chunk = chunk.substring(urlMatch[0].length);
+				}
+				
+				if (background != 0 || foreground != 1) {
+					var elem = document.createElement("span");
+					if (background != 0)
+						elem.style.backgroundColor = TEXT_COLORS[background];
+					if (foreground != 1)
+						elem.style.color = TEXT_COLORS[foreground];
+					elems.forEach(function(e) {
+						elem.appendChild(e);
+					});
+					elems = [elem];
+				}
+				var temp = [[bold, "b"], [italic, "i"], [underline, "u"]];
+				temp.forEach(function(pair) {
+					if (pair[0]) {
+						var elem = document.createElement(pair[1]);
+						elems.forEach(function(e) {
+							elem.appendChild(e);
+						});
+						elems = [elem];
+					}
+				});
+				elems.forEach(function(e) {
+					result.push(e);
+				});
+			}
+			if (formatMatch == null)
+				break;
+			
+			// Process format code
+			switch (str.charCodeAt(strPartEnd)) {
+				case 0x02:
+					bold = !bold;
+					break;
+				case 0x1D:
+					italic = !italic;
+					break;
+				case 0x1F:
+					underline = !underline;
+					break;
+				case 0x16:  // Reverse
+					var temp = foreground;
+					foreground = background;
+					background = temp;
+					break;
+				case 0x0F:  // Plain
+					bold = false;
+					italic = false;
+					underline = false;
+					background = 0;
+					foreground = 1;
+					break;
+				case 0x03:  // Color
+					var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : 1;
+					var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : 0;
+					if (fore < TEXT_COLORS.length) foreground = fore;
+					if (back < TEXT_COLORS.length) background = back;
+					break;
+				default:
+					throw "Assertion error";
+			}
+			str = str.substring(formatMatch[0].length);
+		}
+		
+		// Epilog
+		if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
+			result.push(document.createTextNode(""));
+		return result;
+	}
+	
+	this.fancyToPlainText = function(str) {
+		return str.replace(REMOVE_FORMATTING_REGEX, "");
+	};
+};
 
 
 
@@ -1190,7 +1202,7 @@ const notificationModule = new function() {
 		var s = (channel != null) ? (channel + " ") : "";
 		var match = ME_INCOMING_REGEX.exec(message);
 		s += (match == null) ? ("<" + user + ">") : ("* " + user);
-		s += " " + ((match == null) ? message : match[1]).replace(REMOVE_FORMATTING_REGEX, "");
+		s += " " + formatTextModule.fancyToPlainText((match == null) ? message : match[1]);
 		this.notifyRaw(windowName, s);
 	};
 	
