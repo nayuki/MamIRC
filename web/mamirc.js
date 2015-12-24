@@ -45,7 +45,7 @@ function init() {
 
 /*---- Window display and data module ----*/
 
-var windowModule = new function() {
+const windowModule = new function() {
 	/* Constants */
 	// Document nodes
 	const windowListElem          = elemId("window-list");
@@ -56,7 +56,6 @@ var windowModule = new function() {
 	const nicknameText = document.createTextNode("");
 	// Miscellaneous
 	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
-	const ME_INCOMING_REGEX = /^\u0001ACTION (.*)\u0001$/;
 	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	
 	/* Variables */
@@ -386,14 +385,6 @@ var windowModule = new function() {
 	};
 	
 	
-	// Attempts to match the given string agaist the '/me' action regex, returning
-	// an array of capture group strings if successful or null if there is no match.
-	// Types: str is string, result is (list<string> with extra properties due to RegExp.exec()) / null. Pure function.
-	this.matchMeMessage = function(str) {
-		return ME_INCOMING_REGEX.exec(str);
-	};
-	
-	
 	/* Private functions */
 	
 	function init() {
@@ -562,7 +553,7 @@ var windowModule = new function() {
 			who = payload[0];
 			nameColor = nickColorModule.getNickColor(who);
 			var s = payload[1];
-			var mematch = self.matchMeMessage(s);
+			var mematch = formatTextModule.matchMeMessage(s);
 			if (mematch != null)
 				s = mematch[1];
 			
@@ -731,6 +722,7 @@ const formatTextModule = new function() {
 	const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
 	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
 	const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
+	const ME_ACTION_REGEX = /^\u0001ACTION (.*)\u0001$/;
 	const TEXT_COLORS = [
 		// The 16 mIRC colors: http://www.mirc.com/colors.html ; http://en.wikichip.org/wiki/irc/colors
 		"#FFFFFF", "#000000", "#00007F", "#009300", "#FF0000", "#7F0000", "#9C009C", "#FC7F00",
@@ -848,6 +840,13 @@ const formatTextModule = new function() {
 			result.push(document.createTextNode(""));
 		return result;
 	}
+	
+	// Attempts to match the given string agaist the '/me' action regex, returning
+	// an array of capture group strings if successful or null if there is no match.
+	// Types: str is string, result is (list<string> with extra properties due to RegExp.exec()) / null. Pure function.
+	this.matchMeMessage = function(str) {
+		return ME_ACTION_REGEX.exec(str);
+	};
 	
 	// Returns a new string representing the given string with all IRC formatting codes removed.
 	// Types: str is string, result is string. Pure function.
@@ -1224,7 +1223,7 @@ const notificationModule = new function() {
 	// Types: windowName is string, channel is string/null, user is string, message is string, result is void.
 	this.notifyMessage = function(windowName, channel, user, message) {
 		var s = (channel != null) ? (channel + " ") : "";
-		var match = windowModule.matchMeMessage(message);
+		var match = formatTextModule.matchMeMessage(message);
 		s += (match == null) ? ("<" + user + ">") : ("* " + user);
 		s += " " + formatTextModule.fancyToPlainText((match == null) ? message : match[1]);
 		this.notifyRaw(windowName, s);
