@@ -313,7 +313,7 @@ var windowModule = new function() {
 						if (self.windowNames.length > 0)
 							self.setActiveWindow(self.windowNames[Math.min(index, self.windowNames.length - 1)]);
 						else
-							utilsModule.removeChildren(messageListElem);
+							utilsModule.clearChildren(messageListElem);
 					}
 				}
 			} else if (type == "MARKREAD") {
@@ -416,7 +416,7 @@ var windowModule = new function() {
 	// Clears the window list HTML container element and rebuilds it from scratch based on
 	// the current states of windowNames, windowData[windowName].newMessages, and activeWindow.
 	function redrawWindowList() {
-		utilsModule.removeChildren(windowListElem);
+		utilsModule.clearChildren(windowListElem);
 		self.windowNames.forEach(function(windowName) {
 			// windowName has type str, and is of the form (profile+"\n"+party)
 			var parts = windowName.split("\n");
@@ -486,7 +486,7 @@ var windowModule = new function() {
 	// Refreshes the channel members text element based on the states of
 	// connectionData[profileName].channels[channelName].members and activeWindow.
 	function redrawChannelMembers() {
-		utilsModule.removeChildren(memberListElem);
+		utilsModule.clearChildren(memberListElem);
 		var profile = self.activeWindow[0], party = self.activeWindow[1];
 		if (profile in self.connectionData && party in self.connectionData[profile].channels) {
 			var members = self.connectionData[profile].channels[party].members;
@@ -505,7 +505,7 @@ var windowModule = new function() {
 	
 	
 	function redrawMessagesTable() {
-		utilsModule.removeChildren(messageListElem);
+		utilsModule.clearChildren(messageListElem);
 		var lines = windowData[self.activeWindow[2]].lines;
 		for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 			// 'line' has type tuple<int seq, int timestamp, str line, int flags>
@@ -1288,8 +1288,9 @@ const utilsModule = new function() {
 		return (n < 10 ? "0" : "") + n;
 	};
 	
-	// Removes all children of the given DOM node.
-	this.removeChildren = function(elem) {
+	// Removes all children of the given DOM element. Returns nothing.
+	// Types: elem is HTMLElement, result is void.
+	this.clearChildren = function(elem) {
 		while (elem.firstChild != null)
 			elem.removeChild(elem.firstChild);
 	};
@@ -1316,10 +1317,10 @@ const errorMsgModule = new function() {
 	const errorMsgContainerElem = elemId("error-msg-container");
 	const errorMsgElem          = elemId("error-msg");
 	
-	utilsModule.removeChildren(errorMsgElem);
+	utilsModule.clearChildren(errorMsgElem);
 	errorMsgContainerElem.getElementsByTagName("a")[0].onclick = function() {
 		errorMsgContainerElem.style.display = "none";
-		utilsModule.removeChildren(errorMsgElem);
+		utilsModule.clearChildren(errorMsgElem);
 		return false;
 	};
 	
