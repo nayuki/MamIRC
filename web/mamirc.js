@@ -61,8 +61,9 @@ var windowModule = new function() {
 	const messageListElem         = elemId("message-list");
 	const memberListContainerElem = elemId("member-list-container");
 	const memberListElem          = elemId("member-list");
-	const nicknameElem            = elemId("nickname");
 	const showMoreMessagesElem    = elemId("show-more-messages");
+	const nicknameText = document.createTextNode("");
+	elemId("nickname").appendChild(nicknameText);
 	
 	// These variables are null before getState() returns successfully. Thereafter, most of them are non-null.
 	
@@ -157,7 +158,7 @@ var windowModule = new function() {
 		this.activeWindow = name.split("\n").concat(name);
 		var profile = this.activeWindow[0];
 		var party = this.activeWindow[1];
-		utilsModule.setElementText(nicknameElem, (profile in this.connectionData ? this.connectionData[profile].currentNickname : ""));
+		nicknameText.data = (profile in this.connectionData) ? this.connectionData[profile].currentNickname : "";
 		redrawWindowList();
 		redrawChannelMembers();
 		
@@ -275,7 +276,7 @@ var windowModule = new function() {
 				var name = payload[2];
 				self.connectionData[profile].currentNickname = name;
 				if (self.activeWindow != null && self.activeWindow[0] == profile) {
-					utilsModule.setElementText(nicknameElem, name);
+					nicknameText.data = name;
 					activeWindowUpdated = true;
 				}
 			} else if (type == "JOINED") {
@@ -1120,10 +1121,10 @@ const menuModule = new function() {
 				var li = document.createElement("li");
 				var child;
 				if (item[1] == null) {
-					child = document.createElement("span");
+					child = utilsModule.createElementWithText("span", item[0]);
 					child.className = "disabled";
 				} else {
-					child = document.createElement("a");
+					child = utilsModule.createElementWithText("a", item[0]);
 					child.href = "#";
 					child.onclick = function() {
 						closeMenu();
@@ -1131,7 +1132,6 @@ const menuModule = new function() {
 						return false;
 					};
 				}
-				utilsModule.setElementText(child, item[0]);
 				li.appendChild(child);
 				ul.appendChild(li);
 			});
@@ -1292,12 +1292,6 @@ const utilsModule = new function() {
 	this.removeChildren = function(elem) {
 		while (elem.firstChild != null)
 			elem.removeChild(elem.firstChild);
-	};
-	
-	// Removes all children of the given DOM node and adds a single text element containing the specified text.
-	this.setElementText = function(elem, str) {
-		this.removeChildren(elem);
-		elem.appendChild(document.createTextNode(str));
 	};
 	
 	// Returns a new DOM element with the given tag name, with a text node of the given content as its only child.
