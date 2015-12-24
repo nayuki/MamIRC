@@ -5,7 +5,6 @@ function elemId(s) {  // Abbreviated function name
 }
 
 // Document nodes (elements)
-const htmlElem                = document.documentElement;
 const windowListElem          = elemId("window-list");
 const messageListElem         = elemId("message-list");
 const memberListContainerElem = elemId("member-list-container");
@@ -958,6 +957,19 @@ const inputBoxModule = new function() {
 		return countUtf8Bytes(checktext) > maxBytesPerLine;
 	}
 	
+	// Finds the first n spaces in the string and returns the rest of the string after the last space found.
+	// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
+	function nthRemainingPart(s, n) {
+		var j = 0;
+		for (var i = 0; i < n; i++) {
+			j = s.indexOf(" ", j);
+			if (j == -1)
+				throw "Space not found";
+			j++;
+		}
+		return s.substring(j);
+	}
+	
 	// Returns the number of bytes it takes to encode the given string in UTF-8.
 	function countUtf8Bytes(s) {
 		var result = 0;
@@ -1066,6 +1078,7 @@ const menuModule = new function() {
 	}
 	
 	// Initialization
+	const htmlElem = document.documentElement;
 	htmlElem.onmousedown = closeMenu;
 	htmlElem.onkeydown = function(ev) {
 		if (ev.keyCode == 27)  // Escape
@@ -1137,7 +1150,6 @@ const nickColorModule = new function() {
 	var nickColorCacheSize = 0;
 	
 	// Exported members
-	var debug = true;
 	this.getNickColor = function(name) {
 		if (!(name in nickColorCache)) {
 			var hash = 1;  // Signed 32-bit integer
@@ -1381,20 +1393,6 @@ function removeChildren(elem) {
 function setElementText(elem, str) {
 	removeChildren(elem);
 	elem.appendChild(document.createTextNode(str));
-}
-
-
-// Finds the first n spaces in the string and returns the rest of the string after the last space found.
-// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
-function nthRemainingPart(s, n) {
-	var j = 0;
-	for (var i = 0; i < n; i++) {
-		j = s.indexOf(" ", j);
-		if (j == -1)
-			throw "Space not found";
-		j++;
-	}
-	return s.substring(j);
 }
 
 
