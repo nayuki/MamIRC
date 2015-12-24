@@ -1,16 +1,7 @@
-/* Main state */
-
-// Type int. At least 0.
-var nextUpdateId = null;
+/* Global variables */
 
 // Type bool.
 var optimizeMobile = false;
-
-// In milliseconds. This value changes during execution depending on successful/failed requests.
-var retryTimeout = 1000;
-
-// Type str.
-var csrfToken = null;
 
 // Configurable parameter. Used by getState().
 var maxMessagesPerWindow = 3000;
@@ -28,8 +19,7 @@ function init() {
 	if (optimizeMobile)
 		maxMessagesPerWindow = 500;
 	
-	getState();
-	checkTimeSkew();
+	networkModule.init();
 }
 
 
@@ -162,7 +152,7 @@ const windowModule = new function() {
 		if (setInitialWindowTimeout != null)
 			clearTimeout(setInitialWindowTimeout);
 		setInitialWindowTimeout = setTimeout(function() {
-			sendAction([["set-initial-window", profile, party]], null);
+			networkModule.sendAction([["set-initial-window", profile, party]], null);
 			setInitialWindowTimeout = null;
 		}, 10000);
 	};
@@ -372,7 +362,7 @@ const windowModule = new function() {
 		var profile = this.activeWindow[0];
 		var windowName = profile + "\n" + target;
 		if (this.windowNames.indexOf(windowName) == -1)
-			sendAction([["open-window", profile, target]], onerror);
+			networkModule.sendAction([["open-window", profile, target]], onerror);
 		else {
 			this.setActiveWindow(windowName);
 			inputBoxModule.putText("");
@@ -435,7 +425,7 @@ const windowModule = new function() {
 			if (party == "" && profile in self.connectionData || profile in self.connectionData && party in self.connectionData[profile].channels)
 				menuItems.push(["Close window", null]);
 			else
-				menuItems.push(["Close window", function() { sendAction([["close-window", profile, party]], null); }]);
+				menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
 			a.oncontextmenu = menuModule.makeOpener(menuItems);
 			
 			var li = document.createElement("li");
@@ -643,11 +633,11 @@ const windowModule = new function() {
 		menuItems.push(["Mark read to here", function() {
 			if (tr.classList.contains("read") && !confirm("Do you want to move mark upward?"))
 				return;
-			sendAction([["mark-read", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
+			networkModule.sendAction([["mark-read", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
 		}]);
 		menuItems.push(["Clear to here", function() {
 			if (confirm("Do you want to clear text?"))
-				sendAction([["clear-lines", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
+				networkModule.sendAction([["clear-lines", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
 		}]);
 		td.oncontextmenu = menuModule.makeOpener(menuItems);
 		tr.appendChild(td);
@@ -919,7 +909,7 @@ const inputBoxModule = new function() {
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
 			if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
 				inputStr = inputStr.substring(1);
-			sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
+			networkModule.sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
 			
 		} else {  // Command or special message
 			// The user input command is case-insensitive. The command sent to the server will be in uppercase.
@@ -933,34 +923,34 @@ const inputBoxModule = new function() {
 				var windowName = profile + "\n" + party;
 				var text = utilsModule.nthRemainingPart(inputStr, 2);
 				if (windowModule.windowNames.indexOf(windowName) == -1) {
-					sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
+					networkModule.sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
 				} else {
 					windowModule.setActiveWindow(windowName);
-					sendMessage(profile, party, text, onerror);
+					networkModule.sendMessage(profile, party, text, onerror);
 				}
 			} else if (cmd == "/me" && parts.length >= 2) {
-				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+				networkModule.sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 			} else if (cmd == "/notice" && parts.length >= 3) {
-				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
+				networkModule.sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
-				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], onerror);
+				networkModule.sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
 				windowModule.openPrivateMessagingWindow(parts[1], onerror);
 			} else if (cmd == "/topic" && parts.length >= 2) {
-				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
+				networkModule.sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
 			} else if (cmd == "/kick" && parts.length >= 2) {
 				var reason = parts.length == 2 ? "" : utilsModule.nthRemainingPart(inputStr, 2);
-				sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
+				networkModule.sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
 			} else if (cmd == "/names" && parts.length == 1) {
 				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
-				sendAction([["send-line", activeWindow[0], "NAMES" + params]], onerror);
+				networkModule.sendAction([["send-line", activeWindow[0], "NAMES" + params]], onerror);
 			} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
 				// Regular commands
 				var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
 				var numParams = parts.length - 1;
 				if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
 					var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
-					sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], onerror);
+					networkModule.sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], onerror);
 				} else {
 					alert("Invalid command");
 					return false;  // Don't clear the text box
@@ -1360,105 +1350,121 @@ const errorMsgModule = new function() {
 
 
 
-/*---- Networking functions ----*/
+/*---- Network communication module ----*/
 
-// Called after login (from authenticate()) and after a severe state desynchronization (indirectly from updateState()).
-// This performs an Ajax request, changes the page layout, and renders the data on screen.
-function getState() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		var data = JSON.parse(xhr.response);
-		if (typeof data != "string") {  // Good data
-			nextUpdateId = data.nextUpdateId;
-			csrfToken = data.csrfToken;
-			windowModule.loadState(data);  // Process data and update UI
-			updateState();  // Start polling
+const networkModule = new function() {
+	/* Variables */
+	const self = this;
+	// Type integer. At least 0.
+	var nextUpdateId = null;
+	// In milliseconds. This value changes during execution depending on successful/failed requests.
+	var retryTimeout = 1000;
+	// Type string.
+	var csrfToken = null;
+	
+	/* Exported functions */
+	
+	this.init = function() {
+		getState();
+		checkTimeSkew();
+	};
+	
+	// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
+	this.sendAction = function(payload, onerror) {
+		var xhr = new XMLHttpRequest();
+		if (onerror != null) {
+			xhr.onload = function() {
+				var data = JSON.parse(xhr.response);
+				if (data != "OK")
+					onerror(data.toString());
+			};
+			xhr.ontimeout = function() {
+				onerror("Connection timeout");
+			};
+			xhr.error = function() {
+				onerror("Network error");
+			};
 		}
+		xhr.open("POST", "do-actions.json", true);
+		xhr.responseType = "text";
+		xhr.timeout = 5000;
+		xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
 	};
-	xhr.ontimeout = xhr.onerror = function() {
-		var li = utilsModule.createElementWithText("li", "(Unable to connect to data provider)");
-		windowListElem.appendChild(li);
+	
+	// Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
+	this.sendMessage = function(profile, target, text, onerror) {
+		this.sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], onerror);
 	};
-	xhr.open("POST", "get-state.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 10000;
-	xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow}));
-}
-
-
-function updateState() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		if (xhr.status != 200)
-			xhr.onerror();
-		else {
-			var data = JSON.parse(xhr.response);
-			if (data != null) {  // Success
-				nextUpdateId = data.nextUpdateId;
-				windowModule.loadUpdates(data);
-				retryTimeout = 1000;
-				updateState();
-			} else {  // Lost synchronization or fell behind too much; do full update and re-render text
-				setTimeout(getState, retryTimeout);
-				if (retryTimeout < 300000)
-					retryTimeout *= 2;
-			}
-		}
-	};
-	xhr.ontimeout = xhr.onerror = function() {
-		setTimeout(updateState, retryTimeout);
-		if (retryTimeout < 300000)
-			retryTimeout *= 2;
-	};
-	var maxWait = 60000;
-	xhr.open("POST", "get-updates.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = maxWait + 20000;
-	xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId, "maxWait":maxWait}));
-}
-
-
-// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
-function sendAction(payload, onerror) {
-	var xhr = new XMLHttpRequest();
-	if (onerror != null) {
+	
+	/* Private functions */
+	
+	// Called after login (from authenticate()) and after a severe state desynchronization (indirectly from updateState()).
+	// This performs an Ajax request, changes the page layout, and renders the data on screen.
+	function getState() {
+		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
 			var data = JSON.parse(xhr.response);
-			if (data != "OK")
-				onerror(data.toString());
+			if (typeof data != "string") {  // Good data
+				nextUpdateId = data.nextUpdateId;
+				csrfToken = data.csrfToken;
+				windowModule.loadState(data);  // Process data and update UI
+				updateState();  // Start polling
+			}
 		};
-		xhr.ontimeout = function() {
-			onerror("Connection timeout");
+		xhr.ontimeout = xhr.onerror = function() {
+			var li = utilsModule.createElementWithText("li", "(Unable to connect to data provider)");
+			windowListElem.appendChild(li);
 		};
-		xhr.error = function() {
-			onerror("Network error");
-		};
+		xhr.open("POST", "get-state.json", true);
+		xhr.responseType = "text";
+		xhr.timeout = 10000;
+		xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow}));
 	}
-	xhr.open("POST", "do-actions.json", true);
-	xhr.responseType = "text";
-	xhr.timeout = 5000;
-	xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
-}
-
-
-// Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
-function sendMessage(profile, target, text, onerror) {
-	sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], onerror);
-}
-
-
-function checkTimeSkew() {
-	var xhr = new XMLHttpRequest();
-	xhr.onload = function() {
-		var skew = Date.now() - JSON.parse(xhr.response);
-		if (Math.abs(skew) > 10000)
-			errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
-	};
-	xhr.open("POST", "get-time.json", true);
-	xhr.responseType = "text";
-	xhr.send(JSON.stringify(""));
-	setTimeout(checkTimeSkew, 100000000);  // About once a day
-}
+	
+	function updateState() {
+		var xhr = new XMLHttpRequest();
+		xhr.onload = function() {
+			if (xhr.status != 200)
+				xhr.onerror();
+			else {
+				var data = JSON.parse(xhr.response);
+				if (data != null) {  // Success
+					nextUpdateId = data.nextUpdateId;
+					windowModule.loadUpdates(data);
+					retryTimeout = 1000;
+					updateState();
+				} else {  // Lost synchronization or fell behind too much; do full update and re-render text
+					setTimeout(getState, retryTimeout);
+					if (retryTimeout < 300000)
+						retryTimeout *= 2;
+				}
+			}
+		};
+		xhr.ontimeout = xhr.onerror = function() {
+			setTimeout(updateState, retryTimeout);
+			if (retryTimeout < 300000)
+				retryTimeout *= 2;
+		};
+		var maxWait = 60000;
+		xhr.open("POST", "get-updates.json", true);
+		xhr.responseType = "text";
+		xhr.timeout = maxWait + 20000;
+		xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId, "maxWait":maxWait}));
+	}
+	
+	function checkTimeSkew() {
+		var xhr = new XMLHttpRequest();
+		xhr.onload = function() {
+			var skew = Date.now() - JSON.parse(xhr.response);
+			if (Math.abs(skew) > 10000)
+				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
+		};
+		xhr.open("POST", "get-time.json", true);
+		xhr.responseType = "text";
+		xhr.send(JSON.stringify(""));
+		setTimeout(checkTimeSkew, 100000000);  // About once a day
+	}
+};
 
 
 
