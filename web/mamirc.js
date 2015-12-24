@@ -374,7 +374,7 @@ const windowModule = new function() {
 	
 	function init() {
 		showMoreMessagesElem.style.display = "none";
-		showMoreMessagesElem.getElementsByTagName("a")[0].onclick = function() {
+		showMoreMessagesElem.querySelector("a").onclick = function() {
 			if (self.activeWindow == null)
 				return;
 			var temp = Math.sqrt(curWindowMaxMessages / 300) + 0.5;
@@ -876,7 +876,7 @@ const inputBoxModule = new function() {
 	var prevTabCompletion = null;  // Type tuple<begin:integer, end:integer, prefix:string, name:string> / null.
 	
 	/* Initialization */
-	elemId("footer").getElementsByTagName("form")[0].onsubmit = handleLine;
+	document.querySelector("footer form").onsubmit = handleLine;
 	inputBoxElem.oninput = colorizeLine;
 	inputBoxElem.onblur = clearTabCompletion;
 	inputBoxElem.onkeydown = function(ev) {
@@ -1124,7 +1124,7 @@ const menuModule = new function() {
 			
 			div.appendChild(ul);
 			div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
-			document.getElementsByTagName("body")[0].appendChild(div);
+			document.querySelector("body").appendChild(div);
 			return false;
 		};
 	};
@@ -1332,7 +1332,7 @@ const errorMsgModule = new function() {
 	
 	/* Initialization */
 	utilsModule.clearChildren(errorMsgElem);
-	errorMsgContainerElem.getElementsByTagName("a")[0].onclick = function() {
+	errorMsgContainerElem.querySelector("a").onclick = function() {
 		errorMsgContainerElem.style.display = "none";
 		utilsModule.clearChildren(errorMsgElem);
 		return false;
