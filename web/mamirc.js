@@ -157,7 +157,7 @@ var windowModule = new function() {
 		this.activeWindow = name.split("\n").concat(name);
 		var profile = this.activeWindow[0];
 		var party = this.activeWindow[1];
-		setElementText(nicknameElem, (profile in this.connectionData ? this.connectionData[profile].currentNickname : ""));
+		utilsModule.setElementText(nicknameElem, (profile in this.connectionData ? this.connectionData[profile].currentNickname : ""));
 		redrawWindowList();
 		redrawChannelMembers();
 		
@@ -275,7 +275,7 @@ var windowModule = new function() {
 				var name = payload[2];
 				self.connectionData[profile].currentNickname = name;
 				if (self.activeWindow != null && self.activeWindow[0] == profile) {
-					setElementText(nicknameElem, name);
+					utilsModule.setElementText(nicknameElem, name);
 					activeWindowUpdated = true;
 				}
 			} else if (type == "JOINED") {
@@ -312,7 +312,7 @@ var windowModule = new function() {
 						if (self.windowNames.length > 0)
 							self.setActiveWindow(self.windowNames[Math.min(index, self.windowNames.length - 1)]);
 						else
-							removeChildren(messageListElem);
+							utilsModule.removeChildren(messageListElem);
 					}
 				}
 			} else if (type == "MARKREAD") {
@@ -330,8 +330,8 @@ var windowModule = new function() {
 							j--;
 						} else  // colSpan == 3
 							lineseq = lines[j + 1][0];
-						setClasslistItem(row.classList, "read"  , lineseq <  seq);
-						setClasslistItem(row.classList, "unread", lineseq >= seq);
+						utilsModule.setClasslistItem(row.classList, "read"  , lineseq <  seq);
+						utilsModule.setClasslistItem(row.classList, "unread", lineseq >= seq);
 					}
 					activeWindowUpdated = true;
 				}
@@ -415,7 +415,7 @@ var windowModule = new function() {
 	// Clears the window list HTML container element and rebuilds it from scratch based on
 	// the current states of windowNames, windowData[windowName].newMessages, and activeWindow.
 	function redrawWindowList() {
-		removeChildren(windowListElem);
+		utilsModule.removeChildren(windowListElem);
 		self.windowNames.forEach(function(windowName) {
 			// windowName has type str, and is of the form (profile+"\n"+party)
 			var parts = windowName.split("\n");
@@ -424,17 +424,17 @@ var windowModule = new function() {
 			
 			// Create the anchor element
 			var a = document.createElement("a");
-			setElementText(a, party != "" ? party : profile);
+			utilsModule.setElementText(a, party != "" ? party : profile);
 			var n = windowData[windowName].numNewMessages;
 			if (n > 0) {
 				var span = document.createElement("span");
-				setElementText(span, " (");
+				utilsModule.setElementText(span, " (");
 				a.appendChild(span);
 				span = document.createElement("span");
-				setElementText(span, n.toString());
+				utilsModule.setElementText(span, n.toString());
 				a.appendChild(span);
 				span = document.createElement("span");
-				setElementText(span, ")");
+				utilsModule.setElementText(span, ")");
 				a.appendChild(span);
 			}
 			if (windowData[windowName].isNickflagged)
@@ -484,7 +484,7 @@ var windowModule = new function() {
 			return;
 		var windowLis = windowListElem.getElementsByTagName("li");
 		self.windowNames.forEach(function(name, i) {
-			setClasslistItem(windowLis[i].classList, "selected", name == self.activeWindow[2]);
+			utilsModule.setClasslistItem(windowLis[i].classList, "selected", name == self.activeWindow[2]);
 		});
 	}
 	
@@ -492,7 +492,7 @@ var windowModule = new function() {
 	// Refreshes the channel members text element based on the states of
 	// connectionData[profileName].channels[channelName].members and activeWindow.
 	function redrawChannelMembers() {
-		removeChildren(memberListElem);
+		utilsModule.removeChildren(memberListElem);
 		var profile = self.activeWindow[0], party = self.activeWindow[1];
 		if (profile in self.connectionData && party in self.connectionData[profile].channels) {
 			var members = self.connectionData[profile].channels[party].members;
@@ -501,7 +501,7 @@ var windowModule = new function() {
 			});
 			members.forEach(function(name) {
 				var li = document.createElement("li");
-				setElementText(li, name);
+				utilsModule.setElementText(li, name);
 				li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(name, null); }]]);
 				memberListElem.appendChild(li);
 			});
@@ -512,7 +512,7 @@ var windowModule = new function() {
 	
 	
 	function redrawMessagesTable() {
-		removeChildren(messageListElem);
+		utilsModule.removeChildren(messageListElem);
 		var lines = windowData[self.activeWindow[2]].lines;
 		for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 			// 'line' has type tuple<int seq, int timestamp, str line, int flags>
@@ -693,7 +693,7 @@ var windowModule = new function() {
 		td.colSpan = 3;
 		var span = document.createElement("span");
 		var d = new Date(timestamp);
-		span.appendChild(document.createTextNode(d.getFullYear() + "\u2012" + twoDigits(d.getMonth() + 1) + "\u2012" + twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()]));
+		span.appendChild(document.createTextNode(d.getFullYear() + "\u2012" + utilsModule.twoDigits(d.getMonth() + 1) + "\u2012" + utilsModule.twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()]));
 		td.appendChild(span);
 		tr.appendChild(td);
 		return tr;
@@ -721,18 +721,13 @@ var windowModule = new function() {
 	// Converts a Unix millisecond timestamp to a string, in the preferred format for lineDataToRowElem().
 	function formatDate(timestamp) {
 		var d = new Date(timestamp);
+		var two = utilsModule.twoDigits;
 		if (!optimizeMobile) {
-			return twoDigits(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + " " +
-				twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes()) + ":" + twoDigits(d.getSeconds());
+			return two(d.getDate()) + "-" + DAYS_OF_WEEK[d.getDay()] + " " +
+				two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds());
 		} else {
-			return DAYS_OF_WEEK[d.getDay()] + " " + twoDigits(d.getHours()) + ":" + twoDigits(d.getMinutes());
+			return DAYS_OF_WEEK[d.getDay()] + " " + two(d.getHours()) + ":" + two(d.getMinutes());
 		}
-	}
-	
-	
-	// Converts an integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
-	function twoDigits(n) {
-		return (n < 10 ? "0" : "") + n;
 	}
 };
 
@@ -792,7 +787,7 @@ const formatTextModule = new function() {
 					a.href = urlMatch[2];
 					a.target = "_blank";
 					a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
-					setElementText(a, urlMatch[2]);
+					utilsModule.setElementText(a, urlMatch[2]);
 					elems.push(a);
 					chunk = chunk.substring(urlMatch[0].length);
 				}
@@ -951,7 +946,7 @@ const inputBoxModule = new function() {
 				var profile = activeWindow[0];
 				var party = parts[1];
 				var windowName = profile + "\n" + party;
-				var text = nthRemainingPart(inputStr, 2);
+				var text = utilsModule.nthRemainingPart(inputStr, 2);
 				if (windowModule.windowNames.indexOf(windowName) == -1) {
 					sendAction([["open-window", profile, party], ["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
 				} else {
@@ -959,17 +954,17 @@ const inputBoxModule = new function() {
 					sendMessage(profile, party, text, onerror);
 				}
 			} else if (cmd == "/me" && parts.length >= 2) {
-				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+				sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 			} else if (cmd == "/notice" && parts.length >= 3) {
-				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + nthRemainingPart(inputStr, 2)]], onerror);
+				sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
 				sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
 				windowModule.openPrivateMessagingWindow(parts[1], onerror);
 			} else if (cmd == "/topic" && parts.length >= 2) {
-				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + nthRemainingPart(inputStr, 1)]], onerror);
+				sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
 			} else if (cmd == "/kick" && parts.length >= 2) {
-				var reason = parts.length == 2 ? "" : nthRemainingPart(inputStr, 2);
+				var reason = parts.length == 2 ? "" : utilsModule.nthRemainingPart(inputStr, 2);
 				sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
 			} else if (cmd == "/names" && parts.length == 1) {
 				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
@@ -997,8 +992,8 @@ const inputBoxModule = new function() {
 	// Change classes of text box based on '/commands' and overlong text
 	function colorizeLine() {
 		var text = inputBoxElem.value;
-		setClasslistItem(inputBoxElem.classList, "is-command", text.startsWith("/") && !text.startsWith("//"));
-		setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong());
+		utilsModule.setClasslistItem(inputBoxElem.classList, "is-command", text.startsWith("/") && !text.startsWith("//"));
+		utilsModule.setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong());
 	}
 	
 	function isLineOverlong() {
@@ -1012,45 +1007,13 @@ const inputBoxModule = new function() {
 			var parts = text.split(" ");
 			var cmd = parts[0].toLowerCase();
 			if ((cmd == "/kick" || cmd == "/msg") && parts.length >= 3)
-				checktext = nthRemainingPart(text, 2);
+				checktext = utilsModule.nthRemainingPart(text, 2);
 			else if ((cmd == "/me" || cmd == "/topic") && parts.length >= 2)
-				checktext = nthRemainingPart(text, 1);
+				checktext = utilsModule.nthRemainingPart(text, 1);
 			else
 				checktext = text;
 		}
-		return countUtf8Bytes(checktext) > maxBytesPerLine;
-	}
-	
-	// Finds the first n spaces in the string and returns the rest of the string after the last space found.
-	// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
-	function nthRemainingPart(s, n) {
-		var j = 0;
-		for (var i = 0; i < n; i++) {
-			j = s.indexOf(" ", j);
-			if (j == -1)
-				throw "Space not found";
-			j++;
-		}
-		return s.substring(j);
-	}
-	
-	// Returns the number of bytes it takes to encode the given string in UTF-8.
-	function countUtf8Bytes(s) {
-		var result = 0;
-		for (var i = 0; i < s.length; i++) {
-			var c = s.charCodeAt(i);
-			if (c < 0x80)
-				result += 1;
-			else if (c < 0x800)
-				result += 2;
-			else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // Check for properly paired UTF-16 high and low surrogates
-					&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
-				result += 4;
-				i++;
-			} else
-				result += 3;
-		}
-		return result;
+		return utilsModule.countUtf8Bytes(checktext) > maxBytesPerLine;
 	}
 	
 	function doTabCompletion() {
@@ -1179,7 +1142,7 @@ const menuModule = new function() {
 						return false;
 					};
 				}
-				setElementText(child, item[0]);
+				utilsModule.setElementText(child, item[0]);
 				li.appendChild(child);
 				ul.appendChild(li);
 			});
@@ -1290,16 +1253,82 @@ const notificationModule = new function() {
 };
 
 
+
+/*---- Utilities module ----*/
+
+// A set of functions that are somewhat general, not too specific to the problem domain of MamIRC.
+// This module only contains public, stateless functions. These functions may return a new
+// value or change an argument's state. They never read/write global state or perform I/O.
+const utilsModule = new function() {
+	/* Exported functions */
+	
+	// Finds the first n spaces in the string and returns the rest of the string after the last space found.
+	// For example: nthRemainingPart("a b c", 0) -> "a b c"; nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> exception.
+	this.nthRemainingPart = function(s, n) {
+		var j = 0;
+		for (var i = 0; i < n; i++) {
+			j = s.indexOf(" ", j);
+			if (j == -1)
+				throw "Space not found";
+			j++;
+		}
+		return s.substring(j);
+	};
+	
+	// Returns the number of bytes it takes to encode the given string in UTF-8.
+	this.countUtf8Bytes = function(s) {
+		var result = 0;
+		for (var i = 0; i < s.length; i++) {
+			var c = s.charCodeAt(i);
+			if (c < 0x80)
+				result += 1;
+			else if (c < 0x800)
+				result += 2;
+			else if (0xD800 <= c && c < 0xDC00 && i + 1 < s.length  // Check for properly paired UTF-16 high and low surrogates
+					&& 0xDC00 <= s.charCodeAt(i + 1) && s.charCodeAt(i + 1) < 0xE000) {
+				result += 4;
+				i++;
+			} else
+				result += 3;
+		}
+		return result;
+	};
+	
+	// Converts an integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
+	this.twoDigits = function(n) {
+		return (n < 10 ? "0" : "") + n;
+	};
+	
+	// Removes all children of the given DOM node.
+	this.removeChildren = function(elem) {
+		while (elem.firstChild != null)
+			elem.removeChild(elem.firstChild);
+	};
+	
+	// Removes all children of the given DOM node and adds a single text element containing the specified text.
+	this.setElementText = function(elem, str) {
+		this.removeChildren(elem);
+		elem.appendChild(document.createTextNode(str));
+	};
+	
+	this.setClasslistItem = function(clslst, name, enable) {
+		if (clslst.contains(name) != enable)
+			clslst.toggle(name);
+	};
+};
+
+
+
 /*---- Alert messages module ----*/
 
 const errorMsgModule = new function() {
 	const errorMsgContainerElem = elemId("error-msg-container");
 	const errorMsgElem          = elemId("error-msg");
 	
-	removeChildren(errorMsgElem);
+	utilsModule.removeChildren(errorMsgElem);
 	errorMsgContainerElem.getElementsByTagName("a")[0].onclick = function() {
 		errorMsgContainerElem.style.display = "none";
-		removeChildren(errorMsgElem);
+		utilsModule.removeChildren(errorMsgElem);
 		return false;
 	};
 	
@@ -1307,7 +1336,7 @@ const errorMsgModule = new function() {
 	this.addMessage = function(s) {
 		errorMsgContainerElem.style.removeProperty("display");
 		var li = document.createElement("li");
-		setElementText(li, s);
+		utilsModule.setElementText(li, s);
 		errorMsgElem.appendChild(li);
 	};
 };
@@ -1329,7 +1358,7 @@ function getState() {
 	};
 	xhr.ontimeout = xhr.onerror = function() {
 		var li = document.createElement("li");
-		setElementText(li, "(Unable to connect to data provider)");
+		utilsModule.setElementText(li, "(Unable to connect to data provider)");
 		windowListElem.appendChild(li);
 	};
 	xhr.open("POST", "get-state.json", true);
@@ -1413,27 +1442,8 @@ function checkTimeSkew() {
 }
 
 
-/*---- Simple utility functions ----*/
 
-// Removes all children of the given DOM node.
-function removeChildren(elem) {
-	while (elem.firstChild != null)
-		elem.removeChild(elem.firstChild);
-}
-
-
-// Removes all children of the given DOM node and adds a single text element containing the specified text.
-function setElementText(elem, str) {
-	removeChildren(elem);
-	elem.appendChild(document.createTextNode(str));
-}
-
-
-function setClasslistItem(clslst, name, enable) {
-	if (clslst.contains(name) != enable)
-		clslst.toggle(name);
-}
-
+/*---- Miscellaneous ----*/
 
 // Monkey patching for Apple Safari and Microsoft Internet Explorer
 if (!("startsWith" in String.prototype)) {
@@ -1443,10 +1453,6 @@ if (!("startsWith" in String.prototype)) {
 		return this.length - pos >= text.length && this.substr(pos, text.length) == text;
 	};
 }
-
-
-
-/*---- Miscellaneous ----*/
 
 // The call to init() must come last due to variables being declared and initialized.
 init();
