@@ -1,31 +1,3 @@
-/* Global variables */
-
-// Type boolean.
-var optimizeMobile = false;
-
-// Configurable parameter. Used by getState().
-var maxMessagesPerWindow = 3000;
-
-
-// Global initialization function - called once after the script and page are loaded.
-// Note that each module has its own initialization logic as well.
-function init() {
-	// Parse cookie for preferences
-	var cookieParts = document.cookie.split(";");
-	cookieParts.forEach(function(s) {
-		s = s.trim();
-		if (s.startsWith("optimize-mobile="))
-			optimizeMobile = s.substring(16) == "true";
-	});
-	if (optimizeMobile)
-		maxMessagesPerWindow = 500;
-	
-	// Fetch data
-	networkModule.init();
-}
-
-
-
 /*---- Window module ----*/
 
 // Holds data for windows and connections, and handles the rendering/display of window data.
@@ -889,21 +861,41 @@ const inputBoxModule = new function() {
 	var prevTabCompletion = null;  // Type tuple<begin:integer, end:integer, prefix:string, name:string> / null.
 	
 	/* Initialization */
-	document.querySelector("footer form").onsubmit = handleLine;
-	inputBoxElem.oninput = colorizeLine;
-	inputBoxElem.onblur = clearTabCompletion;
-	inputBoxElem.onkeydown = function(ev) {
-		if (ev.keyCode == 9) {
-			doTabCompletion();
-			return false;
-		} else {
-			clearTabCompletion();
-			return true;
-		}
+	init();
+	
+	/* Exported functions */
+	
+	// Sets the text box to the given string, gives input focus, and puts the caret at the end.
+	// Types: str is string, result is void.
+	this.putText = function(str) {
+		inputBoxElem.value = str;
+		inputBoxElem.focus();
+		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = str.length;
 	};
-	inputBoxElem.value = "";
+	
+	// Clears the text in the text box. Returns nothing.
+	// Types: result is void.
+	this.clearText = function() {
+		inputBoxElem.value = "";
+	};
 	
 	/* Private functions */
+	
+	function init() {
+		document.querySelector("footer form").onsubmit = handleLine;
+		inputBoxElem.oninput = colorizeLine;
+		inputBoxElem.onblur = clearTabCompletion;
+		inputBoxElem.onkeydown = function(ev) {
+			if (ev.keyCode == 9) {
+				doTabCompletion();
+				return false;
+			} else {
+				clearTabCompletion();
+				return true;
+			}
+		};
+		inputBoxElem.value = "";
+	}
 	
 	function handleLine() {
 		var inputStr = inputBoxElem.value;
@@ -1068,22 +1060,6 @@ const inputBoxModule = new function() {
 	function clearTabCompletion() {
 		prevTabCompletion = null;
 	}
-	
-	/* Exported functions */
-	
-	// Sets the text box to the given string, gives input focus, and puts the caret at the end.
-	// Types: str is string, result is void.
-	this.putText = function(str) {
-		inputBoxElem.value = str;
-		inputBoxElem.focus();
-		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = str.length;
-	};
-	
-	// Clears the text in the text box. Returns nothing.
-	// Types: result is void.
-	this.clearText = function() {
-		inputBoxElem.value = "";
-	};
 };
 
 
@@ -1519,5 +1495,31 @@ if (!("startsWith" in String.prototype)) {
 }
 
 
-// The call to init() must come last due to variables and modules being declared and initialized.
+/* Global variables */
+
+// Type boolean.
+var optimizeMobile = false;
+
+// Configurable parameter. Used by getState().
+var maxMessagesPerWindow = 3000;
+
+
+/* Initialization */
+
+function init() {
+	// Parse cookie for preferences
+	var cookieParts = document.cookie.split(";");
+	cookieParts.forEach(function(s) {
+		s = s.trim();
+		if (s.startsWith("optimize-mobile="))
+			optimizeMobile = s.substring(16) == "true";
+	});
+	if (optimizeMobile)
+		maxMessagesPerWindow = 500;
+	
+	// Fetch data
+	networkModule.init();
+}
+
+// This initialization call must come last due to variables and modules being declared and initialized.
 init();
