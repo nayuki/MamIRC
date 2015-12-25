@@ -179,7 +179,7 @@ const windowModule = new function() {
 					redrawWindowList();
 					if (!windowData[windowName].isMuted) {
 						var notiftext = null;
-						if (!payload[2].startsWith("#") && !payload[2].startsWith("&") && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
+						if (!isChannelName(payload[2]) && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 							// New private messaging window popped open, or nickflagged in one
 							notificationModule.notifyMessage(windowName, null, line[3], line[4]);
 						} else if ((line[1] & Flags.NICKFLAG) != 0)
@@ -629,6 +629,18 @@ const windowModule = new function() {
 	}
 	
 	
+	// Returns a new window object with fields set to initial values.
+	// Types: result is Window. Pure function.
+	function createBlankWindow() {
+		return {
+			lines: [],
+			markedReadUntil: 0,
+			numNewMessages: 0,
+			isNickflagged: false,
+			isMuted: false,
+		};
+	}
+	
 	// Given a timestamp in Unix milliseconds, this returns a new full row element for the messages table.
 	// Types: timestamp is int, result is HTMLElement. Pure function.
 	function dateToTableRow(timestamp) {
@@ -643,7 +655,6 @@ const windowModule = new function() {
 		return tr;
 	}
 	
-	
 	// Tests whether the two given timestamps (in Unix milliseconds) fall on different dates.
 	// Types: ts0 is integer, ts1 is integer, result is boolean. Pure function.
 	function areDatesDifferent(ts0, ts1) {
@@ -651,20 +662,6 @@ const windowModule = new function() {
 		var d1 = new Date(ts1);
 		return d0.getFullYear() != d1.getFullYear() || d0.getMonth() != d1.getMonth() || d0.getDate() != d1.getDate();
 	}
-	
-	
-	// Returns a new window object with fields set to initial values.
-	// Types: result is Window. Pure function.
-	function createBlankWindow() {
-		return {
-			lines: [],
-			markedReadUntil: 0,
-			numNewMessages: 0,
-			isNickflagged: false,
-			isMuted: false,
-		};
-	}
-	
 	
 	// Converts the given timestamp in Unix milliseconds to a string in the preferred format for lineDataToTableRow().
 	// Types: timestamp is integer, result is string. Pure function.
@@ -678,6 +675,12 @@ const windowModule = new function() {
 			return DAYS_OF_WEEK[d.getDay()] + " " + two(d.getHours()) + ":" + two(d.getMinutes());
 		}
 	}
+	
+	// Tests whether the given string is the name of a channel.
+	// Types: name is string, result is boolean. Pure function.
+	function isChannelName(name) {
+		return name.startsWith("#") || name.startsWith("&");
+	}
 };
 
 
@@ -690,20 +693,22 @@ const formatTextModule = new function() {
 	const DETECTION_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
 	const FORMAT_CODE_REGEX = /^(.*?)(?:[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?)/;
 	const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
-	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
-	const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;
+	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;    // Includes parentheses
+	const URL_REGEX1 = /^(.*?\()(https?:\/\/[^ ()]+)/;  // Excludes parentheses
 	const ME_ACTION_REGEX = /^\u0001ACTION (.*)\u0001$/;
 	const TEXT_COLORS = [
 		// The 16 mIRC colors: http://www.mirc.com/colors.html ; http://en.wikichip.org/wiki/irc/colors
 		"#FFFFFF", "#000000", "#00007F", "#009300", "#FF0000", "#7F0000", "#9C009C", "#FC7F00",
 		"#FFFF00", "#00FC00", "#009393", "#00FFFF", "#0000FC", "#FF00FF", "#7F7F7F", "#D2D2D2",
 	];
+	const DEFAULT_BACKGROUND = 0;  // An index in TEXT_COLORS
+	const DEFAULT_FOREGROUND = 1;  // An index in TEXT_COLORS
 	
 	/* Exported functions */
 	
 	// Given a string with possible IRC formatting control codes and plain text URLs,
 	// this returns an array of DOM nodes representing text with formatting and anchor links.
-	// Types: str is string, result is list<HTMLElement>. Pure function.
+	// Types: str is string, result is list<HTMLElement/Text>. Pure function.
 	this.fancyTextToElems = function(str) {
 		// Take fast path if string contains no formatting or potential URLs
 		if (!DETECTION_REGEX.test(str))
@@ -713,8 +718,8 @@ const formatTextModule = new function() {
 		var bold = false;
 		var italic = false;
 		var underline = false;
-		var background = 0;
-		var foreground = 1;
+		var background = DEFAULT_BACKGROUND;  // An index in TEXT_COLORS
+		var foreground = DEFAULT_FOREGROUND;  // An index in TEXT_COLORS
 		
 		// Process formatting commands and chunks of text
 		var result = [];
@@ -742,11 +747,11 @@ const formatTextModule = new function() {
 					chunk = chunk.substring(urlMatch[0].length);
 				}
 				
-				if (background != 0 || foreground != 1) {
+				if (background != DEFAULT_BACKGROUND || foreground != DEFAULT_FOREGROUND) {
 					var elem = document.createElement("span");
-					if (background != 0)
+					if (background != DEFAULT_BACKGROUND)
 						elem.style.backgroundColor = TEXT_COLORS[background];
-					if (foreground != 1)
+					if (foreground != DEFAULT_FOREGROUND)
 						elem.style.color = TEXT_COLORS[foreground];
 					elems.forEach(function(e) {
 						elem.appendChild(e);
@@ -770,7 +775,7 @@ const formatTextModule = new function() {
 			if (formatMatch == null)
 				break;
 			
-			// Process format code
+			// Update state based on format code
 			switch (str.charCodeAt(strPartEnd)) {
 				case 0x02:
 					bold = !bold;
@@ -790,12 +795,12 @@ const formatTextModule = new function() {
 					bold = false;
 					italic = false;
 					underline = false;
-					background = 0;
-					foreground = 1;
+					background = DEFAULT_BACKGROUND;
+					foreground = DEFAULT_FOREGROUND;
 					break;
 				case 0x03:  // Color
-					var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : 1;
-					var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : 0;
+					var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : DEFAULT_FOREGROUND;
+					var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : DEFAULT_BACKGROUND;
 					if (fore < TEXT_COLORS.length) foreground = fore;
 					if (back < TEXT_COLORS.length) background = back;
 					break;
@@ -973,17 +978,18 @@ const inputBoxModule = new function() {
 	function colorizeLine() {
 		var text = inputBoxElem.value;
 		utilsModule.setClasslistItem(inputBoxElem.classList, "is-command", text.startsWith("/") && !text.startsWith("//"));
-		utilsModule.setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong());
+		utilsModule.setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong(text));
 	}
 	
-	function isLineOverlong() {
-		var text = inputBoxElem.value;
+	// Tests whether the given input box text line is too long.
+	// Types: text is string, result is boolean. Pure function.
+	function isLineOverlong(text) {
 		var checktext;
-		if (text.startsWith("//"))
+		if (text.startsWith("//"))  // Message beginning with slash
 			checktext = text.substring(1);
-		else if (!text.startsWith("/"))
+		else if (!text.startsWith("/"))  // Ordinary message
 			checktext = text;
-		else {  // Starts with '/' but not '//'
+		else {  // Slash-command
 			var parts = text.split(" ");
 			var cmd = parts[0].toLowerCase();
 			if ((cmd == "/kick" || cmd == "/msg") && parts.length >= 3)
@@ -1479,7 +1485,7 @@ const networkModule = new function() {
 /*---- Miscellaneous ----*/
 
 // This definition exists only for the purpose of abbreviation, because it is used so many times.
-// Types: name is string, result is HTMLElement/null.
+// Types: name is string, result is HTMLElement/null. Pure function.
 function elemId(name) {
 	return document.getElementById(name);
 }
