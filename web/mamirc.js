@@ -417,7 +417,6 @@ const windowModule = new function() {
 			}
 			if (windowData[windowName].isNickflagged)
 				a.classList.add("nickflag");
-			a.href = "#";
 			a.onclick = function() {
 				self.setActiveWindow(windowName);
 				return false;
@@ -1133,7 +1132,6 @@ const menuModule = new function() {
 					child.className = "disabled";
 				} else {
 					child = utilsModule.createElementWithText("a", item[0]);
-					child.href = "#";
 					child.onclick = function() {
 						closeMenu();
 						item[1]();
