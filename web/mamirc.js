@@ -154,9 +154,9 @@ const windowModule = new function() {
 				var numPrefixDel = Math.max(lines.length - maxMessagesPerWindow, 0);
 				lines.splice(0, numPrefixDel);
 				if (self.activeWindow != null && windowName == self.activeWindow[2]) {
-					var msgRow = lineDataToRowElem(line);
+					var msgRow = lineDataToTableRow(line);
 					if (messageListElem.firstChild != null && lines.length >= 2 && areDatesDifferent(line[2], lines[lines.length - 2][2])) {
-						var dateRow = dateToRowElem(line[2]);
+						var dateRow = dateToTableRow(line[2]);
 						if (msgRow.classList.contains("unread"))
 							dateRow.classList.add("unread");
 						if (msgRow.classList.contains("read"))
@@ -461,9 +461,9 @@ const windowModule = new function() {
 		for (var i = Math.max(lines.length - curWindowMaxMessages, 0), head = true; i < lines.length; i++, head = false) {
 			// 'line' has type tuple<int seq, int timestamp, str line, int flags>
 			var line = lines[i];
-			var msgRow = lineDataToRowElem(line);
+			var msgRow = lineDataToTableRow(line);
 			if (!head && areDatesDifferent(line[2], lines[i - 1][2])) {
-				var dateRow = dateToRowElem(line[2]);
+				var dateRow = dateToTableRow(line[2]);
 				if (msgRow.classList.contains("unread"))
 					dateRow.classList.add("unread");
 				if (msgRow.classList.contains("read"))
@@ -498,7 +498,7 @@ const windowModule = new function() {
 	// The window line comes from windowData[windowName].lines[i] (which can be from loadState() or loadUpdates()).
 	// This function returns valid data only when it is called on lines in the active window; it must not be used for off-screen windows.
 	// Types: line is list<sequence:integer, flags:integer, timestamp:integer, payload:string...>, result is HTMLElement.
-	function lineDataToRowElem(line) {
+	function lineDataToTableRow(line) {
 		// Input variables
 		const sequence = line[0];
 		const flags = line[1];
@@ -631,7 +631,7 @@ const windowModule = new function() {
 	
 	// Given a timestamp in Unix milliseconds, this returns a new full row element for the messages table.
 	// Types: timestamp is int, result is HTMLElement. Pure function.
-	function dateToRowElem(timestamp) {
+	function dateToTableRow(timestamp) {
 		var tr = document.createElement("tr");
 		var td = document.createElement("td");
 		td.colSpan = 3;
@@ -666,7 +666,7 @@ const windowModule = new function() {
 	}
 	
 	
-	// Converts the given timestamp in Unix milliseconds to a string in the preferred format for lineDataToRowElem().
+	// Converts the given timestamp in Unix milliseconds to a string in the preferred format for lineDataToTableRow().
 	// Types: timestamp is integer, result is string. Pure function.
 	function formatDate(timestamp) {
 		var d = new Date(timestamp);
@@ -687,7 +687,7 @@ const windowModule = new function() {
 // Handles formatting codes and URLs in raw IRC message strings. Stateless module.
 const formatTextModule = new function() {
 	/* Constants */
-	const SPECIAL_FORMATTING_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
+	const DETECTION_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
 	const FORMAT_CODE_REGEX = /^(.*?)(?:[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:(\d{1,2})(?:,(\d{1,2}))?)?)/;
 	const REMOVE_FORMATTING_REGEX = /[\u0002\u000F\u0016\u001D\u001F]|\u0003(?:\d{1,2}(?:,\d{1,2})?)?/g;
 	const URL_REGEX0 = /^(|.*? )(https?:\/\/[^ ]+)/;
@@ -706,7 +706,7 @@ const formatTextModule = new function() {
 	// Types: str is string, result is list<HTMLElement>. Pure function.
 	this.fancyTextToElems = function(str) {
 		// Take fast path if string contains no formatting or potential URLs
-		if (!SPECIAL_FORMATTING_REGEX.test(str))
+		if (!DETECTION_REGEX.test(str))
 			return [document.createTextNode(str)];
 		
 		// Current formatting state
@@ -1134,7 +1134,7 @@ const menuModule = new function() {
 // Associates each nickname with a color. The mapping is based on hashing, and thus is stateless and consistent.
 const nickColorModule = new function() {
 	/* Constants */
-	const colorTable = [
+	const COLOR_TABLE = [
 		// 8 hand-tuned colors that are fairly perceptually uniform
 		"DC7979", "E1A056", "C6CA34", "5EA34D", "62B5C6", "7274CF", "B97DC2", "949494",
 		// 56 averages of pairs of the colors above, blended in sRGB
@@ -1169,7 +1169,7 @@ const nickColorModule = new function() {
 				nickColorCache = {};
 				nickColorCacheSize = 0;
 			}
-			nickColorCache[name] = "#" + colorTable[(hash >>> 0) % colorTable.length];
+			nickColorCache[name] = "#" + COLOR_TABLE[(hash >>> 0) % COLOR_TABLE.length];
 			nickColorCacheSize++;
 		}
 		return nickColorCache[name];
