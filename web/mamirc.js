@@ -403,9 +403,9 @@ const windowModule = new function() {
 			var a = utilsModule.createElementWithText("a", party != "" ? party : profile);
 			var n = windowData[windowName].numNewMessages;
 			if (n > 0) {
-				a.appendChild(utilsModule.createElementWithText("span", " ("));
-				a.appendChild(utilsModule.createElementWithText("span", n.toString()));
-				a.appendChild(utilsModule.createElementWithText("span", ")"));
+				[" (", n.toString(), ")"].forEach(function(s) {
+					a.appendChild(utilsModule.createElementWithText("span", s));
+				});
 			}
 			if (windowData[windowName].isNickflagged)
 				a.classList.add("nickflag");
@@ -418,9 +418,10 @@ const windowModule = new function() {
 				menuItems.push(["Unmute window", function() { windowData[windowName].isMuted = false; }]);
 			else {
 				menuItems.push(["Mute window", function() {
-					windowData[windowName].isMuted = true;
-					windowData[windowName].numNewMessages = 0;
-					windowData[windowName].isNickflagged = false;
+					var win = windowData[windowName];
+					win.isMuted = true;
+					win.numNewMessages = 0;
+					win.isNickflagged = false;
 					redrawWindowList();
 				}]);
 			}
@@ -441,8 +442,9 @@ const windowModule = new function() {
 		var totalNewMsg = 0;
 		for (var key in windowData)
 			totalNewMsg += windowData[key].numNewMessages;
-		if (self.activeWindow != null)
-			document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + (self.activeWindow[1] != "" ? self.activeWindow[1] + " - " : "") + self.activeWindow[0] + " - MamIRC";
+		var activeWin = self.activeWindow
+		if (activeWin != null)
+			document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + (activeWin[1] != "" ? activeWin[1] + " - " : "") + activeWin[0] + " - MamIRC";
 	}
 	
 	
@@ -649,10 +651,8 @@ const windowModule = new function() {
 		tr.appendChild(td);
 		
 		// Finishing touches
-		if (sequence < windowData[self.activeWindow[2]].markedReadUntil)
-			tr.classList.add("read");
-		else
-			tr.classList.add("unread");
+		var isRead = sequence < windowData[self.activeWindow[2]].markedReadUntil;
+		tr.classList.add(isRead ? "read" : "unread");
 		return tr;
 	}
 	
