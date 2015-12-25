@@ -9,7 +9,7 @@ const windowModule = new function() {
 	const memberListContainerElem = elemId("member-list-container");
 	const memberListElem          = elemId("member-list");
 	const showMoreMessagesElem    = elemId("show-more-messages");
-	const nicknameText = document.createTextNode("");
+	const nicknameText = textNode("");
 	// Miscellaneous
 	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
 	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -539,52 +539,52 @@ const windowModule = new function() {
 			who = "(" + payload[0] + ")";
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		} else if (type == Flags.NICK) {
-			lineElems.push(document.createTextNode(payload[0] + " changed their name to " + payload[1]));
+			lineElems.push(textNode(payload[0] + " changed their name to " + payload[1]));
 			tr.classList.add("nick-change");
 		} else if (type == Flags.JOIN) {
 			who = "\u2192";  // Rightwards arrow
-			lineElems.push(document.createTextNode(payload[0] + " joined the channel"));
+			lineElems.push(textNode(payload[0] + " joined the channel"));
 			tr.classList.add("user-enter");
 		} else if (type == Flags.PART) {
 			who = "\u2190";  // Leftwards arrow
-			lineElems.push(document.createTextNode(payload[0] + " left the channel"));
+			lineElems.push(textNode(payload[0] + " left the channel"));
 			tr.classList.add("user-exit");
 		} else if (type == Flags.QUIT) {
 			who = "\u2190";  // Leftwards arrow
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
-			lineElems.splice(0, 0, document.createTextNode(payload[0] + " has quit: "));
+			lineElems.splice(0, 0, textNode(payload[0] + " has quit: "));
 			tr.classList.add("user-exit");
 		} else if (type == Flags.KICK) {
 			who = "\u2190";  // Leftwards arrow
 			lineElems = formatTextModule.fancyTextToElems(payload[2]);
-			lineElems.splice(0, 0, document.createTextNode(payload[0] + " was kicked by " + payload[1] + ": "));
+			lineElems.splice(0, 0, textNode(payload[0] + " was kicked by " + payload[1] + ": "));
 			tr.classList.add("user-exit");
 		} else if (type == Flags.TOPIC) {
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
-			lineElems.splice(0, 0, document.createTextNode(payload[0] + " set the channel topic to: "));
+			lineElems.splice(0, 0, textNode(payload[0] + " set the channel topic to: "));
 		} else if (type == Flags.INITNOTOPIC) {
-			lineElems.push(document.createTextNode("No channel topic is set"));
+			lineElems.push(textNode("No channel topic is set"));
 		} else if (type == Flags.INITTOPIC) {
 			lineElems = formatTextModule.fancyTextToElems(payload[0]);
-			lineElems.splice(0, 0, document.createTextNode("The channel topic is: "));
+			lineElems.splice(0, 0, textNode("The channel topic is: "));
 		} else if (type == Flags.SERVERREPLY) {
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		} else if (type == Flags.NAMES) {
-			lineElems.push(document.createTextNode("Users in channel: " + payload.join(", ")));
+			lineElems.push(textNode("Users in channel: " + payload.join(", ")));
 			tr.classList.add("user-list");
 		} else if (type == Flags.MODE) {
-			lineElems.push(document.createTextNode(payload[0] + " set mode " + payload[1]));
+			lineElems.push(textNode(payload[0] + " set mode " + payload[1]));
 			tr.classList.add("mode-change");
 		} else if (type == Flags.CONNECTING) {
 			var str = "Connecting to server at " + payload[0] + ", port " + payload[1] + ", " + (payload[2] ? "SSL" : "no SSL") + "...";
-			lineElems.push(document.createTextNode(str));
+			lineElems.push(textNode(str));
 		} else if (type == Flags.CONNECTED) {
-			lineElems.push(document.createTextNode("Socket opened to IP address " + payload[0]));
+			lineElems.push(textNode("Socket opened to IP address " + payload[0]));
 		} else if (type == Flags.DISCONNECTED) {
-			lineElems.push(document.createTextNode("Disconnected from server"));
+			lineElems.push(textNode("Disconnected from server"));
 		} else {
 			who = "RAW";
-			lineElems.push(document.createTextNode("flags=" + flags + " " + payload.join(" ")));
+			lineElems.push(textNode("flags=" + flags + " " + payload.join(" ")));
 		}
 		
 		// Make timestamp cell
@@ -707,7 +707,7 @@ const formatTextModule = new function() {
 	this.fancyTextToElems = function(str) {
 		// Take fast path if string contains no formatting or potential URLs
 		if (!DETECTION_REGEX.test(str))
-			return [document.createTextNode(str)];
+			return [textNode(str)];
 		
 		// Current formatting state
 		var bold = false;
@@ -731,7 +731,7 @@ const formatTextModule = new function() {
 						urlMatch = URL_REGEX1.exec(chunk);
 					var chunkPartEnd = urlMatch != null ? urlMatch[1].length : chunk.length;
 					if (chunkPartEnd > 0)
-						elems.push(document.createTextNode(chunk.substr(0, chunkPartEnd)));
+						elems.push(textNode(chunk.substr(0, chunkPartEnd)));
 					if (urlMatch == null)
 						break;
 					var a = utilsModule.createElementWithText("a", urlMatch[2]);
@@ -807,7 +807,7 @@ const formatTextModule = new function() {
 		
 		// Epilog
 		if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
-			result.push(document.createTextNode(""));
+			result.push(textNode(""));
 		return result;
 	}
 	
@@ -920,10 +920,10 @@ const inputBoxModule = new function() {
 			// The user input command is case-insensitive. The command sent to the server will be in uppercase.
 			var parts = inputStr.split(" ");
 			var cmd = parts[0].toLowerCase();
+			var profile = activeWindow[0];
 			
 			// Irregular commands
 			if (cmd == "/msg" && parts.length >= 3) {
-				var profile = activeWindow[0];
 				var party = parts[1];
 				var windowName = profile + "\n" + party;
 				var text = utilsModule.nthRemainingPart(inputStr, 2);
@@ -934,28 +934,28 @@ const inputBoxModule = new function() {
 					networkModule.sendMessage(profile, party, text, onerror);
 				}
 			} else if (cmd == "/me" && parts.length >= 2) {
-				networkModule.sendMessage(activeWindow[0], activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+				networkModule.sendMessage(profile, activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 			} else if (cmd == "/notice" && parts.length >= 3) {
-				networkModule.sendAction([["send-line", activeWindow[0], "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
+				networkModule.sendAction([["send-line", profile, "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
-				networkModule.sendAction([["send-line", activeWindow[0], "PART " + activeWindow[1]]], onerror);
+				networkModule.sendAction([["send-line", profile, "PART " + activeWindow[1]]], onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
 				windowModule.openPrivateMessagingWindow(parts[1], onerror);
 			} else if (cmd == "/topic" && parts.length >= 2) {
-				networkModule.sendAction([["send-line", activeWindow[0], "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
+				networkModule.sendAction([["send-line", profile, "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
 			} else if (cmd == "/kick" && parts.length >= 2) {
 				var reason = parts.length == 2 ? "" : utilsModule.nthRemainingPart(inputStr, 2);
-				networkModule.sendAction([["send-line", activeWindow[0], "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
+				networkModule.sendAction([["send-line", profile, "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
 			} else if (cmd == "/names" && parts.length == 1) {
 				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
-				networkModule.sendAction([["send-line", activeWindow[0], "NAMES" + params]], onerror);
+				networkModule.sendAction([["send-line", profile, "NAMES" + params]], onerror);
 			} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
 				// Regular commands
 				var minMaxParams = OUTGOING_COMMAND_PARAM_COUNTS[cmd];
 				var numParams = parts.length - 1;
 				if (numParams >= minMaxParams[0] && numParams <= minMaxParams[1]) {
 					var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
-					networkModule.sendAction([["send-line", activeWindow[0], cmd.substring(1).toUpperCase() + params]], onerror);
+					networkModule.sendAction([["send-line", profile, cmd.substring(1).toUpperCase() + params]], onerror);
 				} else {
 					alert("Invalid command");
 					return false;  // Don't clear the text box
@@ -1296,7 +1296,7 @@ const utilsModule = new function() {
 	// as its only child. Types: tagName is string, text is string, result is HTMLElement. Pure function.
 	this.createElementWithText = function(tagName, text) {
 		var result = document.createElement(tagName);
-		result.appendChild(document.createTextNode(text));
+		result.appendChild(textNode(text));
 		return result;
 	};
 	
@@ -1482,6 +1482,13 @@ const networkModule = new function() {
 // Types: name is string, result is HTMLElement/null.
 function elemId(name) {
 	return document.getElementById(name);
+}
+
+
+// This definition exists only for the purpose of abbreviation, because it is used so many times.
+// Types: text is string, result is Text (Node). Pure function.
+function textNode(text) {
+	return document.createTextNode(text);
 }
 
 
