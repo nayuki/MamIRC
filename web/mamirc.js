@@ -33,7 +33,7 @@ const windowModule = new function() {
 	
 	// Type map<string->Connection> / null. Each key is a network profile name. The type of each Connection is
 	// object{currentNickname:string, channels:map<string->Channel>}, where Channel is object{members:list<string>, topic:string/null}.
-	this.connectionData = null;
+	var connectionData = null;
 	
 	// Type map<string->integer> / null. It is a collection of integer constants, defined
 	// in the Java code to avoid duplication. Values are set by networkModule.getState().
@@ -54,7 +54,7 @@ const windowModule = new function() {
 	// Types: inData is object, result is void.
 	this.loadState = function(inData) {
 		// Set simple fields
-		this.connectionData = inData.connections;
+		connectionData = inData.connections;
 		Flags = inData.flagsConstants;
 		
 		// Handle the windows
@@ -112,7 +112,7 @@ const windowModule = new function() {
 		this.activeWindow = name.split("\n").concat(name);
 		var profile = this.activeWindow[0];
 		var party = this.activeWindow[1];
-		nicknameText.data = (profile in this.connectionData) ? this.connectionData[profile].currentNickname : "";
+		nicknameText.data = (profile in connectionData) ? connectionData[profile].currentNickname : "";
 		redrawWindowList();
 		redrawChannelMembers();
 		
@@ -186,7 +186,7 @@ const windowModule = new function() {
 							notificationModule.notifyMessage(windowName, payload[2], line[3], line[4]);
 					}
 				} else if (subtype == Flags.JOIN || subtype == Flags.PART || subtype == Flags.QUIT || subtype == Flags.KICK || subtype == Flags.NICK) {
-					var members = self.connectionData[payload[1]].channels[payload[2]].members;
+					var members = connectionData[payload[1]].channels[payload[2]].members;
 					var name = line[3];
 					if (subtype == Flags.JOIN && members.indexOf(name) == -1)
 						members.push(name);
@@ -203,38 +203,38 @@ const windowModule = new function() {
 					if (self.activeWindow != null && windowName == self.activeWindow[2])
 						redrawChannelMembers();
 				} else if (subtype == Flags.TOPIC) {
-					self.connectionData[payload[1]].channels[payload[2]].topic = line[4];
+					connectionData[payload[1]].channels[payload[2]].topic = line[4];
 				} else if (subtype == Flags.INITNOTOPIC) {
-					self.connectionData[payload[1]].channels[payload[2]].topic = null;
+					connectionData[payload[1]].channels[payload[2]].topic = null;
 				} else if (subtype == Flags.INITTOPIC) {
-					self.connectionData[payload[1]].channels[payload[2]].topic = line[3];
+					connectionData[payload[1]].channels[payload[2]].topic = line[3];
 				} else if (subtype == Flags.NOTICE || subtype == Flags.SERVERREPLY) {
 					if (!windowData[windowName].isMuted) {
 						windowData[windowName].numNewMessages++;
 						redrawWindowList();
 					}
 				} else if (subtype == Flags.NAMES) {
-					self.connectionData[payload[1]].channels[payload[2]].members = line.slice(3);
+					connectionData[payload[1]].channels[payload[2]].members = line.slice(3);
 					if (self.activeWindow != null && payload[1] == self.activeWindow[0] && payload[2] == self.activeWindow[1])
 						redrawChannelMembers();
 				} else if (subtype == Flags.DISCONNECTED && payload[2] == "") {
-					delete self.connectionData[payload[1]];
+					delete connectionData[payload[1]];
 				}
 			} else if (type == "MYNICK") {
 				var profile = payload[1];
 				var name = payload[2];
-				self.connectionData[profile].currentNickname = name;
+				connectionData[profile].currentNickname = name;
 				if (self.activeWindow != null && self.activeWindow[0] == profile) {
 					nicknameText.data = name;
 					activeWindowUpdated = true;
 				}
 			} else if (type == "JOINED") {
-				self.connectionData[payload[1]].channels[payload[2]] = {
+				connectionData[payload[1]].channels[payload[2]] = {
 					members: [],
 					topic: null,
 				};
 			} else if (type == "PARTED" || type == "KICKED") {
-				delete self.connectionData[payload[1]].channels[payload[2]];
+				delete connectionData[payload[1]].channels[payload[2]];
 				if (self.activeWindow != null && self.activeWindow[0] == payload[1] && self.activeWindow[1] == payload[2])
 					redrawChannelMembers();
 				if (type == "KICKED")
@@ -308,7 +308,7 @@ const windowModule = new function() {
 					activeWindowUpdated = true;
 				}
 			} else if (type == "CONNECTED") {
-				self.connectionData[payload[1]] = {
+				connectionData[payload[1]] = {
 					currentNickname: null,
 					channels: {},
 				};
@@ -341,6 +341,19 @@ const windowModule = new function() {
 			this.setActiveWindow(windowName);
 			inputBoxModule.putText("");
 		}
+	};
+	
+	
+	// Returns a new list of channel member names for the given profile and channel,
+	// or null if not currently connected to the profile or joined in the channel.
+	// Types: profile is string, channel is string, result is list<string> / null.
+	this.getChannelMembers = function(profile, channel) {
+		if (!(profile in connectionData))
+			return null;
+		var data = connectionData[profile].channels;
+		if (!(channel in data))
+			return null;
+		return data[channel].members.slice(0);  // Defensive copy
 	};
 	
 	
@@ -397,7 +410,7 @@ const windowModule = new function() {
 					redrawWindowList();
 				}]);
 			}
-			if (party == "" && profile in self.connectionData || profile in self.connectionData && party in self.connectionData[profile].channels)
+			if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
 				menuItems.push(["Close window", null]);
 			else
 				menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
@@ -438,8 +451,8 @@ const windowModule = new function() {
 	function redrawChannelMembers() {
 		utilsModule.clearChildren(memberListElem);
 		var profile = self.activeWindow[0], party = self.activeWindow[1];
-		if (profile in self.connectionData && party in self.connectionData[profile].channels) {
-			var members = self.connectionData[profile].channels[party].members;
+		if (profile in connectionData && party in connectionData[profile].channels) {
+			var members = connectionData[profile].channels[party].members;
 			members.sort(function(s, t) {  // Safe mutation; case-insensitive ordering
 				return s.toLowerCase().localeCompare(t.toLowerCase());
 			});
@@ -1013,7 +1026,8 @@ const inputBoxModule = new function() {
 				break;
 			var profile = windowModule.activeWindow[0];
 			var party = windowModule.activeWindow[1];
-			if (!(profile in windowModule.connectionData) || !(party in windowModule.connectionData[profile].channels))
+			var candidates = windowModule.getChannelMembers(profile, party);
+			if (candidates == null)
 				break;
 			
 			var text = inputBoxElem.value;
@@ -1029,7 +1043,7 @@ const inputBoxModule = new function() {
 				prefix = prevTabCompletion[2];
 			}
 			
-			var candidates = windowModule.connectionData[profile].channels[party].members.filter(function(name) {
+			candidates = candidates.filter(function(name) {
 				return name.toLowerCase().startsWith(prefix); });
 			if (candidates.length == 0)
 				break;
