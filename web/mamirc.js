@@ -1,6 +1,6 @@
 /* Global variables */
 
-// Type bool.
+// Type boolean.
 var optimizeMobile = false;
 
 // Configurable parameter. Used by getState().
@@ -10,6 +10,7 @@ var maxMessagesPerWindow = 3000;
 // Global initialization function - called once after the script and page are loaded.
 // Note that each module has its own initialization logic as well.
 function init() {
+	// Parse cookie for preferences
 	var cookieParts = document.cookie.split(";");
 	cookieParts.forEach(function(s) {
 		s = s.trim();
@@ -19,12 +20,15 @@ function init() {
 	if (optimizeMobile)
 		maxMessagesPerWindow = 500;
 	
+	// Fetch data
 	networkModule.init();
 }
 
 
-/*---- Window display and data module ----*/
 
+/*---- Window module ----*/
+
+// Holds data for windows and connections, and handles the rendering/display of window data.
 const windowModule = new function() {
 	/* Constants */
 	// Document nodes
@@ -39,35 +43,34 @@ const windowModule = new function() {
 	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	
 	/* Variables */
-	// These variables are null before getState() returns successfully. Thereafter, most of them are non-null.
+	// These variables are null before networkModule.getState() returns successfully. Thereafter, most of them are non-null.
 	
-	// Type tuple<str profile, str party, str concatenated>.
-	// Is null if windowNames is null or zero-length, otherwise this[2] equals an entry in windowNames.
+	// Type tuple<profile:string, party:string, concatenated:string> / null.
+	// Is null if windowNames is null or zero-length, otherwise activeWindow[2] equals an entry in windowNames.
 	this.activeWindow = null;
 	
-	// Type list<str>. Length 0 or more. Each element is of the form (profile+"\n"+party).
+	// Type list<string> / null. Length 0 or more. Each element is of the form (profile+"\n"+party).
 	// Elements can be in any order, and it determines the order rendered on screen.
 	this.windowNames = null;
 	
-	// Type map<str,window>. Key is an entry in windowNames. Each window has these properties:
-	// - list<list<int seq, int flags, int timestamp, str... payload>> lines
-	// - int markedReadUntil
-	// - int numNewMessages
-	// - bool isNickflagged
+	// Type map<string->Window> / null. Each key is an entry in windowNames. The type of each Window
+	// is object{lines:list<list<seq:integer, flags:integer, timestamp:integer, payload:string...>>,
+	// markedReadUntil:integer, numNewMessages:integer, isNickflagged:boolean, isMuted:boolean}.
+	// (See createBlankWindow() for an example of all the fields.)
 	var windowData = null;
 	
-	// Type map<str,object>. Key is the network profile name. Each object has these properties:
-	// - str currentNickname
-	// - map<str,object> channels, with values having {"members" -> list<str>, "topic" -> str or null}
+	// Type map<string->Connection> / null. Each key is a network profile name. The type of each Connection is
+	// object{currentNickname:string, channels:map<string->Channel>}, where Channel is object{members:list<string>, topic:string/null}.
 	this.connectionData = null;
 	
-	// Type integer (returned by window.setTimeout()).
+	// Type integer / null (returned by window.setTimeout()).
 	var setInitialWindowTimeout = null;
 	
-	// Type map<str,int>. It is a collection of integer constants, defined in Java code to avoid duplication. Values are set by getState().
+	// Type map<string->integer> / null. It is a collection of integer constants, defined
+	// in the Java code to avoid duplication. Values are set by networkModule.getState().
 	var Flags = null;
 	
-	// Type integer.
+	// Type integer / null.
 	var curWindowMaxMessages = null;
 	
 	
@@ -78,7 +81,8 @@ const windowModule = new function() {
 	
 	/* Exported functions */
 	
-	// Called only by getState(). inData is a object parsed from JSON text.
+	// Called only by networkModule.getState(). inData is an elaborate object parsed from JSON text.
+	// Types: inData is object, result is void.
 	this.loadState = function(inData) {
 		// Set simple fields
 		this.connectionData = inData.connections;
@@ -88,7 +92,7 @@ const windowModule = new function() {
 		this.windowNames = [];
 		windowData = {};
 		inData.windows.forEach(function(inWindow) {
-			// 'inWindow' has type tuple<str profile, str party, window state>
+			// 'inWindow' has type tuple<profile:string, party:string, state:Window>
 			var windowName = inWindow[0] + "\n" + inWindow[1];
 			if (self.windowNames.indexOf(windowName) != -1)
 				throw "Duplicate window";
@@ -125,6 +129,7 @@ const windowModule = new function() {
 	// Changes activeWindow and redraws the user interface. 'name' must exist in the array windowNames.
 	// Note that for efficiency, switching to the already active window does not re-render the table of lines.
 	// Thus all other logic must update the active window's lines incrementally whenever new updates arrive.
+	// Types: name is string, result is void.
 	this.setActiveWindow = function(name) {
 		// activeWindow may be null at the start of this method, but will be non-null afterward
 		windowData[name].numNewMessages = 0;
@@ -158,6 +163,8 @@ const windowModule = new function() {
 	};
 	
 	
+	// Called by networkModule.updateState(). inData is an elaborate object parsed from JSON text.
+	// Types: inData is object, result is void.
 	this.loadUpdates = function(inData) {
 		const messagesElem = elemId("messages");
 		const scrollPosition = messagesElem.scrollTop;
@@ -358,6 +365,9 @@ const windowModule = new function() {
 	};
 	
 	
+	// Either switches to an existing private messaging window of the given name on
+	// the current profile, or sends a command to the server to open a new PM window.
+	// Types: target is string, onerror is function()->void / null, result is void.
 	this.openPrivateMessagingWindow = function(target, onerror) {
 		var profile = this.activeWindow[0];
 		var windowName = profile + "\n" + target;
@@ -372,6 +382,7 @@ const windowModule = new function() {
 	
 	/* Private functions */
 	
+	// Performs module initialization. Types: result is void.
 	function init() {
 		showMoreMessagesElem.style.display = "none";
 		showMoreMessagesElem.querySelector("a").onclick = function() {
@@ -386,8 +397,8 @@ const windowModule = new function() {
 	}
 	
 	
-	// Clears the window list HTML container element and rebuilds it from scratch based on
-	// the current states of windowNames, windowData[windowName].newMessages, and activeWindow.
+	// Clears the window list HTML container element and rebuilds it from scratch based on the current states
+	// of windowNames, windowData[windowName].newMessages, and activeWindow. Types: result is void.
 	function redrawWindowList() {
 		utilsModule.clearChildren(windowListElem);
 		self.windowNames.forEach(function(windowName) {
@@ -445,7 +456,7 @@ const windowModule = new function() {
 	
 	
 	// Refreshes the selection class of each window <li> element based on the states of windowNames and activeWindow.
-	// This assumes that the list of HTML elements is already synchronized with windowNames.
+	// This assumes that the list of HTML elements is already synchronized with windowNames. Types: result is void.
 	function refreshWindowSelection() {
 		if (self.activeWindow == null)
 			return;
@@ -458,6 +469,7 @@ const windowModule = new function() {
 	
 	// Refreshes the channel members text element based on the states of
 	// connectionData[profileName].channels[channelName].members and activeWindow.
+	// Types: Result is void.
 	function redrawChannelMembers() {
 		utilsModule.clearChildren(memberListElem);
 		var profile = self.activeWindow[0], party = self.activeWindow[1];
@@ -477,6 +489,7 @@ const windowModule = new function() {
 	}
 	
 	
+	// Clears and rerenders the entire table of messages for the current window. Types: result is void.
 	function redrawMessagesTable() {
 		utilsModule.clearChildren(messageListElem);
 		var lines = windowData[self.activeWindow[2]].lines;
@@ -502,6 +515,7 @@ const windowModule = new function() {
 	}
 	
 	
+	// Calculates and apply column widths in the main table, and changes the table to the fixed layout. Types: result is void.
 	function reflowMessagesTable() {
 		var tableElem = messageListElem.parentNode;
 		tableElem.style.tableLayout = "auto";
@@ -517,7 +531,8 @@ const windowModule = new function() {
 	
 	// Converts a window line (which is a tuple of str/int) into a <tr> element for the main messages table.
 	// The window line comes from windowData[windowName].lines[i] (which can be from loadState() or loadUpdates()).
-	// This function can only be called for lines in the active window; it must not be used for off-screen windows.
+	// This function returns valid data only when it is called on lines in the active window; it must not be used for off-screen windows.
+	// Types: line is list<sequence:integer, flags:integer, timestamp:integer, payload:string...>, result is HTMLElement.
 	function lineDataToRowElem(line) {
 		// Input variables
 		const sequence = line[0];
@@ -527,10 +542,10 @@ const windowModule = new function() {
 		const type = flags & Flags.TYPE_MASK;
 		
 		// Output variables
-		var who = "\u25CF";    // Type str
-		var nameColor = null;  // Type str or null
-		var lineElems = [];    // Type list<domnode>
-		var quoteText = null;  // Type str or null
+		var who = "\u25CF";    // Type string
+		var nameColor = null;  // Type string/null
+		var lineElems = [];    // Type list<HTMLElement>
+		var quoteText = null;  // Type string/null
 		var tr = document.createElement("tr");
 		
 		// Take action depending on head of payload
@@ -651,6 +666,8 @@ const windowModule = new function() {
 	}
 	
 	
+	// Given a timestamp in Unix milliseconds, this returns a new full row element for the messages table.
+	// Types: timestamp is int, result is HTMLElement. Pure function.
 	function dateToRowElem(timestamp) {
 		var tr = document.createElement("tr");
 		var td = document.createElement("td");
@@ -664,6 +681,8 @@ const windowModule = new function() {
 	}
 	
 	
+	// Tests whether the two given timestamps (in Unix milliseconds) fall on different dates.
+	// Types: ts0 is integer, ts1 is integer, result is boolean. Pure function.
 	function areDatesDifferent(ts0, ts1) {
 		var d0 = new Date(ts0);
 		var d1 = new Date(ts1);
@@ -671,6 +690,8 @@ const windowModule = new function() {
 	}
 	
 	
+	// Returns a new window object with fields set to initial values.
+	// Types: result is Window. Pure function.
 	function createBlankWindow() {
 		return {
 			lines: [],
@@ -682,7 +703,8 @@ const windowModule = new function() {
 	}
 	
 	
-	// Converts a Unix millisecond timestamp to a string, in the preferred format for lineDataToRowElem().
+	// Converts the given timestamp in Unix milliseconds to a string in the preferred format for lineDataToRowElem().
+	// Types: timestamp is integer, result is string. Pure function.
 	function formatDate(timestamp) {
 		var d = new Date(timestamp);
 		var two = utilsModule.twoDigits;
@@ -1089,7 +1111,7 @@ const menuModule = new function() {
 	
 	/* Exported functions */
 	// Based on the given list of menu items, this returns an event handler function to pop open the context menu.
-	// Types: items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is function(ev:Event)->Boolean.
+	// Types: items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is function(ev:Event)->boolean.
 	this.makeOpener = function(items) {
 		return function(ev) {
 			// If text is currently selected, show the native context menu instead -
@@ -1166,7 +1188,7 @@ const nickColorModule = new function() {
 	/* Exported functions */
 	// Returns the color associated with the given nickname, based on a hashing algorithm.
 	// 'name' is an arbitrary string, and the result is a CSS hexadecimal color in the format "#ABC012".
-	// Types: name is string, result is string.
+	// Types: name is string, result is string. Pure function.
 	this.getNickColor = function(name) {
 		if (!(name in nickColorCache)) {
 			var hash = 1;  // Signed 32-bit integer
@@ -1231,7 +1253,7 @@ const notificationModule = new function() {
 	
 	// Returns either str if short enough, or some prefix of str with "..." appended.
 	// The function is needed because Mozilla Firefox allows ridiculously long notification lines to be displayed.
-	// Types: str is string, result is string.
+	// Types: str is string, result is string. Pure function.
 	function truncateLongText(str) {
 		var LIMIT = 5;
 		var i = 0;
@@ -1313,7 +1335,7 @@ const utilsModule = new function() {
 	};
 	
 	// Modifies the given class list so that it contains / does not contain the given token name. Returns nothing.
-	// Types: clslst is DOMTokenList (mutable), name is string, enable is Boolean, result is void.
+	// Types: clslst is DOMTokenList (mutable), name is string, enable is boolean, result is void.
 	this.setClasslistItem = function(clslst, name, enable) {
 		if (clslst.contains(name) != enable)
 			clslst.toggle(name);
@@ -1355,21 +1377,23 @@ const errorMsgModule = new function() {
 const networkModule = new function() {
 	/* Variables */
 	const self = this;
-	// Type integer. At least 0.
+	// Type integer/null. At least 0.
 	var nextUpdateId = null;
-	// In milliseconds. This value changes during execution depending on successful/failed requests.
+	// Type integer. This value, in milliseconds, changes during execution depending on successful/failed requests.
 	var retryTimeout = 1000;
-	// Type string.
+	// Type string/null.
 	var csrfToken = null;
 	
 	/* Exported functions */
 	
+	// Initializes this module. Must not be called more than once.
 	this.init = function() {
 		getState();
 		checkTimeSkew();
 	};
 	
-	// Type signature: str path, list<list<val>> payload, func onload/null, func ontimeout/null. Returns nothing.
+	// Sends the given payload of commands to the MamIRC processor. If an error occurs, the onerror callback is called.
+	// Types: payload is list<list<object>>, onerror is function(reason:string)->void / null, result is void.
 	this.sendAction = function(payload, onerror) {
 		var xhr = new XMLHttpRequest();
 		if (onerror != null) {
@@ -1391,15 +1415,16 @@ const networkModule = new function() {
 		xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
 	};
 	
-	// Type signature: str profile, str target, str text. Returns nothing. The value (profile+"\n"+target) need not exist in windowNames.
+	// Sends a request to the MamIRC processor to send an IRC PRIVMSG to the given target.
+	// Note that the value (profile+"\n"+target) need not currently exist in windowNames.
+	// Types: profile is string, target is string, text is string, onerror is function(reason:string)->void / null, result is void.
 	this.sendMessage = function(profile, target, text, onerror) {
 		this.sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], onerror);
 	};
 	
 	/* Private functions */
 	
-	// Called after login (from authenticate()) and after a severe state desynchronization (indirectly from updateState()).
-	// This performs an Ajax request, changes the page layout, and renders the data on screen.
+	// Called by init(), or from updateState() after a severe state desynchronization. Returns nothing.
 	function getState() {
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
@@ -1421,6 +1446,7 @@ const networkModule = new function() {
 		xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow}));
 	}
 	
+	// Called by only getState() or updateState(). Returns nothing.
 	function updateState() {
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
@@ -1452,6 +1478,7 @@ const networkModule = new function() {
 		xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId, "maxWait":maxWait}));
 	}
 	
+	// Called by only init() or checkTimeSkew(). Returns nothing.
 	function checkTimeSkew() {
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
@@ -1486,5 +1513,6 @@ if (!("startsWith" in String.prototype)) {
 	};
 }
 
-// The call to init() must come last due to variables being declared and initialized.
+
+// The call to init() must come last due to variables and modules being declared and initialized.
 init();
