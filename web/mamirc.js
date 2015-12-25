@@ -63,9 +63,6 @@ const windowModule = new function() {
 	// object{currentNickname:string, channels:map<string->Channel>}, where Channel is object{members:list<string>, topic:string/null}.
 	this.connectionData = null;
 	
-	// Type integer / null (returned by window.setTimeout()).
-	var setInitialWindowTimeout = null;
-	
 	// Type map<string->integer> / null. It is a collection of integer constants, defined
 	// in the Java code to avoid duplication. Values are set by networkModule.getState().
 	var Flags = null;
@@ -154,12 +151,7 @@ const windowModule = new function() {
 		messagesElem.scrollTop = messagesElem.scrollHeight;
 		
 		// Tell the processor that this window was selected
-		if (setInitialWindowTimeout != null)
-			clearTimeout(setInitialWindowTimeout);
-		setInitialWindowTimeout = setTimeout(function() {
-			networkModule.sendAction([["set-initial-window", profile, party]], null);
-			setInitialWindowTimeout = null;
-		}, 10000);
+		networkModule.setInitialWindowDelayed(profile, party, 10000);
 	};
 	
 	
@@ -1381,6 +1373,8 @@ const networkModule = new function() {
 	var retryTimeout = 1000;
 	// Type string/null.
 	var csrfToken = null;
+	// Type integer / null (returned by window.setTimeout()).
+	var setInitialWindowTimeout = null;
 	
 	/* Exported functions */
 	
@@ -1418,6 +1412,19 @@ const networkModule = new function() {
 	// Types: profile is string, party is string, text is string, onerror is function(reason:string)->void / null, result is void.
 	this.sendMessage = function(profile, party, text, onerror) {
 		this.sendAction([["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
+	};
+	
+	// Sends a request to the Processor to set the initial window to the given window name, but only after
+	// the given delay in milliseconds. If another setInitialWindowDelayed() request is called before
+	// the delay expires, the previous request is cancelled and a new delayed request starts counting down.
+	// Types: profile is string, party is string, delay is integer, result is void.
+	this.setInitialWindowDelayed = function(profile, party, delay) {
+		if (setInitialWindowTimeout != null)
+			clearTimeout(setInitialWindowTimeout);
+		setInitialWindowTimeout = setTimeout(function() {
+			networkModule.sendAction([["set-initial-window", profile, party]], null);
+			setInitialWindowTimeout = null;
+		}, delay);
 	};
 	
 	/* Private functions */
