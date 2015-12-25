@@ -232,10 +232,10 @@ public final class MamircProcessor {
 			
 			case "NOTICE": {
 				String who = msg.prefixName;
-				String target = msg.getParameter(0);
-				if (target.equals(state.getCurrentNickname()))
-					target = who;
-				addNoticeLine(profile.name, target, 0, ev.timestamp, who, msg.getParameter(1));
+				String party = msg.getParameter(0);
+				if (party.equals(state.getCurrentNickname()))
+					party = who;
+				addNoticeLine(profile.name, party, 0, ev.timestamp, who, msg.getParameter(1));
 				break;
 			}
 			
@@ -255,13 +255,13 @@ public final class MamircProcessor {
 				String reason = msg.getParameter(2);
 				for (String chan : msg.getParameter(0).split(",")) {
 					boolean mekicked = false;
-					for (String target : msg.getParameter(1).split(",")) {
-						if (curchans.containsKey(chan) && curchans.get(chan).members.contains(target)) {
-							if (target.equalsIgnoreCase(state.getCurrentNickname()))
+					for (String party : msg.getParameter(1).split(",")) {
+						if (curchans.containsKey(chan) && curchans.get(chan).members.contains(party)) {
+							if (party.equalsIgnoreCase(state.getCurrentNickname()))
 								mekicked = true;
 							else
-								addKickLine(profile.name, chan, ev.timestamp, target, msg.prefixName, reason);
-							curchans.get(chan).members.remove(target);
+								addKickLine(profile.name, chan, ev.timestamp, party, msg.prefixName, reason);
+							curchans.get(chan).members.remove(party);
 						}
 					}
 					if (mekicked) {  // Save this part for last
@@ -274,8 +274,8 @@ public final class MamircProcessor {
 			}
 			
 			case "MODE": {
-				String target = msg.getParameter(0);
-				if (!state.getCurrentChannels().containsKey(target))
+				String party = msg.getParameter(0);
+				if (!state.getCurrentChannels().containsKey(party))
 					break;
 				String text = "";
 				for (int i = 1; i < msg.parameters.size(); i++) {
@@ -283,20 +283,20 @@ public final class MamircProcessor {
 						text += " ";
 					text += msg.getParameter(i);
 				}
-				addModeLine(profile.name, target, ev.timestamp, msg.prefixName, text);
+				addModeLine(profile.name, party, ev.timestamp, msg.prefixName, text);
 				break;
 			}
 			
 			case "PRIVMSG": {
 				String who = msg.prefixName;
-				String target = msg.getParameter(0);
-				if (target.charAt(0) != '#' && target.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
-					target = who;
+				String party = msg.getParameter(0);
+				if (party.charAt(0) != '#' && party.charAt(0) != '&')  // Not a channel, and is therefore a private message to me
+					party = who;
 				String text = msg.getParameter(1);
 				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
 					flags |= Window.Flags.NICKFLAG.value;
-				addPrivmsgLine(profile.name, target, flags, ev.timestamp, who, text);
+				addPrivmsgLine(profile.name, party, flags, ev.timestamp, who, text);
 				break;
 			}
 			
@@ -665,21 +665,21 @@ public final class MamircProcessor {
 	/*---- Window line adding methods ----*/
 	
 	// Must be called in a locked context. Should only be called by the stub methods below, not directly by any methods above.
-	private void addWindowLine(String profile, String target, int flags, long timestamp, Object... payload) {
+	private void addWindowLine(String profile, String party, int flags, long timestamp, Object... payload) {
 		if (!windows.containsKey(profile))
 			windows.put(profile, new TreeMap<String,Window>());
 		Map<String,Window> innerMap = windows.get(profile);
-		if (!innerMap.containsKey(target)) {
-			String lower = profile + "\n" + target.toLowerCase();
+		if (!innerMap.containsKey(party)) {
+			String lower = profile + "\n" + party.toLowerCase();
 			if (windowCaseMap.containsKey(lower))
-				target = windowCaseMap.get(lower).split("\n", 2)[1];
+				party = windowCaseMap.get(lower).split("\n", 2)[1];
 			else {
-				innerMap.put(target, new Window());
-				windowCaseMap.put(lower, profile + "\n" + target);
+				innerMap.put(party, new Window());
+				windowCaseMap.put(lower, profile + "\n" + party);
 			}
 		}
 		timestamp = divideAndFloor(timestamp, 1000);
-		Window win = innerMap.get(target);
+		Window win = innerMap.get(party);
 		int sequence = win.nextSequence;
 		win.addLine(flags, timestamp, payload);
 		List<Window.Line> list = win.lines;
@@ -689,7 +689,7 @@ public final class MamircProcessor {
 		Object[] temp = new Object[6 + payload.length];
 		temp[0] = "APPEND";
 		temp[1] = profile;
-		temp[2] = target;
+		temp[2] = party;
 		temp[3] = sequence;
 		temp[4] = flags;
 		temp[5] = timestamp;
@@ -708,56 +708,56 @@ public final class MamircProcessor {
 		addWindowLine(profile, "", Window.Flags.CONNECTED.value, timestamp, ipAddr);
 	}
 	
-	private void addDisconnectedLine(String profile, String target, long timestamp) {
-		addWindowLine(profile, target, Window.Flags.DISCONNECTED.value, timestamp);
+	private void addDisconnectedLine(String profile, String party, long timestamp) {
+		addWindowLine(profile, party, Window.Flags.DISCONNECTED.value, timestamp);
 	}
 	
-	private void addInitNoTopicLine(String profile, String target, long timestamp) {
-		addWindowLine(profile, target, Window.Flags.INITNOTOPIC.value, timestamp);
+	private void addInitNoTopicLine(String profile, String party, long timestamp) {
+		addWindowLine(profile, party, Window.Flags.INITNOTOPIC.value, timestamp);
 	}
 	
-	private void addInitTopicLine(String profile, String target, long timestamp, String text) {
-		addWindowLine(profile, target, Window.Flags.INITTOPIC.value, timestamp, text);
+	private void addInitTopicLine(String profile, String party, long timestamp, String text) {
+		addWindowLine(profile, party, Window.Flags.INITTOPIC.value, timestamp, text);
 	}
 	
-	private void addJoinLine(String profile, String target, long timestamp, String nick) {
-		addWindowLine(profile, target, Window.Flags.JOIN.value, timestamp, nick);
+	private void addJoinLine(String profile, String party, long timestamp, String nick) {
+		addWindowLine(profile, party, Window.Flags.JOIN.value, timestamp, nick);
 	}
 	
-	private void addKickLine(String profile, String target, long timestamp, String kickee, String kicker, String text) {
-		addWindowLine(profile, target, Window.Flags.KICK.value, timestamp, kickee, kicker, text);
+	private void addKickLine(String profile, String party, long timestamp, String kickee, String kicker, String text) {
+		addWindowLine(profile, party, Window.Flags.KICK.value, timestamp, kickee, kicker, text);
 	}
 	
-	private void addModeLine(String profile, String target, long timestamp, String source, String text) {
-		addWindowLine(profile, target, Window.Flags.MODE.value, timestamp, source, text);
+	private void addModeLine(String profile, String party, long timestamp, String source, String text) {
+		addWindowLine(profile, party, Window.Flags.MODE.value, timestamp, source, text);
 	}
 	
-	private void addNamesLine(String profile, String target, long timestamp, String[] names) {
-		addWindowLine(profile, target, Window.Flags.NAMES.value, timestamp, (Object[])names);
+	private void addNamesLine(String profile, String party, long timestamp, String[] names) {
+		addWindowLine(profile, party, Window.Flags.NAMES.value, timestamp, (Object[])names);
 	}
 	
-	private void addNickLine(String profile, String target, long timestamp, String oldNick, String newNick) {
-		addWindowLine(profile, target, Window.Flags.NICK.value, timestamp, oldNick, newNick);
+	private void addNickLine(String profile, String party, long timestamp, String oldNick, String newNick) {
+		addWindowLine(profile, party, Window.Flags.NICK.value, timestamp, oldNick, newNick);
 	}
 	
-	private void addNoticeLine(String profile, String target, int flags, long timestamp, String nick, String text) {
-		addWindowLine(profile, target, Window.Flags.NOTICE.value | flags, timestamp, nick, text);
+	private void addNoticeLine(String profile, String party, int flags, long timestamp, String nick, String text) {
+		addWindowLine(profile, party, Window.Flags.NOTICE.value | flags, timestamp, nick, text);
 	}
 	
-	private void addPartLine(String profile, String target, long timestamp, String nick) {
-		addWindowLine(profile, target, Window.Flags.PART.value, timestamp, nick);
+	private void addPartLine(String profile, String party, long timestamp, String nick) {
+		addWindowLine(profile, party, Window.Flags.PART.value, timestamp, nick);
 	}
 	
-	private void addPrivmsgLine(String profile, String target, int flags, long timestamp, String nick, String text) {
-		addWindowLine(profile, target, Window.Flags.PRIVMSG.value | flags, timestamp, nick, text);
+	private void addPrivmsgLine(String profile, String party, int flags, long timestamp, String nick, String text) {
+		addWindowLine(profile, party, Window.Flags.PRIVMSG.value | flags, timestamp, nick, text);
 	}
 	
-	private void addTopicLine(String profile, String target, long timestamp, String nick, String text) {
-		addWindowLine(profile, target, Window.Flags.TOPIC.value, timestamp, nick, text);
+	private void addTopicLine(String profile, String party, long timestamp, String nick, String text) {
+		addWindowLine(profile, party, Window.Flags.TOPIC.value, timestamp, nick, text);
 	}
 	
-	private void addQuitLine(String profile, String target, long timestamp, String nick, String text) {
-		addWindowLine(profile, target, Window.Flags.QUIT.value, timestamp, nick, text);
+	private void addQuitLine(String profile, String party, long timestamp, String nick, String text) {
+		addWindowLine(profile, party, Window.Flags.QUIT.value, timestamp, nick, text);
 	}
 	
 	private void addServerReplyLine(String profile, long timestamp, String code, String text) {
@@ -798,12 +798,12 @@ public final class MamircProcessor {
 			// States of current windows
 			List<List<Object>> outWindows = new ArrayList<>();
 			for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
-				for (Map.Entry<String,Window> targetEntry : profileEntry.getValue().entrySet()) {
+				for (Map.Entry<String,Window> partyEntry : profileEntry.getValue().entrySet()) {
 					List<Object> outWindow = new ArrayList<>();
 					outWindow.add(profileEntry.getKey());
-					outWindow.add(targetEntry.getKey());
+					outWindow.add(partyEntry.getKey());
 					
-					Window inWindow = targetEntry.getValue();
+					Window inWindow = partyEntry.getValue();
 					List<List<Object>> outLines = new ArrayList<>();
 					long prevTimestamp = 0;
 					List<Window.Line> inLines = inWindow.lines;

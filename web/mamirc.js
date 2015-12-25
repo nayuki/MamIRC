@@ -367,12 +367,12 @@ const windowModule = new function() {
 	
 	// Either switches to an existing private messaging window of the given name on
 	// the current profile, or sends a command to the server to open a new PM window.
-	// Types: target is string, onerror is function()->void / null, result is void.
-	this.openPrivateMessagingWindow = function(target, onerror) {
+	// Types: party is string, onerror is function()->void / null, result is void.
+	this.openPrivateMessagingWindow = function(party, onerror) {
 		var profile = this.activeWindow[0];
-		var windowName = profile + "\n" + target;
+		var windowName = profile + "\n" + party;
 		if (this.windowNames.indexOf(windowName) == -1)
-			networkModule.sendAction([["open-window", profile, target]], onerror);
+			networkModule.sendAction([["open-window", profile, party]], onerror);
 		else {
 			this.setActiveWindow(windowName);
 			inputBoxModule.putText("");
@@ -1415,11 +1415,11 @@ const networkModule = new function() {
 		xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
 	};
 	
-	// Sends a request to the MamIRC processor to send an IRC PRIVMSG to the given target.
-	// Note that the value (profile+"\n"+target) need not currently exist in windowNames.
-	// Types: profile is string, target is string, text is string, onerror is function(reason:string)->void / null, result is void.
-	this.sendMessage = function(profile, target, text, onerror) {
-		this.sendAction([["send-line", profile, "PRIVMSG " + target + " :" + text]], onerror);
+	// Sends a request to the MamIRC processor to send an IRC PRIVMSG to the given party.
+	// Note that the value (profile+"\n"+party) need not currently exist in windowNames.
+	// Types: profile is string, party is string, text is string, onerror is function(reason:string)->void / null, result is void.
+	this.sendMessage = function(profile, party, text, onerror) {
+		this.sendAction([["send-line", profile, "PRIVMSG " + party + " :" + text]], onerror);
 	};
 	
 	/* Private functions */
