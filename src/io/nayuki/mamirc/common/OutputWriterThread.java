@@ -54,7 +54,6 @@ public final class OutputWriterThread extends Thread {
 		} catch (IOException e) {}
 		catch (InterruptedException e) {}
 		finally {  // Clean up
-			queue = null;  // Not thread-safe, but is a best-effort attempt to detect invalid usage
 			try {
 				output.close();
 			} catch (IOException e) {}
@@ -82,7 +81,7 @@ public final class OutputWriterThread extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread, but only called once.
+	// Can be called safely from any thread.
 	public void terminate() {
 		try {
 			queue.put(TERMINATOR);

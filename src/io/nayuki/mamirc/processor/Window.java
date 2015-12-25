@@ -21,7 +21,7 @@ final class Window {
 	
 	
 	// Timestamp is in seconds instead of milliseconds.
-	public void addLine(int flags, long timestamp, String... payload) {
+	public void addLine(int flags, long timestamp, Object... payload) {
 		lines.add(new Line(nextSequence, flags, timestamp, payload));
 		nextSequence++;
 	}
@@ -41,10 +41,10 @@ final class Window {
 		public final int sequence;
 		public final int flags;
 		public final long timestamp;  // In seconds, not milliseconds
-		public final String[] payload;
+		public final Object[] payload;
 		
 		
-		public Line(int sequence, int flags, long timestamp, String... payload) {
+		public Line(int sequence, int flags, long timestamp, Object... payload) {
 			if (payload == null)
 				throw new NullPointerException();
 			this.sequence = sequence;
@@ -58,23 +58,25 @@ final class Window {
 	
 	public enum Flags {
 		RESERVED(0),
-		DISCONNECTED(1),
-		INITTOPIC(2),
-		INITNOTOPIC(3),
-		JOIN(4),
-		KICK(5),
-		MODE(6),
-		NAMES(7),
-		NICK(8),
-		NOTICE(9),
-		PART(10),
-		PRIVMSG(11),
-		QUIT(12),
-		SERVERREPLY(13),
-		TOPIC(14),
-		TYPE_MASK((1 << 4) - 1),
-		OUTGOING(1 << 4),
-		NICKFLAG(1 << 5);
+		CONNECTING(1),
+		CONNECTED(2),
+		DISCONNECTED(3),
+		INITTOPIC(4),
+		INITNOTOPIC(5),
+		JOIN(6),
+		KICK(7),
+		MODE(8),
+		NAMES(9),
+		NICK(10),
+		NOTICE(11),
+		PART(12),
+		PRIVMSG(13),
+		QUIT(14),
+		SERVERREPLY(15),
+		TOPIC(16),
+		TYPE_MASK((1 << 5) - 1),
+		OUTGOING(1 << 5),
+		NICKFLAG(1 << 6);
 		
 		public final int value;
 		private Flags(int val) {

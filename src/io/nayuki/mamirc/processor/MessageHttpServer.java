@@ -163,16 +163,8 @@ final class MessageHttpServer {
 						int startId = Json.getInt(reqData, "nextUpdateId");
 						int maxWait = Json.getInt(reqData, "maxWait");
 						maxWait = Math.max(Math.min(maxWait, 300000), 1);
-						synchronized(master) {
-							Map<String,Object> data = master.getUpdates(startId);
-							if (data != null && Json.getList(data, "updates").size() == 0) {
-								try {
-									master.wait(maxWait);
-								} catch (InterruptedException e) {}
-								data = master.getUpdates(startId);
-							}
-							writeJsonResponse(data, he);
-						}
+						Map<String,Object> data = master.getUpdates(startId, maxWait);
+						writeJsonResponse(data, he);
 						break;
 					}
 					

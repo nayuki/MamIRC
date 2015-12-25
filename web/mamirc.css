@@ -394,6 +394,10 @@ form {
 
 /* Miscellaneous */
 
+a:not([href]) {
+	cursor: pointer;
+}
+
 #show-more-messages {
 	margin: 0.5em 0em;
 	text-align: center;
