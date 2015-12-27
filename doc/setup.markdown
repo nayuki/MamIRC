@@ -7,7 +7,7 @@ This document describes how to set up and run your own copy of MamIRC. A brief o
 0. Download JSON and SQLite libraries (dependencies).
 0. Extract JAR and native binaries from SQLite package.
 0. Compile all Java code, taking care to specify classpaths correctly.
-0. Edit connector.ini and processor.ini in a text editor.
+0. Edit backend-config.json and user-config.json in a text editor.
 0. Launch MamIRC Connector and MamIRC Processor Java programs in the background.
 0. Set up SSL proxy in front of the MamIRC web server.
 0. Open web browser to your MamIRC instance's URL.
@@ -23,8 +23,7 @@ Platform support for backend software:
 Web browser support for frontend web app:
 
 * Working correctly: Mozilla Firefox (desktop), Google Chrome (desktop and Android).
-* Known broken: Apple Safari (desktop and iOS).
-* Not tested: Microsoft Internet Explorer, Opera, Firefox (mobile).
+* Not tested: Apple Safari (desktop and iOS), Microsoft Internet Explorer, Opera, Firefox (mobile).
 
 
 Steps for Linux setup
@@ -38,15 +37,15 @@ Steps for Linux setup
 
 0. Run the script and watch for error messages. The script will download the code and libraries, manipulate directories, and compile the Java code. Command: `sh setup.sh`
 
-0. Open "connector-sample.ini" in a text editor, check the port number that you want the MamIRC Connector to serve on, check or change the password that a Processor needs to give to access the Connector, and check the name of the database file that you want to write the IRC log to. The defaults settings are acceptable, and the default password is fairly safe because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "backend-config-sample.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "-sample" in the name.
 
-0. Now we launch the MamIRC Connector software, with the configuration file name as an argument, like this: `sh run-connector.sh connector.ini`
+0. Now we launch the MamIRC Connector software, with the configuration file name as an argument, like this: `sh run-connector.sh backend-config.json`
 
 0. If the launch was successful, the `java` process will run forever, and can be seen in the process list produced by `ps x`. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using `ps x`). To debug an unsuccessful launch, you'd need to type out the `java` command in run-connector.sh, minus the initial `nohup` and trailing `&`.
 
-0. Open "processor-sample.ini" in a text editor, and you must edit numerous items, all in JSON syntax. Observe or change the web server port; you will later use this to connect to MamIRC from a web browser. Choose a password for the web interface; this password protects unauthorized users from accessing your MamIRC instance. Edit the IRC networks section and follow the example syntax carefully - choose a profile name for each network, add one or more IRC servers, choose your nickname and alternate nicks, set your user name and real name, and make a list of channels to join upon successful connection. Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "user-config-sample.json" in a text editor, follow the examples, and edit the IRC networks you want to connect to. Fill in the fields for the IRC servers, your nickname, and the channels you want to join. Finally, it's recommended to rename the file to remove the "-sample" in the name.
 
-0. Now we launch the MamIRC Processor software, with both configuration file names as arguments in order, like this: `sh run-processor.sh connector.ini processor.ini`
+0. Now we launch the MamIRC Processor software, with both configuration file names as arguments in order, like this: `sh run-processor.sh backend-config.json user-config.json`
 
 0. Again if the launch was successful, this second `java` process will run forever. If unsuccessful, you'd need to type out the `java` command in run-processor.sh, minus the initial `nohup` and trailing `&`, to help debug what went wrong with the software run. If successful, then your MamIRC Processor should have connected to your designated IRC networks and joined your designated channels, all silently in the background.
 
@@ -70,15 +69,15 @@ Steps for Windows setup
 
 0. If choosing to compile from the command line (ensuring that your PATH can reach `javac`), first make a directory named "bin" in the project root, then run this command: `javac -cp nayuki-json-lib.jar;sqlite4java.jar -sourcepath src/ -d bin/ src/io/nayuki/mamirc/connector/MamircConnector.java src/io/nayuki/mamirc/processor/MamircProcessor.java`
 
-0. Open "connector-sample.ini" in a text editor, check the port number that you want the MamIRC Connector to serve on, check or change the password that a Processor needs to give to access the Connector, and check the name of the database file that you want to write the IRC log to. The defaults settings are acceptable, and the default password is fairly safe because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "backend-config-sample.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "-sample" in the name.
 
-0. Now we launch the MamIRC Connector software, with the configuration file name as an argument, like this: `javaw -cp bin/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/connector/MamircConnector connector.ini`
+0. Now we launch the MamIRC Connector software, with the configuration file name as an argument, like this: `javaw -cp bin/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/connector/MamircConnector backend-config.json`
 
 0. If the launch was successful, the javaw.exe process will run forever, and can be seen in the list in Windows Task Manager. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using Task Manager). To debug an unsuccessful launch, it is helpful to replace `javaw` with `java`, so that error messages can be seen on the console.
 
-0. Open "processor-sample.ini" in a text editor, and you must edit numerous items, all in JSON syntax. Observe or change the web server port; you will later use this to MamIRC from a web browser. Choose a password for the web interface; this password protects unauthorized users from accessing your MamIRC instance. Edit the IRC networks section and follow the example syntax carefully - choose a profile name for each network, add one or more IRC servers, choose your nickname and alternate nicks, set your user name and real name, and make a list of channels to join upon successful connection. Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "user-config-sample.json" in a text editor, follow the examples, and edit the IRC networks you want to connect to. Fill in the fields for the IRC servers, your nickname, and the channels you want to join. Finally, it's recommended to rename the file to remove the "-sample" in the name.
 
-0. Now we launch the MamIRC Processor software, with both configuration file names as arguments in order, like this: `javaw -cp bin/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/processor/MamircProcessor connector.ini processor.ini`
+0. Now we launch the MamIRC Processor software, with both configuration file names as arguments in order, like this: `javaw -cp bin/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/processor/MamircProcessor backend-config.json user-config.json`
 
 0. Again if the launch was successful, this second javaw.exe process will run forever. If unsuccessful, you can replace `javaw` with `java` to help debug what went wrong with the software run. If successful, then your MamIRC Processor should have connected to your designated IRC networks and joined your designated channels, all silently in the background.
 
@@ -90,7 +89,7 @@ Steps for Windows setup
 Configuring the web server
 --------------------------
 
-The MamIRC Processor has a built-in HTTP web server. The server port number is set in the "processor.ini" configuration file. By default, the web server only listens for connections coming from the local machine, not from the LAN or Internet. This safety feature forces you to consider how you want to secure your communications.
+The MamIRC Processor has a built-in HTTP web server. The server port number is set in the "backend-config.json" configuration file. By default, the web server only listens for connections coming from the local machine, not from the LAN or Internet. This safety feature forces you to consider how you want to secure your communications.
 
 Local-only: If you are running the MamIRC Processor and a web browser on the same machine, then there is nothing to configure and you are good to go. This case makes sense if you are running a local desktop computer that is always on and has a stable Internet connection, or if you are running MamIRC for development.
 
