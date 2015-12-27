@@ -16,11 +16,11 @@ public final class BackendConfiguration {
 	// Not null. This is an uninterpreted string, and file existence is not checked.
 	public final File connectorDatabaseFile;
 	
-	// Not null, and at least 0 bytes long.
-	private final byte[] connectorPassword;
-	
 	// In the range [0, 65535].
 	public final int connectorServerPort;
+	
+	// Not null, and at least 0 bytes long.
+	private final byte[] connectorPassword;
 	
 	// In the range [0, 65535].
 	public final int webServerPort;
@@ -40,8 +40,8 @@ public final class BackendConfiguration {
 		
 		// Retrieve each field
 		connectorDatabaseFile = new File(Json.getString(data, "connector-database-file"));
-		connectorPassword = Utils.toUtf8(Json.getString(data, "connector-password"));
 		connectorServerPort = Utils.checkPortNumber(Json.getInt(data, "connector-server-port"));
+		connectorPassword = Utils.toUtf8(Json.getString(data, "connector-password"));
 		webServerPort = Utils.checkPortNumber(Json.getInt(data, "web-server-port"));
 		webUiPassword = Json.getString(data, "web-ui-password");
 	}
