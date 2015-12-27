@@ -25,7 +25,7 @@ import io.nayuki.mamirc.common.ConnectorConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.processor.IrcSession.RegState;
-import io.nayuki.mamirc.processor.ProcessorConfiguration.IrcNetwork;
+import io.nayuki.mamirc.processor.UserConfiguration.IrcNetwork;
 
 
 /* 
@@ -38,24 +38,22 @@ public final class MamircProcessor {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws IOException {
-		if (args.length != 2) {
-			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor connector.ini processor.ini");
+		if (args.length != 3) {
+			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor connector.ini processor.ini UserConfig.json");
 			System.exit(1);
 		}
 		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
 		new MamircProcessor(
 			new ConnectorConfiguration(new File(args[0])),
-			new ProcessorConfiguration(new File(args[1])));
+			new ProcessorConfiguration(new File(args[1])),
+			new UserConfiguration(new File(args[2])));
 		// The main thread returns, while other threads live on
 	}
 	
 	
 	
 	/*---- Fields (global state) ----*/
-	
-	// Immutable
-	private final ProcessorConfiguration myConfiguration;
 	
 	// Current workers
 	private ConnectorReaderThread reader;
@@ -72,6 +70,7 @@ public final class MamircProcessor {
 	private int nextUpdateId;
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	private boolean isTerminating;
+	private UserConfiguration userConfiguration;
 	
 	// Concurrency
 	private final Lock lock;
@@ -82,11 +81,11 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(ConnectorConfiguration conConfig, ProcessorConfiguration procConfig) {
-		if (conConfig == null || procConfig == null)
+	public MamircProcessor(ConnectorConfiguration conConfig, ProcessorConfiguration procConfig, UserConfiguration userConfig) {
+		if (conConfig == null || procConfig == null || userConfig == null)
 			throw new NullPointerException();
-		myConfiguration = procConfig;
 		
+		userConfiguration = userConfig;
 		ircSessions = new HashMap<>();
 		windows = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
@@ -166,9 +165,9 @@ public final class MamircProcessor {
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String metadata = parts[4];
-			if (!myConfiguration.ircNetworks.containsKey(metadata))
+			if (!userConfiguration.ircNetworks.containsKey(metadata))
 				throw new IllegalStateException("No profile: " + metadata);
-			ircSessions.put(conId, new IrcSession(myConfiguration.ircNetworks.get(metadata)));
+			ircSessions.put(conId, new IrcSession(userConfiguration.ircNetworks.get(metadata)));
 			addConnectingLine(metadata, ev.timestamp, parts[1], Integer.parseInt(parts[2]), parts[3].equals("ssl"));
 			
 		} else if (line.startsWith("opened ")) {
@@ -548,7 +547,7 @@ public final class MamircProcessor {
 			}
 			
 			// Connect to networks
-			for (IrcNetwork net : myConfiguration.ircNetworks.values()) {
+			for (IrcNetwork net : userConfiguration.ircNetworks.values()) {
 				if (!activeProfiles.contains(net))
 					tryConnect(net);
 			}
@@ -885,10 +884,10 @@ public final class MamircProcessor {
 		lock.lock();
 		try {
 			Map<String,Object> result = new HashMap<>();
-			for (Entry<String,IrcNetwork> entry : myConfiguration.ircNetworks.entrySet()) {
+			for (Entry<String,IrcNetwork> entry : userConfiguration.ircNetworks.entrySet()) {
 				IrcNetwork inProfile = entry.getValue();
 				Map<String,Object> outProfile = new HashMap<>();
-				outProfile.put("connect", true);
+				outProfile.put("connect", inProfile.connect);
 				outProfile.put("nicknames", inProfile.nicknames);
 				outProfile.put("username", inProfile.username);
 				outProfile.put("realname", inProfile.realname);

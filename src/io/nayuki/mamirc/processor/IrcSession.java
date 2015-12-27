@@ -13,7 +13,7 @@ final class IrcSession {
 	/*---- Fields ----*/
 	
 	// Not null, immutable
-	public final ProcessorConfiguration.IrcNetwork profile;
+	public final UserConfiguration.IrcNetwork profile;
 	
 	
 	/* Fields used during registration */
@@ -43,7 +43,7 @@ final class IrcSession {
 	
 	/*---- Constructor ----*/
 	
-	public IrcSession(ProcessorConfiguration.IrcNetwork profile) {
+	public IrcSession(UserConfiguration.IrcNetwork profile) {
 		if (profile == null)
 			throw new NullPointerException();
 		this.profile = profile;
