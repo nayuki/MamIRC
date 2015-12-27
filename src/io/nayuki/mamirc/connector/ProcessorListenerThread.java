@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import io.nayuki.mamirc.common.Utils;
 
 
 /* 
@@ -28,8 +29,7 @@ final class ProcessorListenerThread extends Thread {
 		super("ProcessorListenerThread");
 		if (master == null || password == null)
 			throw new NullPointerException();
-		if ((port & 0xFFFF) != port)
-			throw new IllegalArgumentException("Invalid TCP port number");
+		Utils.checkPortNumber(port);
 		
 		this.master = master;
 		this.password = password.clone();  // Defensive copy

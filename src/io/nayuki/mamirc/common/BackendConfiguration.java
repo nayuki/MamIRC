@@ -41,12 +41,8 @@ public final class BackendConfiguration {
 		// Retrieve each field
 		connectorDatabaseFile = new File(Json.getString(data, "connector-database-file"));
 		connectorPassword = Utils.toUtf8(Json.getString(data, "connector-password"));
-		connectorServerPort = Json.getInt(data, "connector-server-port");
-		if ((connectorServerPort & 0xFFFF) != connectorServerPort)
-			throw new IllegalStateException("Invalid TCP port number");
-		webServerPort = Json.getInt(data, "web-server-port");
-		if ((webServerPort & 0xFFFF) != webServerPort)
-			throw new IllegalStateException("Invalid TCP port number");
+		connectorServerPort = Utils.checkPortNumber(Json.getInt(data, "connector-server-port"));
+		webServerPort = Utils.checkPortNumber(Json.getInt(data, "web-server-port"));
 		webUiPassword = Json.getString(data, "web-ui-password");
 	}
 	

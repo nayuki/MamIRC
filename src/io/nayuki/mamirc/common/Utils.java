@@ -32,6 +32,15 @@ public final class Utils {
 	}
 	
 	
+	// Returns the argument if it is in the range [0, 65535], otherwise throws an exception.
+	public static int checkPortNumber(int port) {
+		if (port >= 0 && port <= 0xFFFF)
+			return port;
+		else
+			throw new IllegalArgumentException("Invalid TCP port number: " + port);
+	}
+	
+	
 	// Character set object for UTF-8.
 	private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	

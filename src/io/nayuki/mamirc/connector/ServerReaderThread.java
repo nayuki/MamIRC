@@ -13,6 +13,7 @@ import javax.net.ssl.X509TrustManager;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
+import io.nayuki.mamirc.common.Utils;
 
 
 /* 
@@ -45,8 +46,7 @@ final class ServerReaderThread extends Thread {
 		super("ServerReaderThread " + conId);
 		if (master == null || hostname == null)
 			throw new NullPointerException();
-		if ((port & 0xFFFF) != port)
-			throw new IllegalArgumentException("Invalid TCP port number");
+		Utils.checkPortNumber(port);
 		
 		this.master = master;
 		connectionId = conId;
