@@ -146,6 +146,12 @@ final class MessageHttpServer {
 				
 				// Handle each API call
 				switch (he.getRequestURI().getPath()) {
+					case "/get-profiles.json": {
+						Map<String,Object> data = master.getProfiles();
+						writeJsonResponse(data, he);
+						break;
+					}
+					
 					case "/get-state.json": {
 						Map<String,Object> data = master.getState(Json.getInt(reqData, "maxMessagesPerWindow"));
 						data.put("csrfToken", csrfToken);
@@ -224,6 +230,7 @@ final class MessageHttpServer {
 				}
 			}
 		};
+		server.createContext("/get-profiles.json", apiHandler);
 		server.createContext("/get-state.json", apiHandler);
 		server.createContext("/get-time.json", apiHandler);
 		server.createContext("/get-updates.json", apiHandler);

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -874,6 +875,37 @@ public final class MamircProcessor {
 				result.put("nextUpdateId", nextUpdateId);
 				return result;
 			}
+		} finally {
+			lock.unlock();
+		}
+	}
+	
+	
+	public Map<String,Object> getProfiles() {
+		lock.lock();
+		try {
+			Map<String,Object> result = new HashMap<>();
+			for (Entry<String,IrcNetwork> entry : myConfiguration.ircNetworks.entrySet()) {
+				IrcNetwork inProfile = entry.getValue();
+				Map<String,Object> outProfile = new HashMap<>();
+				outProfile.put("connect", true);
+				outProfile.put("nicknames", inProfile.nicknames);
+				outProfile.put("username", inProfile.username);
+				outProfile.put("realname", inProfile.realname);
+				outProfile.put("nickservPassword", inProfile.nickservPassword);
+				outProfile.put("channels", new ArrayList<>(inProfile.channels));
+				List<Map<String,Object>> outServers = new ArrayList<>();
+				for (IrcNetwork.Server inServer : inProfile.servers) {
+					Map<String,Object> outServer = new HashMap<>();
+					outServer.put("hostname", inServer.hostnamePort.getHostString());
+					outServer.put("port", inServer.hostnamePort.getPort());
+					outServer.put("ssl", inServer.useSsl);
+					outServers.add(outServer);
+				}
+				outProfile.put("servers", outServers);
+				result.put(entry.getKey(), outProfile);
+			}
+			return result;
 		} finally {
 			lock.unlock();
 		}

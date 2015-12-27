@@ -393,6 +393,85 @@ thead {
 }
 
 
+/* Network profile configuration */
+
+#network-profiles {
+	position: absolute;
+	z-index: 1;
+	width: 100%;
+	height: 100%;
+	padding: 1.0em 2.0em;
+	box-sizing: border-box;
+	overflow-y: auto;
+	background-color: #FFFFFF;
+}
+
+#network-profiles h2 {
+	font-size: 150%;
+	font-weight: bold;
+}
+
+#network-profiles form {
+	margin-top: 1.0em;
+	max-width: 35em;
+	padding: 1.0em 1.2em 1.5em;
+	background-color: #FAFAFA;
+	border: 1px solid #C0C0C0;
+	border-radius: 1em;
+}
+
+#network-profiles h3 {
+	margin-bottom: -0.5em;
+	text-align: right;
+	font-size: 130%;
+	font-weight: bold;
+}
+
+#network-profiles small {
+	font-size: 75%;
+	color: #A0A0A0;
+}
+
+#network-profiles input {
+	font-size: inherit;
+}
+
+#network-profiles input[type="text"], #network-profiles input[type="password"] {
+	width: 10em;
+}
+
+#network-profiles input[type="number"] {
+	width: 3em;
+	-moz-appearance: textfield;
+}
+
+#network-profiles tr:nth-child(2) td:first-child {  /* Servers label */
+	vertical-align: top;
+}
+
+#network-profiles li {  /* Servers list */
+	margin-bottom: 0.2em;
+}
+
+#network-profiles a {  /* Add another server link */
+	display: inline-block;
+	margin-top: 0.2em;
+	margin-bottom: 0.4em;
+}
+
+#network-profiles li input:first-child {  /* Hostname text box */
+	width: 14em;
+}
+
+#network-profiles tr:nth-child(3) input {  /* Nicknames text box */
+	width: 15em;
+}
+
+#network-profiles tr:last-child input {  /* Channels-to-join text box */
+	width: 20em;
+}
+
+
 /* Miscellaneous */
 
 a:not([href]) {

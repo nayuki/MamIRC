@@ -1496,6 +1496,150 @@ const networkModule = new function() {
 
 
 
+/*---- Network profile configuration UI module ----*/
+
+const profileConfigModule = new function() {
+	/* Constants */
+	const containerElem = elemId("network-profiles");
+	
+	/* Initialization */
+	init();
+	
+	/* Private functions */
+	
+	// Sets click event handlers on HTML elements. Types: result is void.
+	function init() {
+		elemId("configure-profiles").onclick = function() {
+			if (containerElem.style.display == "block")
+				return;
+			var xhr = new XMLHttpRequest();
+			xhr.onload = function() {
+				var data = JSON.parse(xhr.response);
+				showDialog(data);
+			};
+			xhr.open("POST", "get-profiles.json", true);
+			xhr.responseType = "text";
+			xhr.send(JSON.stringify(""));
+		};
+		elemId("close-network-profiles").onclick = function() {
+			containerElem.style.display = "none";
+			var formElems = containerElem.getElementsByTagName("form");
+			while (formElems.length > 0)
+				containerElem.removeChild(formElems[0]);
+		};
+	}
+	
+	// Types: profileData is object, result is void.
+	function showDialog(profileData) {
+		var profileNames = Object.keys(profileData);
+		profileNames.sort();
+		profileNames.forEach(function(profileName, i) {
+			var profile = profileData[profileName];
+			var form = document.createElement("form");
+			var h3 = utilsModule.createElementWithText("h3", profileName);
+			form.appendChild(h3);
+			var table = document.createElement("table");
+			var tbody = document.createElement("tbody");
+			
+			// "Connect" checkbox row
+			var tr = document.createElement("tr");
+			var td = document.createElement("td");
+			td.colSpan = 2;
+			var input = document.createElement("input");
+			input.type = "checkbox";
+			input.checked = profile.connect;
+			input.id = "profile" + i + "-connect";
+			td.appendChild(input);
+			var label = utilsModule.createElementWithText("label", " Connect");
+			label.htmlFor = input.id;
+			td.appendChild(label);
+			tr.appendChild(td);
+			tbody.appendChild(tr);
+			
+			// "Servers" row and sub-rows
+			tr = document.createElement("tr");
+			tr.appendChild(utilsModule.createElementWithText("td", "IRC servers:"));
+			td = document.createElement("td");
+			var ul = document.createElement("ul");
+			profile.servers.forEach(function(serverEntry, j) {
+				var li = document.createElement("li");
+				var input = document.createElement("input");
+				input.type = "text";
+				input.value = serverEntry.hostname;
+				input.placeholder = "irc.example.com (hostname)";
+				li.appendChild(input);
+				li.appendChild(textNode(" "));
+				input = document.createElement("input");
+				input.type = "number";
+				input.min = 0;
+				input.max = 65535;
+				input.value = serverEntry.port.toString();
+				input.placeholder = "port";
+				li.appendChild(input);
+				li.appendChild(textNode(" "));
+				input = document.createElement("input");
+				input.type = "checkbox";
+				input.checked = serverEntry.ssl;
+				input.id = "profile" + i + "-server" + j + "-" + "ssl";
+				li.appendChild(input);
+				var label = utilsModule.createElementWithText("label", " SSL");
+				label.htmlFor = input.id;
+				li.appendChild(label);
+				ul.appendChild(li);
+			});
+			var li = document.createElement("li");
+			var a = utilsModule.createElementWithText("a", "+ Add another server");
+			li.appendChild(a);
+			ul.appendChild(li);
+			td.appendChild(ul);
+			tr.appendChild(td);
+			tbody.appendChild(tr);
+			
+			// Five rows that have a pattern
+			appendTextBoxRow(tbody, "Nicknames:", "profile" + i + "-nicknames", "text",
+				profile.nicknames.join(", "), "e.g. Jamie, Jamie_, Jamie2", "at least one");
+			appendTextBoxRow(tbody, "Username", "profile" + i + "-username", "text",
+				profile.username, "e.g. Jamie", "required");
+			appendTextBoxRow(tbody, "Real name:", "profile" + i + "-realname", "text",
+				profile.realname, "e.g. Jamie Taylor Smith", "required");
+			appendTextBoxRow(tbody, "NickServ password:", "profile" + i + "-nickservpassword", "password",
+				(profile.nickservPassword != null ? profile.nickservPassword : ""), null, "optional");
+			appendTextBoxRow(tbody, "Channels to join:", "profile" + i + "-channelstojoin", "text",
+				profile.channels.join(", "), "e.g. #alpha, #beta, #delta key, &gamma", "any");
+			
+			table.appendChild(tbody);
+			form.appendChild(table);
+			containerElem.appendChild(form);
+		});
+		containerElem.style.display = "block";
+	};
+	
+	// Types: parentElem is HTMLElement, labelText is string, textBoxId is string, inputType is string,
+	// initValue is string, placeholderText is string/null, commentText is string, result is void.
+	function appendTextBoxRow(parentElem, labelText, textBoxId, inputType, initValue, placeholderText, commentText) {
+		var tr = document.createElement("tr");
+		var td = document.createElement("td");
+		var label = utilsModule.createElementWithText("label", labelText);
+		label.htmlFor = textBoxId;
+		td.appendChild(label);
+		tr.appendChild(td);
+		
+		var td = document.createElement("td");
+		var input = document.createElement("input");
+		input.type = inputType;
+		input.value = initValue;
+		if (placeholderText != null)
+			input.placeholder = placeholderText;
+		input.id = textBoxId;
+		td.appendChild(input);
+		td.appendChild(utilsModule.createElementWithText("small", " (" + commentText + ")"));
+		tr.appendChild(td);
+		parentElem.appendChild(tr);
+	}
+};
+
+
+
 /*---- Miscellaneous ----*/
 
 // This definition exists only for the purpose of abbreviation, because it is used so many times.
