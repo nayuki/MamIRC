@@ -25,5 +25,7 @@
 			"nickserv-password": "abc12345",
 			"channels": ["#meduka", "#meguca"]
 		}
-	}
+	},
+	
+	"date-boundary-offset-seconds": 0
 }

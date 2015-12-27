@@ -22,6 +22,8 @@ final class UserConfiguration {
 	
 	public final Map<String,IrcNetwork> ircNetworks;  // Not null; keys and values not null; immutable.
 	
+	public int dateBoundaryOffsetSeconds;
+	
 	
 	/*---- Constructor ----*/
 	
@@ -33,6 +35,8 @@ final class UserConfiguration {
 			throw new IllegalArgumentException("Invalid configuration file type");
 		
 		// Convert to internal data format
+		dateBoundaryOffsetSeconds = Json.getInt(data, "date-boundary-offset-seconds");
+		
 		// 'In'-suffixed variables have data in JSON-Java format;
 		// 'Out'-suffixed variables are in this data structure's desired format.
 		Map<String,Object> netsIn = Json.getMap(data, "network-profiles");
@@ -40,6 +44,15 @@ final class UserConfiguration {
 		for (String name : netsIn.keySet())
 			netsOut.put(name, convertNetwork(name, Json.getMap(netsIn, name)));
 		ircNetworks = Collections.unmodifiableMap(netsOut);
+	}
+	
+	
+	/*---- Methods ----*/
+	
+	public Object toJsonObject() {
+		Map<String,Object> result = new HashMap<>();
+		result.put("date-boundary-offset-seconds", dateBoundaryOffsetSeconds);
+		return result;
 	}
 	
 	

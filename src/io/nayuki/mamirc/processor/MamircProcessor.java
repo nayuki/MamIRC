@@ -833,6 +833,7 @@ public final class MamircProcessor {
 				flagConst.put(flag.name(), flag.value);
 			result.put("flagsConstants", flagConst);
 			result.put("initialWindow", initialWindow);
+			result.put("userConfiguration", userConfiguration.toJsonObject());
 			return result;
 		} finally {
 			lock.unlock();

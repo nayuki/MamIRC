@@ -42,6 +42,9 @@ const windowModule = new function() {
 	// Type integer / null.
 	var curWindowMaxMessages = null;
 	
+	// Type integer / null.
+	var dateBoundaryOffsetMs = null;
+	
 	
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
@@ -56,6 +59,7 @@ const windowModule = new function() {
 		// Set simple fields
 		connectionData = inData.connections;
 		Flags = inData.flagsConstants;
+		dateBoundaryOffsetMs = userConfiguration["date-boundary-offset-seconds"] * 1000;
 		
 		// Handle the windows
 		this.windowNames = [];
@@ -655,12 +659,12 @@ const windowModule = new function() {
 	}
 	
 	// Given a timestamp in Unix milliseconds, this returns a new full row element for the messages table.
-	// Types: timestamp is int, result is HTMLElement. Pure function.
+	// Types: timestamp is int, result is HTMLElement.
 	function dateToTableRow(timestamp) {
 		var tr = document.createElement("tr");
 		var td = document.createElement("td");
 		td.colSpan = 3;
-		var d = new Date(timestamp);
+		var d = new Date(timestamp - dateBoundaryOffsetMs);
 		var text = d.getFullYear() + "\u2012" + utilsModule.twoDigits(d.getMonth() + 1) + "\u2012" + utilsModule.twoDigits(d.getDate()) + "\u2012" + DAYS_OF_WEEK[d.getDay()];
 		var span = utilsModule.createElementWithText("span", text);
 		td.appendChild(span);
@@ -669,10 +673,10 @@ const windowModule = new function() {
 	}
 	
 	// Tests whether the two given timestamps (in Unix milliseconds) fall on different dates.
-	// Types: ts0 is integer, ts1 is integer, result is boolean. Pure function.
+	// Types: ts0 is integer, ts1 is integer, result is boolean.
 	function areDatesDifferent(ts0, ts1) {
-		var d0 = new Date(ts0);
-		var d1 = new Date(ts1);
+		var d0 = new Date(ts0 - dateBoundaryOffsetMs);
+		var d1 = new Date(ts1 - dateBoundaryOffsetMs);
 		return d0.getFullYear() != d1.getFullYear() || d0.getMonth() != d1.getMonth() || d0.getDate() != d1.getDate();
 	}
 	
@@ -1433,6 +1437,7 @@ const networkModule = new function() {
 			if (typeof data != "string") {  // Good data
 				nextUpdateId = data.nextUpdateId;
 				csrfToken = data.csrfToken;
+				userConfiguration = data.userConfiguration;
 				windowModule.loadState(data);  // Process data and update UI
 				updateState();  // Start polling
 			}
@@ -1673,6 +1678,9 @@ var optimizeMobile = false;
 
 // Configurable parameter. Used by getState().
 var maxMessagesPerWindow = 3000;
+
+// JSON object.
+var userConfiguration = null;
 
 
 /* Initialization */
