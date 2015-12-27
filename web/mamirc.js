@@ -920,7 +920,7 @@ const inputBoxModule = new function() {
 		var activeWindow = windowModule.activeWindow;
 		if (activeWindow == null || inputStr == "")
 			return false;
-		if (isLineOverlong()) {
+		if (isLineOverlong(inputStr)) {
 			alert("Line is too long");
 			return false;
 		}
