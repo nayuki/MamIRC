@@ -10,8 +10,8 @@
 
 
 # Check arguments
-if [ "$#" -ne 3 ]; then
-	echo "Usage: sh $0 ConnectorConfig.ini ProcessorConfig.ini UserConfig.json"
+if [ "$#" -ne 2 ]; then
+	echo "Usage: sh $0 BackendConfig.json UserConfig.json"
 	exit 1
 fi
 if [ ! -f $1 ]; then
@@ -24,4 +24,4 @@ if [ ! -f $2 ]; then
 fi
 
 # Run command in background
-nohup java -mx50M -cp "bin/:sqlite4java.jar:nayuki-json-lib.jar" io/nayuki/mamirc/processor/MamircProcessor $1 $2 $3 >/dev/null 2>&1 &
+nohup java -mx50M -cp "bin/:sqlite4java.jar:nayuki-json-lib.jar" io/nayuki/mamirc/processor/MamircProcessor $1 $2 >/dev/null 2>&1 &

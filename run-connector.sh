@@ -11,7 +11,7 @@
 
 # Check arguments
 if [ "$#" -ne 1 ]; then
-	echo "Usage: sh $0 ConnectorConfig.ini"
+	echo "Usage: sh $0 BackendConfig.json"
 	exit 1
 fi
 if [ ! -f $1 ]; then

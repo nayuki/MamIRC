@@ -1,0 +1,10 @@
+{
+	"data-type": "mamirc-backend-config",
+	
+	"connector-server-port": 29629,
+	"connector-password": "tZaMxUmLbhSotsJC2FY4wBlF",
+	"connector-database-file": "mamirc-archive.sqlite",
+	
+	"web-server-port": 11972,
+	"web-ui-password": "giudak7viull"
+}

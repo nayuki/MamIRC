@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import io.nayuki.mamirc.common.CleanLine;
-import io.nayuki.mamirc.common.ConnectorConfiguration;
+import io.nayuki.mamirc.common.BackendConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.processor.IrcSession.RegState;
@@ -38,16 +38,15 @@ public final class MamircProcessor {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws IOException {
-		if (args.length != 3) {
-			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor connector.ini processor.ini UserConfig.json");
+		if (args.length != 2) {
+			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor BackendConfig.json UserConfig.json");
 			System.exit(1);
 		}
 		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
 		new MamircProcessor(
-			new ConnectorConfiguration(new File(args[0])),
-			new ProcessorConfiguration(new File(args[1])),
-			new UserConfiguration(new File(args[2])));
+			new BackendConfiguration(new File(args[0])),
+			new UserConfiguration(new File(args[1])));
 		// The main thread returns, while other threads live on
 	}
 	
@@ -81,8 +80,8 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(ConnectorConfiguration conConfig, ProcessorConfiguration procConfig, UserConfiguration userConfig) {
-		if (conConfig == null || procConfig == null || userConfig == null)
+	public MamircProcessor(BackendConfiguration backendConfig, UserConfiguration userConfig) {
+		if (backendConfig == null || userConfig == null)
 			throw new NullPointerException();
 		
 		userConfiguration = userConfig;
@@ -99,10 +98,10 @@ public final class MamircProcessor {
 		condTerminate = lock.newCondition();
 		
 		writer = null;
-		reader = new ConnectorReaderThread(this, conConfig);
+		reader = new ConnectorReaderThread(this, backendConfig);
 		reader.start();
 		try {
-			server = new MessageHttpServer(this, procConfig.webServerPort, procConfig.webUiPassword);
+			server = new MessageHttpServer(this, backendConfig.webServerPort, backendConfig.webUiPassword);
 		} catch (IOException e) {
 			e.printStackTrace();
 			terminate();

@@ -8,7 +8,7 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.CleanLine;
-import io.nayuki.mamirc.common.ConnectorConfiguration;
+import io.nayuki.mamirc.common.BackendConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
@@ -28,14 +28,14 @@ final class ConnectorReaderThread extends Thread {
 	/*---- Fields ----*/
 	
 	private final MamircProcessor master;
-	private final ConnectorConfiguration configuration;
+	private final BackendConfiguration configuration;
 	private Socket socket;
 	private OutputWriterThread writer;
 	
 	
 	/*---- Constructor ----*/
 	
-	public ConnectorReaderThread(MamircProcessor master, ConnectorConfiguration config) {
+	public ConnectorReaderThread(MamircProcessor master, BackendConfiguration config) {
 		super("ConnectorReaderThread");
 		if (master == null || config == null)
 			throw new NullPointerException();
@@ -88,7 +88,7 @@ final class ConnectorReaderThread extends Thread {
 		// Connect and authenticate
 		if (socket != null)
 			throw new IllegalStateException();
-		socket = new Socket("localhost", configuration.serverPort);
+		socket = new Socket("localhost", configuration.connectorServerPort);
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		master.attachConnectorWriter(writer);
 		writer.start();
@@ -113,7 +113,7 @@ final class ConnectorReaderThread extends Thread {
 		}
 		
 		// Read archived events from database and process them
-		SQLiteConnection database = new SQLiteConnection(configuration.databaseFile);
+		SQLiteConnection database = new SQLiteConnection(configuration.connectorDatabaseFile);
 		try {
 			database.open(false);
 			SQLiteStatement query = database.prepare("SELECT sequence, timestamp, type, data FROM events WHERE connectionId=? AND sequence<? ORDER BY sequence ASC");

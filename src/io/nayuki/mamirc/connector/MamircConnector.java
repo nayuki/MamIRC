@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
 import io.nayuki.mamirc.common.CleanLine;
-import io.nayuki.mamirc.common.ConnectorConfiguration;
+import io.nayuki.mamirc.common.BackendConfiguration;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
@@ -28,7 +28,7 @@ public final class MamircConnector {
 	
 	public static void main(String[] args) throws IOException, SQLiteException {
 		if (args.length != 1) {
-			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector connector.ini");
+			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector BackendConfig.json");
 			System.exit(1);
 		}
 		
@@ -37,7 +37,7 @@ public final class MamircConnector {
 		
 		// Load config and start connector
 		File configFile = new File(args[0]);
-		ConnectorConfiguration config = new ConnectorConfiguration(configFile);
+		BackendConfiguration config = new BackendConfiguration(configFile);
 		new MamircConnector(config);
 		// The main thread returns, while other threads live on
 	}
@@ -68,20 +68,20 @@ public final class MamircConnector {
 	
 	// This constructor launches a bunch of worker threads and returns immediately.
 	// If initialization failed, the new threads are terminated and an exception is thrown.
-	public MamircConnector(ConnectorConfiguration config) throws IOException, SQLiteException {
+	public MamircConnector(BackendConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
 		processorReader = null;
 		processorWriter = null;
 		
 		// Initialize database logger and get next connection ID
-		databaseLogger = new DatabaseLoggerThread(config.databaseFile);
+		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();  // Execute on current thread, not new thread
 		System.err.println("Database opened");
 		
 		// Listen for an incoming processor
-		processorListener = new ProcessorListenerThread(this, config.serverPort, config.getConnectorPassword());
-		System.err.println("Listening on port " + config.serverPort);
+		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
+		System.err.println("Listening on port " + config.connectorServerPort);
 		
 		// Finish the start-up
 		databaseLogger.start();
