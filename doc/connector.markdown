@@ -106,6 +106,6 @@ Project links
 
 * Home page: [http://www.nayuki.io/page/mamirc-the-headless-irc-client](http://www.nayuki.io/page/mamirc-the-headless-irc-client)
 
-* Repository: [https://github.com/nayuki/MamIRC](https://github.com/nayuki/MamIRC)
+* GitHub repository: [https://github.com/nayuki/MamIRC](https://github.com/nayuki/MamIRC)
 
-* Documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
+* Online documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
