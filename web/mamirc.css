@@ -1,6 +1,6 @@
 /*---- Reset defaults ----*/
 
-html, body, h1, h2, p, ul, li, table, tbody, tr, td, th {
+html, body, h1, h2, h3, p, ul, li, table, tbody, tr, td, th {
 	margin: 0em;
 	padding: 0em;
 	font-family: inherit;
@@ -37,6 +37,7 @@ html {
 }
 
 body {
+	position: relative;
 	max-width: 90em;
 	height: 100%;
 	margin-left: auto;
@@ -209,7 +210,7 @@ header h1, #messages h2 {
 
 /* Main table of messages */
 
-table {
+#messages table {
 	margin-top: 0.5em;
 	width: 100%;
 	border-collapse: collapse;
@@ -219,17 +220,17 @@ thead {
 	display: none;
 }
 
-tr:hover {
+#messages tr:hover {
 	background-color: #F6F6F6;
 }
 
-td {
+#messages td {
 	padding: 0.1em 0.3em;
 	box-sizing: border-box;
 	vertical-align: top;
 }
 
-td:nth-child(1) {
+#messages td:nth-child(1) {
 	width: 1%;
 	text-align: right;
 	white-space: pre;
@@ -237,20 +238,20 @@ td:nth-child(1) {
 	color: #A0A0A0;
 }
 
-td:nth-child(2) {
+#messages td:nth-child(2) {
 	width: 1%;
 	text-align: right;
 	white-space: pre;
 }
 
-tbody td:nth-child(3) {
+#messages tbody td:nth-child(3) {
 	width: 98%;
 	text-align: left;
 	white-space: pre-wrap;
 	word-wrap: break-word;
 }
 
-tbody td[colspan="3"] {
+#messages tbody td[colspan="3"] {
 	padding-top: 1.0em;
 	overflow: hidden;
 	text-align: center;
@@ -258,7 +259,7 @@ tbody td[colspan="3"] {
 	color: #A0A0A0;
 }
 
-tbody td[colspan="3"] span::before, tbody td[colspan="3"] span::after {
+#messages tbody td[colspan="3"] span::before, #messages tbody td[colspan="3"] span::after {
 	display: inline-block;
 	width: 50%;
 	height: 0px;
@@ -268,73 +269,73 @@ tbody td[colspan="3"] span::before, tbody td[colspan="3"] span::after {
 	content: "";
 }
 
-tbody td[colspan="3"] span::before {
+#messages tbody td[colspan="3"] span::before {
 	right: 0.5em;
 	margin-left: -50%;
 }
 
-tbody td[colspan="3"] span::after {
+#messages tbody td[colspan="3"] span::after {
 	left: 0.5em;
 	margin-right: -50%;
 }
 
-tr.outgoing td:nth-child(2)::before {
+#messages tr.outgoing td:nth-child(2)::before {
 	content: "\25A0\00A0";
 }
 
-tr.nickflag td:nth-child(3) {
+#messages tr.nickflag td:nth-child(3) {
 	background: #FFF4F0;
 }
 
-tr.me-action td:nth-child(2), tr.me-action td:nth-child(3) {
+#messages tr.me-action td:nth-child(2), #messages tr.me-action td:nth-child(3) {
 	font-style: italic;
 }
 
-tr.me-action td:nth-child(2):before {
+#messages tr.me-action td:nth-child(2):before {
 	content: "\2606\00A0";
 }
 
-tr.user-enter td:nth-child(2), tr.user-enter td:nth-child(3) {
+#messages tr.user-enter td:nth-child(2), #messages tr.user-enter td:nth-child(3) {
 	color: #A9CE9F;
 }
 
-tr.user-exit td:nth-child(2), tr.user-exit td:nth-child(3) {
+#messages tr.user-exit td:nth-child(2), #messages tr.user-exit td:nth-child(3) {
 	color: #E8BFB7;
 }
 
-tr.nick-change td:nth-child(2), tr.nick-change td:nth-child(3) {
+#messages tr.nick-change td:nth-child(2), #messages tr.nick-change td:nth-child(3) {
 	color: #E0DC9A;
 }
 
-tr.mode-change td:nth-child(2), tr.mode-change td:nth-child(3) {
+#messages tr.mode-change td:nth-child(2), #messages tr.mode-change td:nth-child(3) {
 	color: #A0B8E5;
 }
 
-tr.user-list td:nth-child(2), tr.user-list td:nth-child(3) {
+#messages tr.user-list td:nth-child(2), #messages tr.user-list td:nth-child(3) {
 	color: #C0C0C0;
 }
 
-tr.read {
+#messages tr.read {
 	background: #F4F4F4;
 	color: #B0B0B0;
 }
 
-td a:link {
+#messages td a:link {
 	color: #D8B100
 }
 
-td a:visited {
+#messages td a:visited {
 	color: #7F6800;
 }
 
-td span a:link, td span a:visited {
+#messages td span a:link, #messages td span a:visited {
 	color: inherit;
 }
 
 
 /* Text box line */
 
-form {
+#footer form {
 	display: table;
 	width: 100%;
 	padding-top: 0.5em;
