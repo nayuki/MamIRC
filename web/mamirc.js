@@ -1540,12 +1540,7 @@ const profileConfigModule = new function() {
 			containerElem.appendChild(createProfileForm(
 				containerElem.getElementsByTagName("form").length, null, blankProfile));
 		};
-		elemId("close-network-profiles").onclick = function() {
-			containerElem.style.display = "none";
-			var formElems = containerElem.getElementsByTagName("form");
-			while (formElems.length > 0)
-				containerElem.removeChild(formElems[0]);
-		};
+		elemId("close-network-profiles").onclick = closeDialog;
 	}
 	
 	// Types: profileData is object, result is void.
@@ -1556,7 +1551,7 @@ const profileConfigModule = new function() {
 			containerElem.appendChild(createProfileForm(i, name, profileData[name]));
 		});
 		containerElem.style.display = "block";
-	};
+	}
 	
 	// Types: parentElem is HTMLElement, labelText is string, textBoxId is string, inputType is string,
 	// initValue is string, placeholderText is string/null, commentText is string, result is void.
@@ -1589,10 +1584,12 @@ const profileConfigModule = new function() {
 		var form = document.createElement("form");
 		var table = document.createElement("table");
 		var tbody = document.createElement("tbody");
-		if (name != null)
+		appendTextBoxRow(tbody, "Profile name:", "profile" + i + "-name", "text",
+			(name == null ? "" : name), "e.g. Abcd Net " + i, "unique, required");
+		if (name != null) {
 			form.appendChild(utilsModule.createElementWithText("h3", name));
-		else
-			appendTextBoxRow(tbody, "Profile name:", "profile" + i + "-name", "text", "", "e.g. Abcd Net " + i, "unique, required");
+			tbody.lastChild.style.display = "none";
+		}
 		
 		// "Connect" checkbox row
 		var tr = document.createElement("tr");
@@ -1684,6 +1681,13 @@ const profileConfigModule = new function() {
 		label.htmlFor = input.id;
 		li.appendChild(label);
 		return li;
+	}
+	
+	function closeDialog() {
+		containerElem.style.display = "none";
+		var formElems = containerElem.getElementsByTagName("form");
+		while (formElems.length > 0)
+			containerElem.removeChild(formElems[0]);
 	}
 };
 
