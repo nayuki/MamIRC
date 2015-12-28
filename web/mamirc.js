@@ -1506,6 +1506,15 @@ const networkModule = new function() {
 const profileConfigModule = new function() {
 	/* Constants */
 	const containerElem = elemId("network-profiles");
+	const blankProfile = {
+		connect: true,
+		servers: [],
+		nicknames: [],
+		username: "",
+		realname: "",
+		nickservPassword: null,
+		channels: [],
+	};
 	
 	/* Initialization */
 	init();
@@ -1526,6 +1535,10 @@ const profileConfigModule = new function() {
 			xhr.responseType = "text";
 			xhr.send(JSON.stringify(""));
 		};
+		elemId("add-irc-network").onclick = function() {
+			containerElem.appendChild(createProfileForm(
+				containerElem.getElementsByTagName("form").length, null, blankProfile));
+		};
 		elemId("close-network-profiles").onclick = function() {
 			containerElem.style.display = "none";
 			var formElems = containerElem.getElementsByTagName("form");
@@ -1538,63 +1551,8 @@ const profileConfigModule = new function() {
 	function showDialog(profileData) {
 		var profileNames = Object.keys(profileData);
 		profileNames.sort();
-		profileNames.forEach(function(profileName, i) {
-			var profile = profileData[profileName];
-			var form = document.createElement("form");
-			var h3 = utilsModule.createElementWithText("h3", profileName);
-			form.appendChild(h3);
-			var table = document.createElement("table");
-			var tbody = document.createElement("tbody");
-			
-			// "Connect" checkbox row
-			var tr = document.createElement("tr");
-			var td = document.createElement("td");
-			td.colSpan = 2;
-			var input = document.createElement("input");
-			input.type = "checkbox";
-			input.checked = profile.connect;
-			input.id = "profile" + i + "-connect";
-			td.appendChild(input);
-			var label = utilsModule.createElementWithText("label", " Connect");
-			label.htmlFor = input.id;
-			td.appendChild(label);
-			tr.appendChild(td);
-			tbody.appendChild(tr);
-			
-			// "Servers" row and sub-rows
-			tr = document.createElement("tr");
-			tr.appendChild(utilsModule.createElementWithText("td", "IRC servers:"));
-			td = document.createElement("td");
-			var ul = document.createElement("ul");
-			profile.servers.forEach(function(serverEntry, j) {
-				ul.appendChild(createServerRow(i, j, serverEntry.hostname, serverEntry.port, serverEntry.ssl));
-			});
-			var li = document.createElement("li");
-			var a = utilsModule.createElementWithText("a", "+ Add another server");
-			a.onclick = function() {
-				ul.insertBefore(createServerRow(i, ul.children.length - 1, "", -1, false), li);
-			};
-			li.appendChild(a);
-			ul.appendChild(li);
-			td.appendChild(ul);
-			tr.appendChild(td);
-			tbody.appendChild(tr);
-			
-			// Five rows that have a pattern
-			appendTextBoxRow(tbody, "Nicknames:", "profile" + i + "-nicknames", "text",
-				profile.nicknames.join(", "), "e.g. Jamie, Jamie_, Jamie2", "at least one");
-			appendTextBoxRow(tbody, "Username", "profile" + i + "-username", "text",
-				profile.username, "e.g. Jamie", "required");
-			appendTextBoxRow(tbody, "Real name:", "profile" + i + "-realname", "text",
-				profile.realname, "e.g. Jamie Taylor Smith", "required");
-			appendTextBoxRow(tbody, "NickServ password:", "profile" + i + "-nickservpassword", "password",
-				(profile.nickservPassword != null ? profile.nickservPassword : ""), null, "optional");
-			appendTextBoxRow(tbody, "Channels to join:", "profile" + i + "-channelstojoin", "text",
-				profile.channels.join(", "), "e.g. #alpha, #beta, #delta key, &gamma", "any");
-			
-			table.appendChild(tbody);
-			form.appendChild(table);
-			containerElem.appendChild(form);
+		profileNames.forEach(function(name, i) {
+			containerElem.appendChild(createProfileForm(i, name, profileData[name]));
 		});
 		containerElem.style.display = "block";
 	};
@@ -1622,6 +1580,80 @@ const profileConfigModule = new function() {
 		parentElem.appendChild(tr);
 	}
 	
+	// Types: i is integer, name is string/null, profile is object{connect:boolean,
+	// servers:list<object{hostname:string, port:integer, ssl:boolean}>, nicknames:list<string>,
+	// username:string, realname:string, nickservPassword:string/null, channels:list<string>},
+	// result is HTMLElement. Pure function.
+	function createProfileForm(i, name, profile) {
+		var form = document.createElement("form");
+		var table = document.createElement("table");
+		var tbody = document.createElement("tbody");
+		if (name != null)
+			form.appendChild(utilsModule.createElementWithText("h3", name));
+		else
+			appendTextBoxRow(tbody, "Profile name:", "profile" + i + "-name", "text", "", "e.g. Abcd Net " + i, "unique, required");
+		
+		// "Connect" checkbox row
+		var tr = document.createElement("tr");
+		var td = document.createElement("td");
+		td.colSpan = 2;
+		var input = document.createElement("input");
+		input.type = "checkbox";
+		input.checked = profile.connect;
+		input.id = "profile" + i + "-connect";
+		td.appendChild(input);
+		var label = utilsModule.createElementWithText("label", " Connect");
+		label.htmlFor = input.id;
+		td.appendChild(label);
+		tr.appendChild(td);
+		tbody.appendChild(tr);
+		
+		// "Servers" row and sub-rows
+		tr = document.createElement("tr");
+		tr.appendChild(utilsModule.createElementWithText("td", "IRC servers:"));
+		td = document.createElement("td");
+		var ul = document.createElement("ul");
+		profile.servers.forEach(function(serverEntry, j) {
+			ul.appendChild(createServerRow(i, j, serverEntry.hostname, serverEntry.port, serverEntry.ssl));
+		});
+		var li = document.createElement("li");
+		var a = utilsModule.createElementWithText("a", "+ Add another server");
+		a.onclick = function() {
+			ul.insertBefore(createServerRow(i, ul.children.length - 1, "", -1, false), li);
+		};
+		li.appendChild(a);
+		ul.appendChild(li);
+		if (name == null)
+			a.onclick();
+		td.appendChild(ul);
+		tr.appendChild(td);
+		tbody.appendChild(tr);
+		
+		// Five rows that have a pattern
+		appendTextBoxRow(tbody, "Nicknames:", "profile" + i + "-nicknames", "text",
+			profile.nicknames.join(", "), "e.g. Jamie, Jamie_, Jamie2", "at least one");
+		appendTextBoxRow(tbody, "Username", "profile" + i + "-username", "text",
+			profile.username, "e.g. Jamie", "required");
+		appendTextBoxRow(tbody, "Real name:", "profile" + i + "-realname", "text",
+			profile.realname, "e.g. Jamie Taylor Smith", "required");
+		appendTextBoxRow(tbody, "NickServ password:", "profile" + i + "-nickservpassword", "password",
+			(profile.nickservPassword != null ? profile.nickservPassword : ""), null, "optional");
+		appendTextBoxRow(tbody, "Channels to join:", "profile" + i + "-channelstojoin", "text",
+			profile.channels.join(", "), "e.g. #alpha, #beta, #delta key, &gamma", "any");
+		
+		// Prevent overzealous password auto-fill
+		if (profile.nickservPassword == null) {
+			for (var j = 0; j < 50; j += 5) {
+				setTimeout(function() {
+					elemId("profile" + i + "-nickservpassword").value = "";
+				}, j);
+			}
+		}
+		
+		table.appendChild(tbody);
+		form.appendChild(table);
+		return form;
+	}
 	
 	// Types: i is integer, j is integer, hostname is string, port is integer, ssl is boolean, result is HTMLElement. Pure function.
 	function createServerRow(i, j, hostname, port, ssl) {

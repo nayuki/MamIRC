@@ -445,7 +445,7 @@ thead {
 	-moz-appearance: textfield;
 }
 
-#network-profiles tr:nth-child(2) td:first-child {  /* Servers label */
+#network-profiles tr:nth-last-child(6) td:first-child {  /* Servers label */
 	vertical-align: top;
 }
 
@@ -463,7 +463,7 @@ thead {
 	width: 14em;
 }
 
-#network-profiles tr:nth-child(3) input {  /* Nicknames text box */
+#network-profiles tr:nth-last-child(5) input {  /* Nicknames text box */
 	width: 15em;
 }
 
