@@ -67,29 +67,40 @@ final class ProcessorReaderThread extends Thread {
 			
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
-			byte[] line = reader.readLine();  // First line, thus not null
-			killer.interrupt();  // Killer is no longer needed, now that we have read the line
-			if (!equalsTimingSafe(line, password))
+			byte[] passwordLine = reader.readLine();  // First line, thus not null
+			if (!equalsTimingSafe(passwordLine, password))
 				return;  // Authentication failure
 			
 			// Launch writer thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
 			writer.setName("OutputWriterThread : " + this.getName());
 			writer.start();
-			master.attachProcessor(this, writer);
 			
-			// Process input lines
-			while (true) {
-				line = reader.readLine();
-				if (line == LineReader.BLANK_EOF || line == null)
-					break;
-				handleLine(line);
+			// Read action line
+			String actionLine = Utils.fromUtf8(reader.readLine());
+			killer.interrupt();  // Killer is no longer needed, now that we have read the lines
+			if (actionLine.equals("list-connections")) {
+				master.listConnectionsToProcessor(writer);
+			} else if (actionLine.equals("attach")) {
+				try {
+					master.attachProcessor(this, writer);
+					while (true) {  // Process input lines
+						byte[] line = reader.readLine();
+						if (line == LineReader.BLANK_EOF || line == null)
+							break;
+						handleLine(line);
+					}
+				} finally {
+					master.detachProcessor(this);
+				}
 			}
 		} catch (IOException e) {}
 		finally {  // Clean up
 			if (writer != null) {
-				master.detachProcessor(this);
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
+				try {
+					writer.join();
+				} catch (InterruptedException e) {}
 			}
 			terminate();
 		}

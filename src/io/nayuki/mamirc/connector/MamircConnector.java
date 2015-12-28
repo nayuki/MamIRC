@@ -103,7 +103,18 @@ public final class MamircConnector {
 	
 	
 	/*---- Methods for accessing/updating global state ----*/
-		
+	
+	// Should only be called from ProcessorReaderThread.
+	public synchronized void listConnectionsToProcessor(OutputWriterThread writer) {
+		// Dump current connection IDs and sequences to processor
+		databaseLogger.flushQueue();
+		writer.postWrite("active-connections");
+		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())
+			writer.postWrite(entry.getKey() + " " + entry.getValue().nextSequence);
+		writer.postWrite("end-list");
+	}
+	
+	
 	// Should only be called from ProcessorReaderThread.
 	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		// Kick out existing processor, and set fields
@@ -111,12 +122,7 @@ public final class MamircConnector {
 			processorReader.terminate();  // Asynchronous termination
 		processorReader = reader;
 		processorWriter = writer;
-		
-		// Dump current connection IDs and sequences to processor
-		databaseLogger.flushQueue();
-		processorWriter.postWrite("active-connections");
-		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())
-			processorWriter.postWrite(entry.getKey() + " " + entry.getValue().nextSequence);
+		listConnectionsToProcessor(writer);
 		processorWriter.postWrite("live-events");
 	}
 	

@@ -93,6 +93,7 @@ final class ConnectorReaderThread extends Thread {
 		master.attachConnectorWriter(writer);
 		writer.start();
 		writer.postWrite(new CleanLine(configuration.getConnectorPassword(), false));
+		writer.postWrite(new CleanLine("attach"));
 		
 		// Read first line
 		LineReader reader = new LineReader(socket.getInputStream());
@@ -106,11 +107,14 @@ final class ConnectorReaderThread extends Thread {
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		while (true) {
 			line = readStringLine(reader);
-			if (line.equals("live-events"))
+			if (line.equals("end-list"))
 				break;
 			String[] parts = line.split(" ", 2);  // Connection ID, next (unused) sequence number
 			connectionSequences.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
 		}
+		line = readStringLine(reader);
+		if (!line.equals("live-events"))
+			throw new RuntimeException("Invalid data format");
 		
 		// Read archived events from database and process them
 		SQLiteConnection database = new SQLiteConnection(configuration.connectorDatabaseFile);

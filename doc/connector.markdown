@@ -77,9 +77,11 @@ For example, here is what a typical connection might look like from the perspect
 
     # Initial handshake
     <-- MyPassword123         # Send password and newline.
+    <-- attach                # Send initial action.
     --> active-connections    # Static string.
     --> 1 2308                # Connection ID = 1, next sequence = 2308.
     --> 7 459                 # Connection ID = 7, next sequence = 459.
+    --> end-list              # Static string.
     --> live-events           # Static string.
     # From this point on, every line is an event with the format:
     # connectionId, sequence, timestamp, type, data.
