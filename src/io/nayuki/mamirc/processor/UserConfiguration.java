@@ -1,7 +1,10 @@
 package io.nayuki.mamirc.processor;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,6 +56,65 @@ final class UserConfiguration {
 		Map<String,Object> result = new HashMap<>();
 		result.put("date-boundary-offset-seconds", dateBoundaryOffsetSeconds);
 		return result;
+	}
+	
+	
+	public void writeToFile(File file) throws IOException {
+		// Manually serialize data in JSON format
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\n");
+		sb.append("\t\"data-type\": \"mamirc-user-config\",\n");
+		sb.append("\t\n");
+		sb.append("\t\"network-profiles\": {\n");
+		List<String> profileNames = new ArrayList<>(ircNetworks.keySet());
+		Collections.sort(profileNames);
+		for (String name : profileNames) {
+			IrcNetwork profile = ircNetworks.get(name);
+			sb.append("\t\t\"").append(name).append("\": {\n");
+			sb.append("\t\t\t\"connect\": ").append(profile.connect).append(",\n");
+			sb.append("\t\t\t\"servers\": [\n");
+			for (IrcNetwork.Server server : profile.servers) {
+				sb.append("\t\t\t\t{\"hostname\": \"").append(server.hostnamePort.getHostString());
+				sb.append("\", \"port\": ").append(server.hostnamePort.getPort());
+				sb.append(", \"ssl\": ").append(server.useSsl).append("}");
+				if (server != profile.servers.get(profile.servers.size() - 1))
+					sb.append(",");
+				sb.append("\n");
+			}
+			sb.append("\t\t\t],\n");
+			sb.append("\t\t\t\"nicknames\": [");
+			boolean head = true;
+			for (String nick : profile.nicknames) {
+				if (head) head = false;
+				else sb.append(", ");
+				sb.append('"').append(nick).append('"');
+			}
+			sb.append("],\n");
+			sb.append("\t\t\t\"username\": \"").append(profile.username).append("\",\n");
+			sb.append("\t\t\t\"realname\": \"").append(profile.realname).append("\",\n");
+			sb.append("\t\t\t\"channels\": [");
+			head = true;
+			for (String chan : profile.channels) {
+				if (head) head = false;
+				else sb.append(", ");
+				sb.append('"').append(chan).append('"');
+			}
+			sb.append("]\n");
+			sb.append("\t\t}").append(name != profileNames.get(profileNames.size() - 1) ? "," : "").append("\n");
+		}
+		sb.append("\t},\n");
+		sb.append("\t\n");
+		sb.append("\t\"date-boundary-offset-seconds\": ").append(dateBoundaryOffsetSeconds).append("\n");
+		sb.append("}\n");
+		String data = sb.toString();
+		
+		Json.parse(data);  // Ensure that the JSON is well-formed
+		Writer out = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
+		try {
+			out.write(data);
+		} finally {
+			out.close();
+		}
 	}
 	
 	

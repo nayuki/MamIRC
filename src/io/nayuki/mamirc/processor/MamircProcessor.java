@@ -44,9 +44,7 @@ public final class MamircProcessor {
 		}
 		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);  // Prevent sqlite4java module from polluting stderr with debug messages
-		new MamircProcessor(
-			new BackendConfiguration(new File(args[0])),
-			new UserConfiguration(new File(args[1])));
+		new MamircProcessor(new BackendConfiguration(new File(args[0])), new File(args[1]));
 		// The main thread returns, while other threads live on
 	}
 	
@@ -70,6 +68,7 @@ public final class MamircProcessor {
 	private final Map<IrcNetwork,int[]> connectionAttemptState;  // Payload is {next server index, delay in milliseconds}
 	private boolean isTerminating;
 	private UserConfiguration userConfiguration;
+	private final File userConfigurationFile;
 	
 	// Concurrency
 	private final Lock lock;
@@ -80,11 +79,12 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(BackendConfiguration backendConfig, UserConfiguration userConfig) {
-		if (backendConfig == null || userConfig == null)
+	public MamircProcessor(BackendConfiguration backendConfig, File userConfigFile) throws IOException {
+		if (backendConfig == null || userConfigFile == null)
 			throw new NullPointerException();
 		
-		userConfiguration = userConfig;
+		userConfigurationFile = userConfigFile;
+		userConfiguration = new UserConfiguration(userConfigFile);
 		ircSessions = new HashMap<>();
 		windows = new TreeMap<>();
 		windowCaseMap = new HashMap<>();
@@ -913,10 +913,11 @@ public final class MamircProcessor {
 	}
 	
 	
-	public void setProfiles(Map<String,IrcNetwork> newProfiles) {
+	public void setProfiles(Map<String,IrcNetwork> newProfiles) throws IOException {
 		lock.lock();
 		try {
 			userConfiguration.ircNetworks = newProfiles;
+			userConfiguration.writeToFile(userConfigurationFile);
 			
 			// Manipulate existing connections
 			Set<String> activeProfileNames = new HashSet<>();
