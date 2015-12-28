@@ -1245,7 +1245,7 @@ const notificationModule = new function() {
 	// The function is needed because Mozilla Firefox allows ridiculously long notification lines to be displayed.
 	// Types: str is string, result is string. Pure function.
 	function truncateLongText(str) {
-		var LIMIT = 5;
+		var LIMIT = 150;
 		var i = 0;
 		// count is the number of Unicode code points seen, not UTF-16 code units
 		for (var count = 0; i < str.length && count < LIMIT; i++) {
