@@ -1506,7 +1506,8 @@ const networkModule = new function() {
 
 const profileConfigModule = new function() {
 	/* Constants */
-	const containerElem = elemId("network-profiles");
+	const screenElem = elemId("network-profiles");
+	const containerElem = elemId("network-profiles-container");
 	const exampleFullnames = ["Alice Margatroid", "Bob Kovsky", "Carol Hong Zhou", "Dave M. Smith"];
 	const blankProfile = {
 		connect: true,
@@ -1526,7 +1527,7 @@ const profileConfigModule = new function() {
 	// Sets click event handlers on HTML elements. Types: result is void.
 	function init() {
 		elemId("configure-profiles").onclick = function() {
-			if (containerElem.style.display == "block")
+			if (screenElem.style.display == "block")
 				return;
 			var xhr = new XMLHttpRequest();
 			xhr.onload = function() {
@@ -1552,7 +1553,9 @@ const profileConfigModule = new function() {
 		profileNames.forEach(function(name, i) {
 			containerElem.appendChild(createProfileForm(i, name, profileData[name]));
 		});
-		containerElem.style.display = "block";
+		if (profileNames.length == 0)
+			elemId("add-irc-network").onclick();
+		screenElem.style.display = "block";
 	}
 	
 	// Types: parentElem is HTMLElement, labelText is string, textBoxId is string, inputType is string,
@@ -1763,10 +1766,8 @@ const profileConfigModule = new function() {
 	}
 	
 	function closeDialog() {
-		containerElem.style.display = "none";
-		var formElems = containerElem.getElementsByTagName("form");
-		while (formElems.length > 0)
-			containerElem.removeChild(formElems[0]);
+		screenElem.style.display = "none";
+		utilsModule.clearChildren(containerElem);
 	}
 	
 	// Splits a string by the separator sequence <any whitespace> <comma> <any whitespace>.

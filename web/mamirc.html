@@ -17,9 +17,14 @@
 		
 		<article id="network-profiles" style="display:none">
 			<h2>Network profiles</h2>
-			<a id="add-irc-network">Add an IRC network</a>
-			<a id="save-network-profiles">Save</a>
-			<a id="close-network-profiles">Cancel</a>
+			<div id="network-profiles-container"></div>
+			<form action="#" method="get">
+				<p><input type="button" value="Add an IRC network" id="add-irc-network"/></p>
+				<p>
+					<input type="button" value="Save" id="save-network-profiles"/>
+					<input type="button" value="Cancel" id="close-network-profiles"/>
+				</p>
+			</form>
 		</article>
 		
 		<nav id="left-sidebar">
@@ -39,7 +44,9 @@
 						</ul>
 					</div>
 					<hr/>
-					<a id="configure-profiles">Configure profiles</a>
+					<p id="configure-profiles-container">
+						<a id="configure-profiles">Configure profiles</a>
+					</p>
 				</div>
 			</div>
 		</nav>

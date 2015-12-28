@@ -395,6 +395,10 @@ thead {
 
 /* Network profile configuration */
 
+#configure-profiles-container {
+	text-align: center;
+}
+
 #network-profiles {
 	position: absolute;
 	z-index: 1;
@@ -411,7 +415,15 @@ thead {
 	font-weight: bold;
 }
 
-#network-profiles form {
+#network-profiles > form p {
+	margin-top: 0.8em;
+}
+
+#network-profiles > form input[type="button"] {
+	padding: 0.3em 1.2em;
+}
+
+#network-profiles-container form {
 	margin-top: 1.0em;
 	max-width: 35em;
 	padding: 1.0em 1.2em 1.5em;
