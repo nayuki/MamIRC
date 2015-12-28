@@ -1540,6 +1540,7 @@ const profileConfigModule = new function() {
 			containerElem.appendChild(createProfileForm(
 				containerElem.getElementsByTagName("form").length, null, blankProfile));
 		};
+		elemId("save-network-profiles").onclick = saveProfiles;
 		elemId("close-network-profiles").onclick = closeDialog;
 	}
 	
@@ -1683,11 +1684,97 @@ const profileConfigModule = new function() {
 		return li;
 	}
 	
+	function saveProfiles() {
+		var profiles = {};
+		try {
+			var formElems = containerElem.getElementsByTagName("form");
+			for (var i = 0; i < formElems.length; i++) {  // Parse each profile form
+				var form = formElems[i];
+				var inputs = form.getElementsByTagName("input");  // Raw list of all input fields
+				var end = inputs.length;
+				if (end % 3 != 1)
+					throw "Assertion error";
+				
+				// Parse list of servers
+				var servers = [];
+				for (var j = 2; j < end - 5; j += 3) {
+					var server = {
+						hostname: inputs[j + 0].value.trim(),
+						port: parseInt(inputs[j + 1].value, 10),
+						ssl: inputs[j + 2].checked,
+					};
+					if (server.hostname != "" && server.port >= 0 && server.port <= 0xFFFF)
+						servers.push(server);  // Add if info is filled, otherwise drop the entry
+				}
+				
+				// Parse all other fields
+				var name = inputs[0].value.trim();
+				var profile = {
+					connect: inputs[1].checked,
+					servers: servers,
+					nicknames: splitByComma(inputs[end - 5].value.trim()),
+					username: inputs[end - 4].value.trim(),
+					realname: inputs[end - 3].value.trim(),
+					nickservPassword: inputs[end - 2].value,
+					channels: splitByComma(inputs[end - 1].value.trim()),
+				};
+				if (profile.nickservPassword == "")  // A bit of postprocessing
+					profile.nickservPassword = null;
+				
+				// Check basic validity
+				if (name == "")
+					continue;  // Drop this profile entirely
+				if (name in profiles)
+					throw "Duplicate profile name: " + name;
+				profile.nicknames.forEach(function(nick) {
+					if (nick == "")
+						throw "Nickname is blank";
+					if (nick.indexOf(" ") != -1)
+						throw "Nickname cannot contain spaces";
+				});
+				profile.channels.forEach(function(chan) {
+					if (chan.indexOf(" ") != chan.lastIndexOf(" "))  // If contains 2 or more spaces
+						throw "Invalid channel name: \"" + chan + "\"";
+				});
+				
+				// Check completeness
+				if (profile.connect) {
+					if (profile.servers.length == 0)
+						throw "Cannot connect to profile " + name + ": No server specified";
+					if (profile.nicknames.length == 0)
+						throw "Cannot connect to profile " + name + ": No nickname specified";
+					if (profile.username.length == 0)
+						throw "Cannot connect to profile " + name + ": No username specified";
+					if (profile.username.indexOf(" ") != -1)
+						throw "Username cannot contain spaces";
+					if (profile.realname.length == 0)
+						throw "Cannot connect to profile " + name + ": No real name specified";
+				}
+				profiles[name] = profile;
+			}
+		} catch (e) {
+			alert(e.toString());
+			return;
+		}
+		alert("Data transfer to Processor not implemented yet");
+		closeDialog();
+	}
+	
 	function closeDialog() {
 		containerElem.style.display = "none";
 		var formElems = containerElem.getElementsByTagName("form");
 		while (formElems.length > 0)
 			containerElem.removeChild(formElems[0]);
+	}
+	
+	// Splits a string by the separator sequence <any whitespace> <comma> <any whitespace>.
+	// However, a zero-length array is returned if the argument is the empty string.
+	// Types: str is string, result is list<string>. Pure function.
+	function splitByComma(str) {
+		if (str == "")
+			return [];
+		else
+			return str.split(/\s*,\s*/);
 	}
 };
 
