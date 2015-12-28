@@ -104,6 +104,6 @@ final class IrcLine {
 	
 	/*---- Constants ----*/
 	
-	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ +)?([^ :][^ ]*)(.*)");
+	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ +)?([^ :]*)(.*)", Pattern.DOTALL);
 	
 }
