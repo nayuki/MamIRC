@@ -1094,6 +1094,7 @@ const inputBoxModule = new function() {
 const menuModule = new function() {
 	/* Initialization */
 	const htmlElem = document.documentElement;
+	const bodyElem = document.querySelector("body");
 	htmlElem.onmousedown = closeMenu;
 	htmlElem.onkeydown = function(ev) {
 		if (ev.keyCode == 27)  // Escape
@@ -1112,8 +1113,8 @@ const menuModule = new function() {
 			closeMenu();
 			var div = document.createElement("div");
 			div.id = "menu";
-			div.style.left = ev.pageX + "px";
-			div.style.top  = ev.pageY + "px";
+			div.style.left = (ev.clientX - bodyElem.getBoundingClientRect().left) + "px";
+			div.style.top  = ev.clientY + "px";
 			var ul = document.createElement("ul");
 			
 			items.forEach(function(item) {
@@ -1136,7 +1137,7 @@ const menuModule = new function() {
 			
 			div.appendChild(ul);
 			div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
-			document.querySelector("body").appendChild(div);
+			bodyElem.appendChild(div);
 			return false;
 		};
 	};
