@@ -1756,7 +1756,8 @@ const profileConfigModule = new function() {
 			alert(e.toString());
 			return;
 		}
-		alert("Data transfer to Processor not implemented yet");
+		networkModule.sendAction([["set-profiles", profiles]],
+			function() { errorMsgModule.addMessage("Setting profiles failed due to network error"); });
 		closeDialog();
 	}
 	

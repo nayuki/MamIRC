@@ -185,7 +185,9 @@ public final class MamircProcessor {
 					addDisconnectedLine(state.profile.name, chan, ev.timestamp);
 				addDisconnectedLine(state.profile.name, "", ev.timestamp);
 				ircSessions.remove(conId);
-				tryConnect(state.profile);
+				IrcNetwork profile = userConfiguration.ircNetworks.get(state.profile.name);
+				if (profile != null && profile.connect)
+					tryConnect(profile);
 			}
 		}
 	}
@@ -905,6 +907,45 @@ public final class MamircProcessor {
 				result.put(entry.getKey(), outProfile);
 			}
 			return result;
+		} finally {
+			lock.unlock();
+		}
+	}
+	
+	
+	public void setProfiles(Map<String,IrcNetwork> newProfiles) {
+		lock.lock();
+		try {
+			userConfiguration.ircNetworks = newProfiles;
+			
+			// Manipulate existing connections
+			Set<String> activeProfileNames = new HashSet<>();
+			for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
+				Integer conId = entry.getKey();
+				IrcSession session = entry.getValue();
+				String name = session.profile.name;
+				IrcNetwork profile = newProfiles.get(name);
+				if (profile == null || !profile.connect)
+					writer.postWrite("disconnect " + conId);
+				else {
+					activeProfileNames.add(name);
+					IrcSession state = ircSessions.get(conId);
+					if (state.getRegistrationState() == RegState.REGISTERED) {
+						for (String chan : profile.channels) {
+							if (!state.getCurrentChannels().containsKey(chan))
+								sendIrcLine(conId, "JOIN", chan);
+						}
+					}
+				}
+			}
+			
+			// Make new connections
+			for (Map.Entry<String,IrcNetwork> entry : newProfiles.entrySet()) {
+				String name = entry.getKey();
+				IrcNetwork profile = entry.getValue();
+				if (profile.connect && !activeProfileNames.contains(name))
+					tryConnect(profile);
+			}
 		} finally {
 			lock.unlock();
 		}

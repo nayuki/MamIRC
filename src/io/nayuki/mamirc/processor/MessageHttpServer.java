@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +25,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.nayuki.json.Json;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.processor.UserConfiguration.IrcNetwork;
 
 
 final class MessageHttpServer {
@@ -186,38 +188,42 @@ final class MessageHttpServer {
 							result = "OK";
 							for (Object row : Json.getList(reqData, "payload")) {
 								List<Object> tuple = Json.getList(row);
-								String profile = Json.getString(tuple, 1);
-								String party = Json.getString(tuple, 2);
-								
-								switch (Json.getString(tuple, 0)) {
-									case "send-line": {
-										// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
-										if (!master.sendLine(profile, party))
-											result = "Profile not found";
-										break;
+								String command = Json.getString(tuple, 0);
+								if (command.equals("set-profiles")) {
+									master.setProfiles(convertProfiles(Json.getMap(tuple, 1)));
+								} else {
+									String profile = Json.getString(tuple, 1);
+									String party = Json.getString(tuple, 2);
+									switch (command) {
+										case "send-line": {
+											// Tuple index 2 is actually the payload line (e.g. "PRIVMSG #foo :Hello, world!")
+											if (!master.sendLine(profile, party))
+												result = "Profile not found";
+											break;
+										}
+										case "mark-read": {
+											master.markRead(profile, party, Json.getInt(tuple, 3));
+											break;
+										}
+										case "clear-lines": {
+											master.clearLines(profile, party, Json.getInt(tuple, 3));
+											break;
+										}
+										case "open-window": {
+											master.openWindow(profile, party);
+											break;
+										}
+										case "close-window": {
+											master.closeWindow(profile, party);
+											break;
+										}
+										case "set-initial-window": {
+											master.setInitialWindow(profile, party);
+											break;
+										}
+										default:
+											throw new AssertionError();
 									}
-									case "mark-read": {
-										master.markRead(profile, party, Json.getInt(tuple, 3));
-										break;
-									}
-									case "clear-lines": {
-										master.clearLines(profile, party, Json.getInt(tuple, 3));
-										break;
-									}
-									case "open-window": {
-										master.openWindow(profile, party);
-										break;
-									}
-									case "close-window": {
-										master.closeWindow(profile, party);
-										break;
-									}
-									case "set-initial-window": {
-										master.setInitialWindow(profile, party);
-										break;
-									}
-									default:
-										throw new AssertionError();
 								}
 							}
 						}
@@ -261,6 +267,48 @@ final class MessageHttpServer {
 	public void terminate() {
 		server.stop(0);
 		executor.shutdown();
+	}
+	
+	
+	private static Map<String,IrcNetwork> convertProfiles(Map<String,Object> inData) {
+		Map<String,IrcNetwork> outData = new HashMap<>();
+		for (Map.Entry<String,Object> entry : inData.entrySet()) {
+			String name = entry.getKey();
+			Map<String,Object> inProfile = Json.getMap(inData, name);
+			
+			List<Object> inServers = Json.getList(inProfile, "servers");
+			List<IrcNetwork.Server> outServers = new ArrayList<>();
+			for (Object val : inServers) {
+				Map<String,Object> inServer = Json.getMap(val);
+				IrcNetwork.Server outServer = new IrcNetwork.Server(
+					Json.getString(inServer, "hostname"),
+					Json.getInt(inServer, "port"),
+					Json.getBoolean(inServer, "ssl"));
+				outServers.add(outServer);
+			}
+			
+			List<Object> inNicknames = Json.getList(inProfile, "nicknames");
+			List<String> outNicknames = new ArrayList<>();
+			for (Object val : inNicknames)
+				outNicknames.add(Json.getString(val));
+			
+			List<Object> inChannels = Json.getList(inProfile, "channels");
+			Set<String> outChannels = new HashSet<>();
+			for (Object val : inChannels)
+				outChannels.add(Json.getString(val));
+			
+			IrcNetwork outProfile = new IrcNetwork(
+				name,
+				Json.getBoolean(inProfile, "connect"),
+				outServers,
+				outNicknames,
+				Json.getString(inProfile, "username"),
+				Json.getString(inProfile, "realname"),
+				(String)Json.getObject(inProfile, "nickservPassword"),
+				outChannels);
+			outData.put(name, outProfile);
+		}
+		return outData;
 	}
 	
 	

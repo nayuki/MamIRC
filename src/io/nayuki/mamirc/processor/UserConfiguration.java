@@ -20,7 +20,7 @@ final class UserConfiguration {
 	
 	/*---- Fields ----*/
 	
-	public final Map<String,IrcNetwork> ircNetworks;  // Not null; keys and values not null; immutable.
+	public Map<String,IrcNetwork> ircNetworks;  // Not null; keys and values not null; immutable.
 	
 	public int dateBoundaryOffsetSeconds;
 	
