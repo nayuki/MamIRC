@@ -1506,6 +1506,7 @@ const networkModule = new function() {
 const profileConfigModule = new function() {
 	/* Constants */
 	const containerElem = elemId("network-profiles");
+	const exampleFullnames = ["Alice Margatroid", "Bob Kovsky", "Carol Hong Zhou", "Dave M. Smith"];
 	const blankProfile = {
 		connect: true,
 		servers: [],
@@ -1630,12 +1631,14 @@ const profileConfigModule = new function() {
 		tbody.appendChild(tr);
 		
 		// Five rows that have a pattern
+		var exampleFullname = exampleFullnames[Math.floor(Math.random() * exampleFullnames.length)];
+		var exampleName = /^([^ ]+)/.exec(exampleFullname)[1];
 		appendTextBoxRow(tbody, "Nicknames:", "profile" + i + "-nicknames", "text",
-			profile.nicknames.join(", "), "e.g. Jamie, Jamie_, Jamie2", "at least one");
+			profile.nicknames.join(", "), "e.g. " + exampleName + ", " + exampleName + "_, " + exampleName + "2", "at least one");
 		appendTextBoxRow(tbody, "Username", "profile" + i + "-username", "text",
-			profile.username, "e.g. Jamie", "required");
+			profile.username, "e.g. " + exampleName, "required");
 		appendTextBoxRow(tbody, "Real name:", "profile" + i + "-realname", "text",
-			profile.realname, "e.g. Jamie Taylor Smith", "required");
+			profile.realname, "e.g. " + exampleFullname, "required");
 		appendTextBoxRow(tbody, "NickServ password:", "profile" + i + "-nickservpassword", "password",
 			(profile.nickservPassword != null ? profile.nickservPassword : ""), null, "optional");
 		appendTextBoxRow(tbody, "Channels to join:", "profile" + i + "-channelstojoin", "text",
