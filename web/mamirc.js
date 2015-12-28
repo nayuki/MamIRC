@@ -1567,33 +1567,13 @@ const profileConfigModule = new function() {
 			td = document.createElement("td");
 			var ul = document.createElement("ul");
 			profile.servers.forEach(function(serverEntry, j) {
-				var li = document.createElement("li");
-				var input = document.createElement("input");
-				input.type = "text";
-				input.value = serverEntry.hostname;
-				input.placeholder = "irc.example.com (hostname)";
-				li.appendChild(input);
-				li.appendChild(textNode(" "));
-				input = document.createElement("input");
-				input.type = "number";
-				input.min = 0;
-				input.max = 65535;
-				input.value = serverEntry.port.toString();
-				input.placeholder = "port";
-				li.appendChild(input);
-				li.appendChild(textNode(" "));
-				input = document.createElement("input");
-				input.type = "checkbox";
-				input.checked = serverEntry.ssl;
-				input.id = "profile" + i + "-server" + j + "-" + "ssl";
-				li.appendChild(input);
-				var label = utilsModule.createElementWithText("label", " SSL");
-				label.htmlFor = input.id;
-				li.appendChild(label);
-				ul.appendChild(li);
+				ul.appendChild(createServerRow(i, j, serverEntry.hostname, serverEntry.port, serverEntry.ssl));
 			});
 			var li = document.createElement("li");
 			var a = utilsModule.createElementWithText("a", "+ Add another server");
+			a.onclick = function() {
+				ul.insertBefore(createServerRow(i, ul.children.length - 1, "", -1, false), li);
+			};
 			li.appendChild(a);
 			ul.appendChild(li);
 			td.appendChild(ul);
@@ -1640,6 +1620,35 @@ const profileConfigModule = new function() {
 		td.appendChild(utilsModule.createElementWithText("small", " (" + commentText + ")"));
 		tr.appendChild(td);
 		parentElem.appendChild(tr);
+	}
+	
+	
+	// Types: i is integer, j is integer, hostname is string, port is integer, ssl is boolean, result is HTMLElement. Pure function.
+	function createServerRow(i, j, hostname, port, ssl) {
+		var li = document.createElement("li");
+		var input = document.createElement("input");
+		input.type = "text";
+		input.value = hostname;
+		input.placeholder = "irc.example.com (hostname)";
+		li.appendChild(input);
+		li.appendChild(textNode(" "));
+		input = document.createElement("input");
+		input.type = "number";
+		input.min = 0;
+		input.max = 65535;
+		input.value = port != -1 ? port.toString() : "";
+		input.placeholder = "port";
+		li.appendChild(input);
+		li.appendChild(textNode(" "));
+		input = document.createElement("input");
+		input.type = "checkbox";
+		input.checked = ssl;
+		input.id = "profile" + i + "-server" + j + "-" + "ssl";
+		li.appendChild(input);
+		var label = utilsModule.createElementWithText("label", " SSL");
+		label.htmlFor = input.id;
+		li.appendChild(label);
+		return li;
 	}
 };
 
