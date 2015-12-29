@@ -1,9 +1,9 @@
 MamIRC Processor
 ================
 
-The Processor is another headless Java program, and most of the backend functionality and complexity is concentrated here. This program:
+The Processor is another headless Java program, and most of the MamIRC backend functionality and complexity is concentrated here. This program:
 
-* Attaches to a MamIRC Connector to receive current connections and new events; also reads from Connector's database to catch up to all events that occurred in current connections.
+* Attaches to a MamIRC Connector to receive current connections and new events; also reads from Connector's database file to catch up to all events that occurred in current connections.
 
 * Executes logic to connect to IRC servers, authenticate with NickServ, and join channels based on the user's configuration file.
 

@@ -13,7 +13,9 @@ The Connector is a headless Java program that performs these tasks:
 
 * Responds to PINGs from IRC servers. (This allows the Processor to crash or hang, without losing the IRC connection.)
 
-The Connector has almost no knowledge of the IRC protocol, except the fact that it is text-based and line-oriented (rather than binary), and can process PINGs. Because of this simplicity, the Connector is fairly feature-complete and expected to be quite stable.
+* Actively detects broken TCP connections by sending blank lines every minute.
+
+The Connector has almost no knowledge of the IRC protocol - except that it treats the protocol as text-based and line-oriented (rather than binary) and that it handles PINGs. Because of this simplicity, the Connector is fairly feature-complete and expected to be quite stable.
 
 
 Database format
@@ -30,7 +32,7 @@ The Connector logs all events to a simple SQLite database file, which has a sing
         PRIMARY KEY(connectionId,sequence)
     );
 
-In addition to the schema, here are extra notes and semantics about the data format:
+In addition to the schema, here are more notes and semantics about the data format:
 
 * `connectionId` starts at 0 and increments (with no gaps) for each connection attempt. It should fit in a signed int32 for convenience in Java, and negative values are invalid.
 
@@ -40,7 +42,7 @@ In addition to the schema, here are extra notes and semantics about the data for
 
 * Events are ordered only within each connection; they are not ordered between connections. Ordering within a connection is important for algorithms that track state changes, whereas ordering between connections is only of interest to human readers. So ordering between connections and with the external world can only be done through timestamps (unfortunately).
 
-* `type` is 0 for a connection state change, 1 for a line received (IRC server to MamIRC), or 2 for a line sent (MamIRC to IRC server); other values are invalid.
+* `type` is 0 for a connection state change, 1 for a line received (IRC server to MamIRC Connector), or 2 for a line sent (MamIRC Connector to IRC server); other values are invalid.
 
 * `data` is a byte array of length at least 0. The interpretation depends on the type, but informally speaking it is usually a UTF-8 string.
 
@@ -51,7 +53,7 @@ In addition to the schema, here are extra notes and semantics about the data for
    0. "disconnect"; if this event exists then it must come after "connect".
    0. "closed"; if this event exists then it must come after "connect", and after "disconnect" (if any).
 
-* Note that not necessarily every connection in the database will have a "closed" event, because the Connector could crash before the connection is cleanly closed and logged. Also, no event can have a higher sequence number than a "closed" event, since it makes no sense to send or receive data after a connection is closed.
+* Note that not necessarily every connection in the database will have a "closed" event, because the Connector could abruptly terminate before the connection is cleanly closed and logged. Also, no event can have a higher sequence number than a "closed" event, since it makes no sense to send or receive data after a connection is closed.
 
 * If `type` is 1 or 2, then `data` is the payload line (respectively) received from or sent to the remote host over the outbound socket connection. `data` is zero or more bytes long, and must not contain '\0', '\n', or '\r'. The string is not necessarily UTF-8, since it's allowable for the IRC protocol to use other character encodings such as ISO 8859-1, Shift JIS, EUC, etc. The Connector faithfully preserves the raw bytes from the stream (without interpreting it as UTF-8) and lets the Processor decide how to handle the character encoding of the text.
 
@@ -59,21 +61,26 @@ In addition to the schema, here are extra notes and semantics about the data for
 
 * If the database is manipulated with an external tool while a Connector is running, it is okay to manipulate events on any `connectionId` that is not a current active connection. It is not okay to manipulate events on active `connectionId` values because if the Processor is restarted, it learns of the current IDs and needs to read the database to get all the events that happened in these current connections.
 
+* Beware of concurrent access to a MamIRC database. Only one Connector instance can use a particular database file at any given time; it is wrong to run two or more Connectors on the same database file because it will cause crashes and data corruption. Also when using an external program to read/write a database currently used by a MamIRC Connector, be sure to avoid locking the database for more than ~10 seconds, or else the Connector will exceed the maximum write timeout, and will terminate itself (along with all your IRC connections).
+
 
 Connector-to-Processor protocol
 -------------------------------
 
-The Connector and Processor communicate with each other over a single socket, using a line-oriented text protocol.
+The Connector and Processor communicate with each other over a single socket, using a line-oriented text protocol. In a sense, the Connector multiplexes all its external connections into one internal connection.
 
-* A line is a finite sequence of bytes, of length at least 0, that does not contain any NUL, CR, or LF. It does not need to conform to the UTF-8 character encoding.
+* A line is a finite sequence of bytes, of length at least 0, that does not contain any NUL, CR, or LF characters. It does not need to conform to the UTF-8 character encoding.
 
 * Both sides of the connection must use universal newline parsing (accepting LF, CR+LF, and CR).
 
 * No action is allowed to be taken on the prefix of an incomplete line. For example, it's unacceptable to see a prefix like "send 10 PRIVM" and start relaying bytes to the IRC connection. The newline character/sequence must be seen before the line is handled. Also, an incomplete line at the end of stream is malformed and must be discarded.
 
-* The Connector interprets the ASCII command at the beginning of each line, but thereafter it handles arbitrary 8-bit data verbatim. This allows it to support a variety of character encodings.
+* The Connector interprets the ASCII command at the beginning of each line, but thereafter it handles arbitrary 8-bit data verbatim (subject to the NUL/CR/LF restriction). This allows the Connector to support a variety of character encodings (excluding poorly behaved encodings like UTF-16 which generates NUL).
 
-For example, here is what a typical connection might look like from the perspective of the Processor (with annotations preceded by `#`, and no blank lines in the actual protocol):
+
+### Example session
+
+For those of you curious about how to implement a Processor, here is what a typical connection looks like from the perspective of the Processor. Annotations are preceded by `#`, and no blank lines are in the actual protocol.
 
     # Initial handshake
     <-- MyPassword123         # Send password and newline.
@@ -95,12 +102,14 @@ For example, here is what a typical connection might look like from the perspect
     --> 1 2310 1449104552109 2 PRIVMSG Alice :Yes I'm here
     
     # Request to open new connection: Hostname, port, SSL, profile name.
-    <-- connect irc.foobarbaz.com 6697 true FBB-IRC
+    <-- connect irc.foobarqux.com 6697 true FBQ IRC Network
     # Connection status change, new connectionId = 8.
-    --> 8 0 1449105037216 0 connect irc.foobarbaz.com 6697 true FBB IRC Network
+    --> 8 0 1449105037216 0 connect irc.foobarbaz.com 6697 true FBQ IRC Network
     --> 8 1 1449105037245 0 opened 139.62.177.78
+    <-- send 8 NICK John
+    <-- send 8 USER John 0 * :John Smith
 
-The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](https://github.com/nayuki/MamIRC/blob/master/src/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For curious developers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
+The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](../src/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For curious developers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
 
 
 Project links
