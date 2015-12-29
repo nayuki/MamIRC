@@ -351,6 +351,11 @@ public final class MamircProcessor {
 			case "004":
 			case "005": {
 				if (state.getRegistrationState() != RegState.REGISTERED) {
+					// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
+					String feedbackNick = msg.getParameter(0);
+					if (state.getCurrentNickname().startsWith(feedbackNick))
+						state.setNickname(feedbackNick);
+					
 					state.setRegistrationState(RegState.REGISTERED);
 					if (realtime) {
 						if (profile.nickservPassword != null && !state.getSentNickservPassword())
