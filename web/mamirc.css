@@ -498,3 +498,14 @@ a:not([href]) {
 #show-more-messages a {
 	padding: 1.0em 1.0em;
 }
+
+#channel-indicator {
+	position: absolute;
+	right: 0.5em;
+	bottom: 0.7em;
+	z-index: -1;
+	font-size: 400%;
+	font-weight: bold;
+	color: #FFFFFF;
+	text-shadow: 0 0 0.2em #E0E0E0;
+}

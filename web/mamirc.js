@@ -9,6 +9,7 @@ const windowModule = new function() {
 	const memberListContainerElem = elemId("member-list-container");
 	const memberListElem          = elemId("member-list");
 	const showMoreMessagesElem    = elemId("show-more-messages");
+	const channelIndicatorText    = textNode("");
 	const nicknameText = textNode("");
 	// Miscellaneous
 	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
@@ -48,6 +49,7 @@ const windowModule = new function() {
 	
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
+	elemId("channel-indicator").appendChild(channelIndicatorText);
 	init();
 	
 	
@@ -120,6 +122,7 @@ const windowModule = new function() {
 		inputBoxModule.setEnabled((profile in connectionData) && (!isChannelName(party) || party in connectionData[profile].channels));
 		redrawWindowList();
 		redrawChannelMembers();
+		channelIndicatorText.data = isChannelName(party) ? party : "";
 		
 		// Redraw all message lines in this window
 		curWindowMaxMessages = 300;
