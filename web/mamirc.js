@@ -117,6 +117,7 @@ const windowModule = new function() {
 		var profile = this.activeWindow[0];
 		var party = this.activeWindow[1];
 		nicknameText.data = (profile in connectionData) ? connectionData[profile].currentNickname : "";
+		inputBoxModule.setEnabled((profile in connectionData) && (!isChannelName(party) || party in connectionData[profile].channels));
 		redrawWindowList();
 		redrawChannelMembers();
 		
@@ -239,8 +240,10 @@ const windowModule = new function() {
 				};
 			} else if (type == "PARTED" || type == "KICKED") {
 				delete connectionData[payload[1]].channels[payload[2]];
-				if (self.activeWindow != null && self.activeWindow[0] == payload[1] && self.activeWindow[1] == payload[2])
+				if (self.activeWindow != null && self.activeWindow[0] == payload[1] && self.activeWindow[1] == payload[2]) {
 					redrawChannelMembers();
+					inputBoxModule.setEnabled(false);
+				}
 				if (type == "KICKED")
 					notificationModule.notifyRaw(windowName, "You were kicked from " + payload[2] + " by " + payload[3] + ": " + payload[4]);
 			} else if (type == "OPENWIN") {
@@ -899,6 +902,12 @@ const inputBoxModule = new function() {
 	// Types: result is void.
 	this.clearText = function() {
 		inputBoxElem.value = "";
+	};
+	
+	// Sets whether the input text box is enabled or disabled.
+	// Types: enable is boolean, result is void.
+	this.setEnabled = function(enable) {
+		inputBoxElem.disabled = !enable;
 	};
 	
 	/* Private functions */
