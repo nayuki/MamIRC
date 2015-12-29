@@ -368,6 +368,15 @@ const windowModule = new function() {
 	
 	// Performs module initialization. Types: result is void.
 	function init() {
+		document.documentElement.addEventListener("keydown", function(ev) {
+			if (ev.keyCode == 38 && ev.ctrlKey) {  // Up arrow
+				changeWindow(-1);
+				ev.preventDefault();
+			} else if (ev.keyCode == 40 && ev.ctrlKey) {  // Down arrow
+				changeWindow(+1);
+				ev.preventDefault();
+			}
+		});
 		showMoreMessagesElem.style.display = "none";
 		showMoreMessagesElem.querySelector("a").onclick = function() {
 			if (self.activeWindow == null)
@@ -646,6 +655,18 @@ const windowModule = new function() {
 		var isRead = sequence < windowData[self.activeWindow[2]].markedReadUntil;
 		tr.classList.add(isRead ? "read" : "unread");
 		return tr;
+	}
+	
+	
+	// Changes the active window index to this plus step, modulo the number of windows.
+	// Types: step is integer, result is void.
+	function changeWindow(step) {
+		if (self.windowNames == null)
+			return;
+		var i = self.windowNames.indexOf(self.activeWindow[2]);
+		var n = self.windowNames.length;
+		i = ((i + step) % n + n) % n;
+		self.setActiveWindow(self.windowNames[i]);
 	}
 	
 	
@@ -1105,10 +1126,10 @@ const menuModule = new function() {
 	const htmlElem = document.documentElement;
 	const bodyElem = document.querySelector("body");
 	htmlElem.onmousedown = closeMenu;
-	htmlElem.onkeydown = function(ev) {
+	htmlElem.addEventListener("keydown", function(ev) {
 		if (ev.keyCode == 27)  // Escape
 			closeMenu();
-	};
+	});
 	
 	/* Exported functions */
 	// Based on the given list of menu items, this returns an event handler function to pop open the context menu.
