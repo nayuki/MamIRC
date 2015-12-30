@@ -1,3 +1,11 @@
+/* 
+ * MamIRC
+ * Copyright (c) Project Nayuki
+ * 
+ * http://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://github.com/nayuki/MamIRC
+ */
+
 package io.nayuki.mamirc.common;
 
 import java.io.ByteArrayInputStream;

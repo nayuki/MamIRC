@@ -5,6 +5,12 @@
 # This can be run in a blank directory or in a directory that has already been set up previously.
 # This script can also be run after updating the source code through an existing Git repository.
 # 
+# MamIRC
+# Copyright (c) Project Nayuki
+# 
+# http://www.nayuki.io/page/mamirc-the-headless-irc-client
+# https://github.com/nayuki/MamIRC
+# 
 
 
 # Clone the Git repository, if we are not in it already

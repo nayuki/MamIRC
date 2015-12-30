@@ -7,6 +7,12 @@
 # The script runs the process in the background with nohup, takes care of
 # the classpath requirements, and sets a memory limit on the JVM.
 # 
+# MamIRC
+# Copyright (c) Project Nayuki
+# 
+# http://www.nayuki.io/page/mamirc-the-headless-irc-client
+# https://github.com/nayuki/MamIRC
+# 
 
 
 # Check arguments

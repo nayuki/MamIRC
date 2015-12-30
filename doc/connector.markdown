@@ -120,3 +120,5 @@ Project links
 * GitHub repository: [https://github.com/nayuki/MamIRC](https://github.com/nayuki/MamIRC)
 
 * Online documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
+
+Copyright © Project Nayuki

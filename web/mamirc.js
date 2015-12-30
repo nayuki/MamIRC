@@ -1,3 +1,12 @@
+/* 
+ * MamIRC
+ * Copyright (c) Project Nayuki
+ * 
+ * http://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://github.com/nayuki/MamIRC
+ */
+
+
 /*---- Window module ----*/
 
 // Holds data for windows and connections, and handles the rendering/display of window data.
