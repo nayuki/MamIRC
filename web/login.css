@@ -15,12 +15,12 @@ html, body, form, h1, p {
 	font-family: inherit;
 	font-size: inherit;
 	font-weight: inherit;
-	list-style-type: none;
 }
 
 input {
 	font-family: inherit;
 	font-size: inherit;
+	font-weight: inherit;
 }
 
 
@@ -73,7 +73,7 @@ p {
 	margin: 0.8em 0em;
 }
 
-input[type="password"], input[type="submit"] {
+input:not([type="checkbox"]) {
 	font-size: 80%;
 	vertical-align: middle;
 }

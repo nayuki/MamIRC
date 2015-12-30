@@ -15,11 +15,13 @@ html, body, h1, h2, h3, p, ul, li, table, tbody, tr, td, th {
 	font-family: inherit;
 	font-size: inherit;
 	font-weight: inherit;
-	list-style-type: none;
+	list-style-type: inherit;
 }
 
 input {
 	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
 }
 
 
@@ -37,6 +39,7 @@ html {
 	font-size: default;
 	font-weight: normal;
 	color: #000000;
+	list-style-type: none;
 }
 
 @media (min-height: 734px) {
@@ -51,6 +54,10 @@ body {
 	height: 100%;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+header {
+	display: none;
 }
 
 #left-sidebar {
@@ -93,7 +100,7 @@ div.align-bottom > div {
 
 /*---- Detailed elements ----*/
 
-header h1, #messages h2 {
+#messages h2 {
 	display: none;
 }
 
@@ -106,7 +113,7 @@ header h1, #messages h2 {
 
 /* List of chat windows */
 
-#window-list-container h2 {
+#left-sidebar h2 {
 	margin-bottom: 0.3em;
 	font-weight: bold;
 	font-size: 120%;
@@ -172,23 +179,13 @@ header h1, #messages h2 {
 
 /* List of channel members */
 
-#member-list-container h2 {
-	margin-bottom: 0.3em;
-	font-weight: bold;
-	font-size: 120%;
-	color: #D0D0D0;
-}
-
 #member-list {
 	margin-left: 1.5em;
-	cursor: default;
-}
-
-#member-list li {
-	list-style-type: disc;
 	line-height: 1.4;
 	word-wrap: break-word;
 	word-break: break-all;
+	list-style-type: disc;
+	cursor: default;
 }
 
 #member-list li:hover {
@@ -210,9 +207,6 @@ header h1, #messages h2 {
 
 #error-msg-container ul {
 	margin-left: 2.0em;
-}
-
-#error-msg-container li {
 	list-style-type: disc;
 }
 
@@ -225,7 +219,7 @@ header h1, #messages h2 {
 	border-collapse: collapse;
 }
 
-thead {
+#messages thead {
 	display: none;
 }
 
@@ -260,7 +254,7 @@ thead {
 	word-wrap: break-word;
 }
 
-#messages tbody td[colspan="3"] {
+#messages tbody td[colspan="3"] {  /* Date heading */
 	padding-top: 1.0em;
 	overflow: hidden;
 	text-align: center;
@@ -296,7 +290,7 @@ thead {
 	background: #FFF4F0;
 }
 
-#messages tr.me-action td:nth-child(2), #messages tr.me-action td:nth-child(3) {
+#messages tr.me-action td + td {
 	font-style: italic;
 }
 
@@ -304,23 +298,23 @@ thead {
 	content: "\2606\00A0";
 }
 
-#messages tr.user-enter td:nth-child(2), #messages tr.user-enter td:nth-child(3) {
+#messages tr.user-enter td + td {
 	color: #A9CE9F;
 }
 
-#messages tr.user-exit td:nth-child(2), #messages tr.user-exit td:nth-child(3) {
+#messages tr.user-exit td + td {
 	color: #E8BFB7;
 }
 
-#messages tr.nick-change td:nth-child(2), #messages tr.nick-change td:nth-child(3) {
+#messages tr.nick-change td + td {
 	color: #E0DC9A;
 }
 
-#messages tr.mode-change td:nth-child(2), #messages tr.mode-change td:nth-child(3) {
+#messages tr.mode-change td + td {
 	color: #A0B8E5;
 }
 
-#messages tr.user-list td:nth-child(2), #messages tr.user-list td:nth-child(3) {
+#messages tr.user-list td + td {
 	color: #C0C0C0;
 }
 
@@ -342,7 +336,7 @@ thead {
 }
 
 
-/* Text box line */
+/* Input text box line */
 
 #footer form {
 	display: table;
@@ -350,17 +344,17 @@ thead {
 	padding-top: 0.5em;
 }
 
-#nickname {
+#footer form > span {
 	display: table-cell;
+}
+
+#nickname {
 	width: 1%;
-	padding-left: 1.0em;
-	padding-right: 1.0em;
+	padding: 0em 1.0em;
 }
 
 #input-box {
-	display: table-cell;
-	width: 99%;
-	font-size: inherit;
+	width: 100%;
 }
 
 #input-box.is-command {
@@ -453,10 +447,6 @@ thead {
 	color: #A0A0A0;
 }
 
-#network-profiles input {
-	font-size: inherit;
-}
-
 #network-profiles input[type="text"], #network-profiles input[type="password"] {
 	width: 10em;
 }
@@ -493,7 +483,7 @@ thead {
 }
 
 
-/* Miscellaneous */
+/*---- Miscellaneous ----*/
 
 a:not([href]) {
 	cursor: pointer;
