@@ -34,34 +34,30 @@
 			</form>
 		</article>
 		
-		<nav id="left-sidebar">
-			<div class="align-bottom">
-				<div>
-					<div id="member-list-container">
-						<h2>Channel members</h2>
-						<ul id="member-list">
-							<li>(None)</li>
-						</ul>
-					</div>
-					<hr/>
-					<div id="window-list-container">
-						<h2>Windows</h2>
-						<ul id="window-list">
-							<li>(None)</li>
-						</ul>
-					</div>
-					<hr/>
-					<p id="configure-profiles-container">
-						<a id="configure-profiles">Configure profiles</a>
-					</p>
+		<article id="main">
+			<nav id="left-sidebar">
+				<div class="expander"></div>
+				<div id="member-list-container">
+					<h2>Channel members</h2>
+					<ul id="member-list">
+						<li>(None)</li>
+					</ul>
 				</div>
-			</div>
-		</nav>
-		
-		<article id="messages">
-			<div class="align-bottom">
+				<hr/>
+				<div id="window-list-container">
+					<h2>Windows</h2>
+					<ul id="window-list">
+						<li>(None)</li>
+					</ul>
+				</div>
+				<hr/>
+				<p><a id="configure-profiles">Configure profiles</a></p>
+			</nav>
+			
+			<section id="messages">
 				<div>
 					<h2>Messages</h2>
+					<div class="expander"></div>
 					<div id="show-more-messages"><a>↑ Show more messages ↑</a></div>
 					<table>
 						<thead>
@@ -77,25 +73,27 @@
 							</tr>
 						</tbody>
 					</table>
+					<div>
+						<div id="channel-indicator"></div>
+					</div>
 				</div>
-			</div>
+				
+				<footer id="footer">
+					<form action="#" method="get">
+						<span id="nickname"></span>
+						<span><input type="text" id="input-box" autocomplete="off"/></span>
+					</form>
+					<div id="error-msg-container" style="display:none">
+						<p>Errors / warnings:</p>
+						<ul id="error-msg">
+							<li>(None)</li>
+						</ul>
+						<p><a>Clear all</a></p>
+					</div>
+				</footer>
+			</section>
 		</article>
 		
-		<footer id="footer">
-			<form action="#" method="get">
-				<span id="nickname"></span>
-				<span><input type="text" id="input-box" autocomplete="off"/></span>
-			</form>
-			<div id="error-msg-container" style="display:none">
-				<p>Errors / warnings:</p>
-				<ul id="error-msg">
-					<li>(None)</li>
-				</ul>
-				<p><a>Clear all</a></p>
-			</div>
-		</footer>
-		
-		<div id="channel-indicator"></div>
 		<script type="application/javascript" src="mamirc.js"></script>
 	</body>
 </html>

@@ -60,52 +60,62 @@ header {
 	display: none;
 }
 
-#left-sidebar {
-	position: absolute;
-	width: 13em;
+#main {
 	height: 100%;
-	padding: 1.0em 0.5em 0.5em 1.0em;
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+}
+
+#left-sidebar {
+	width: 13em;
+	flex-grow: 0;
+	flex-shrink: 0;
+	padding: 1.0em 0.5em 1.0em 1.0em;
 	box-sizing: border-box;
 	background-color: rgba(0,0,0,0.03);
 	overflow-y: auto;
-}
-
-div.align-bottom {
-	display: table;
-	width: 100%;
-	height: 100%;
-}
-
-div.align-bottom > div {
-	display: table-cell;
-	width: 100%;
-	height: 100%;
-	vertical-align: bottom;
+	display: flex;
+	flex-direction: column;
 }
 
 #messages {
+	flex-grow: 1;
+	flex-shrink: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+#messages > div {
+	flex-grow: 1;
+	flex-shrink: 1;
+	margin-bottom: 0.5em;
+	display: flex;
 	position: relative;
-	width: calc(100% - 13em);
-	left: 13em;
-	height: calc(100% - 3em);
+	flex-direction: column;
 	overflow-y: scroll;
+}
+
+#messages > div > div {
+	position: relative;
+	height: 0;
 }
 
 #channel-indicator {
 	position: absolute;
-	right: 0.5em;
-	bottom: 0.7em;
+	bottom: 0.5rem;
+	right: 1.0rem;
 	z-index: -1;
 	font-size: 400%;
 	font-weight: bold;
 	color: #FFFFFF;
+	line-height: 1;
 	text-shadow: 0 0 0.2em #E0E0E0;
 }
 
 #footer {
-	position: relative;
-	width: calc(100% - 13em);
-	left: 13em;
+	flex-shrink: 0;
+	padding-bottom: 0.8em;
 }
 
 #network-profiles {
@@ -117,6 +127,10 @@ div.align-bottom > div {
 	box-sizing: border-box;
 	overflow-y: auto;
 	background-color: #FFFFFF;
+}
+
+div.expander {
+	flex-grow: 1;
 }
 
 
@@ -137,8 +151,7 @@ div.align-bottom > div {
 	border-bottom: 1px dashed #A0A0A0;
 }
 
-#configure-profiles-container {
-	margin-bottom: 0.5em;
+#left-sidebar p {
 	text-align: center;
 }
 
@@ -358,22 +371,24 @@ div.align-bottom > div {
 /* Input text box line */
 
 #footer form {
-	display: table;
-	width: 100%;
-	padding-top: 0.5em;
-}
-
-#footer form > span {
-	display: table-cell;
+	display: flex;
+	align-items: center;
 }
 
 #nickname {
-	width: 1%;
+	flex-grow: 0;
+	flex-shrink: 0;
 	padding: 0em 1.0em;
+}
+
+#footer form > span:nth-child(2) {
+	flex-grow: 1;
+	flex-shrink: 1;
 }
 
 #input-box {
 	width: 100%;
+    box-sizing: border-box;
 }
 
 #input-box.is-command {
