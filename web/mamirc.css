@@ -71,7 +71,7 @@ header {
 	width: 11.5em;
 	flex-grow: 0;
 	flex-shrink: 0;
-	padding: 1.0em 0.5em 1.0em 1.0em;
+	padding: 1.0em 0.5em 0em 1.0em;
 	background-color: rgba(0,0,0,0.03);
 	overflow-y: auto;
 	display: flex;
@@ -95,7 +95,7 @@ header {
 	overflow-y: scroll;
 }
 
-#messages > div > div {
+#channel-indicator-container {
 	position: relative;
 	height: 0;
 }
@@ -151,6 +151,7 @@ div.expander {
 }
 
 #left-sidebar p {
+	padding-bottom: 0.5em;
 	text-align: center;
 }
 
@@ -358,12 +359,12 @@ div.expander {
 }
 
 #show-more-messages {
-	margin: 0.5em 0em;
 	text-align: center;
 }
 
 #show-more-messages a {
-	padding: 1.0em 1.0em;
+	display: inline-block;
+	padding: 0.5em 1.0em 0.2em;
 }
 
 
