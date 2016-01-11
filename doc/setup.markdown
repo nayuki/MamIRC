@@ -29,7 +29,7 @@ Web browser support for frontend web app:
 Steps for Linux setup
 ---------------------
 
-0. The machine must have Git and Java JDK (7+) installed. You need basic proficiency with the command line.
+0. The machine must have Git and Java Development Kit 7+ installed. OpenJDK and Oracle JDK are acceptable. You need basic proficiency with the command line.
 
 0. Create a new empty directory for MamIRC.
 
@@ -57,7 +57,7 @@ Steps for Linux setup
 Steps for Windows setup
 -----------------------
 
-0. The machine must have Java JDK (7+) installed. You need moderate proficiency with the command line.
+0. The machine must have Java Development Kit 7+ installed. You need moderate proficiency with the command line.
 
 0. Download the [MamIRC ZIP file](https://github.com/nayuki/MamIRC/archive/master.zip) from GitHub, and unzip it into a new directory for MamIRC.
 
