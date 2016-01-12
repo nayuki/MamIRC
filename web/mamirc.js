@@ -128,10 +128,10 @@ const windowModule = new function() {
 		var profile = this.activeWindow[0];
 		var party = this.activeWindow[1];
 		nicknameText.data = (profile in connectionData) ? connectionData[profile].currentNickname : "";
-		inputBoxModule.setEnabled((profile in connectionData) && (!isChannelName(party) || party in connectionData[profile].channels));
+		inputBoxModule.setEnabled((profile in connectionData) && (!utilsModule.isChannelName(party) || party in connectionData[profile].channels));
 		redrawWindowList();
 		redrawChannelMembers();
-		channelIndicatorText.data = isChannelName(party) ? party : "";
+		channelIndicatorText.data = utilsModule.isChannelName(party) ? party : "";
 		
 		// Redraw all message lines in this window
 		curWindowMaxMessages = 300;
@@ -196,7 +196,7 @@ const windowModule = new function() {
 					redrawWindowList();
 					if (!windowData[windowName].isMuted) {
 						var notiftext = null;
-						if (!isChannelName(payload[2]) && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
+						if (!utilsModule.isChannelName(payload[2]) && (newWindow || (line[1] & Flags.NICKFLAG) != 0)) {
 							// New private messaging window popped open, or nickflagged in one
 							notificationModule.notifyMessage(windowName, null, line[3], line[4]);
 						} else if ((line[1] & Flags.NICKFLAG) != 0)
@@ -722,12 +722,6 @@ const windowModule = new function() {
 		} else {
 			return DAYS_OF_WEEK[d.getDay()] + " " + two(d.getHours()) + ":" + two(d.getMinutes());
 		}
-	}
-	
-	// Tests whether the given string is the name of a channel.
-	// Types: name is string, result is boolean. Pure function.
-	function isChannelName(name) {
-		return name.startsWith("#") || name.startsWith("&");
 	}
 };
 
@@ -1340,6 +1334,12 @@ const utilsModule = new function() {
 		}
 		return result;
 	};
+	
+	// Tests whether the given string is the name of a channel.
+	// Types: name is string, result is boolean. Pure function.
+	this.isChannelName = function(name) {
+		return name.startsWith("#") || name.startsWith("&");
+	}
 	
 	// Converts the given integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
 	// Types: n is integer, result is string. Pure function.
