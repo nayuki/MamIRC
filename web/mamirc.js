@@ -15,7 +15,7 @@ const windowModule = new function() {
 	// Document nodes
 	const windowListElem          = elemId("window-list");
 	const messageListElem         = elemId("message-list");
-	const memberListContainerElem = elemId("member-list-container");
+	const memberListHeadingElem = elemId("member-list-heading");
 	const memberListElem          = elemId("member-list");
 	const showMoreMessagesElem    = elemId("show-more-messages");
 	const channelIndicatorText    = textNode("");
@@ -489,9 +489,9 @@ const windowModule = new function() {
 				li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(name, null); }]]);
 				memberListElem.appendChild(li);
 			});
-			memberListContainerElem.style.removeProperty("display");
+			memberListHeadingElem.style.removeProperty("display");
 		} else
-			memberListContainerElem.style.display = "none";
+			memberListHeadingElem.style.display = "none";
 	}
 	
 	

@@ -78,6 +78,23 @@ header {
 	flex-direction: column;
 }
 
+#window-list-container, #member-list-container {
+	min-height: 10em;
+	height: 0em;
+	flex-shrink: 0;
+	overflow-y: auto;
+}
+
+#member-list-container {
+	flex-grow: 3;
+}
+
+#window-list-container {
+	flex-grow: 2;
+	display: flex;
+	flex-direction: column;
+}
+
 #messages {
 	flex-grow: 1;
 	flex-shrink: 1;
