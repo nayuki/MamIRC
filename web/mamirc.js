@@ -409,37 +409,37 @@ const windowModule = new function() {
 			var parts = windowName.split("\n");
 			var profile = parts[0];
 			var party = parts[1];
+			var window = windowData[windowName];
 			
 			// Create the anchor element
 			var a = utilsModule.createElementWithText("a", party != "" ? party : profile);
-			var n = windowData[windowName].numNewMessages;
+			var n = window.numNewMessages;
 			if (n > 0) {
 				[" (", n.toString(), ")"].forEach(function(s) {
 					a.appendChild(utilsModule.createElementWithText("span", s));
 				});
 			}
-			utilsModule.setClasslistItem(a, "nickflag", windowData[windowName].isNickflagged);
+			utilsModule.setClasslistItem(a, "nickflag", window.isNickflagged);
 			a.onclick = function() {
 				self.setActiveWindow(windowName);
 				return false;
 			};
 			a.oncontextmenu = function(ev) {
 				var menuItems = [];
-				if (windowData[windowName].isMuted)
-					menuItems.push(["Unmute window", function() { windowData[windowName].isMuted = false; }]);
+				if (window.isMuted)
+					menuItems.push(["Unmute window", function() { window.isMuted = false; }]);
 				else {
 					menuItems.push(["Mute window", function() {
-						var win = windowData[windowName];
+						var win = window;
 						win.isMuted = true;
 						win.numNewMessages = 0;
 						win.isNickflagged = false;
 						redrawWindowList();
 					}]);
 				}
-				if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
-					menuItems.push(["Close window", null]);
-				else
-					menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
+				var closable = !(profile in connectionData) || (party != "" && !(party in connectionData[profile].channels));
+				var func = function() { networkModule.sendAction([["close-window", profile, party]], null); };
+				menuItems.push(["Close window", closable ? func : null]);
 				if (utilsModule.isChannelName(party) && profile in connectionData) {
 					var mode = party in connectionData[profile].channels;
 					var func = function() {
