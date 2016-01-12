@@ -7,7 +7,7 @@ This document describes how to set up and run your own copy of MamIRC. A brief o
 0. Download JSON and SQLite libraries (dependencies).
 0. Extract JAR and native binaries from SQLite package.
 0. Compile all Java code, taking care to specify classpaths correctly.
-0. Edit backend-config.json and user-config.json in a text editor.
+0. Edit backend-config.json in a text editor, and view user-config.json.
 0. Launch MamIRC Connector and MamIRC Processor Java programs in the background.
 0. Set up SSL proxy in front of the MamIRC web server.
 0. Open web browser to your MamIRC instance's URL.
@@ -43,7 +43,7 @@ Steps for Linux setup
 
 0. If the launch was successful, the `java` process will run forever, and it can be seen in the process list produced by `ps x`. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using `ps x`). To debug an unsuccessful launch, you'd need to type out the `java` command found in run-connector.sh, minus the initial `nohup` and trailing `&`.
 
-0. Open "user-config-sample.json" in a text editor, and delete all the sample network profiles, so that the line reads `"network-profiles": {},` (with trailing comma). Although you are free to edit this file directly to specify your IRC network profiles, it's much easier to use the web UI for configuration. Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "user-config-blank.json" in a text editor. You can this file as-is without editing, and it's recommended to rename the file to remove the "-blank" suffix. Although you can manually type out your IRC network profiles into this configuration file (see "user-config-sample.json" for syntax), it's much easier to use the web UI instead.
 
 0. Now launch the MamIRC Processor program, with both configuration file names as arguments in order, like this: `sh run-processor.sh backend-config.json user-config.json`
 
@@ -51,7 +51,7 @@ Steps for Linux setup
 
 0. Note that at this point, the MamIRC Processor only listens for HTTP connections from the local machine; you cannot access your MamIRC web UI from the Internet or even LAN. To change this behavior, read the section below titled "Configuring the web server".
 
-0. Finally we view and interact with MamIRC through a web browser. Navigate to http://localhost:11972/ , according to the web server port number you set. Enter your password, and follow the graphical user interface. The only significant non-obvious UI feature is some items on screen be right-clicked to get a menu of available commands.
+0. Finally we view and interact with MamIRC through a web browser. Navigate to http://localhost:6264/ , according to the web server port number you set. Enter your password, and follow the graphical user interface. The only significant non-obvious UI feature is some items on screen be right-clicked to get a menu of available commands.
 
 
 Steps for Windows setup
@@ -75,7 +75,7 @@ Steps for Windows setup
 
 0. If the launch was successful, the javaw.exe process will run forever, and can be seen in the list in Windows Task Manager. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using Task Manager). To debug an unsuccessful launch, it is helpful to replace `javaw` with `java`, so that error messages can be seen on the console.
 
-0. Open "user-config-sample.json" in a text editor, and delete all the sample network profiles, so that the line reads `"network-profiles": {},` (with trailing comma). Although you are free to edit this file directly to specify your IRC network profiles, it's much easier to use the web UI for configuration. Finally, it's recommended to rename the file to remove the "-sample" in the name.
+0. Open "user-config-blank.json" in a text editor. You can this file as-is without editing, and it's recommended to rename the file to remove the "-blank" suffix. Although you can manually type out your IRC network profiles into this configuration file (see "user-config-sample.json" for syntax), it's much easier to use the web UI instead.
 
 0. Now launch the MamIRC Processor program, with both configuration file names as arguments in order, like this: `javaw -cp bin/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/processor/MamircProcessor backend-config.json user-config.json`
 
@@ -83,7 +83,7 @@ Steps for Windows setup
 
 0. Note that at this point, the MamIRC Processor only listens for HTTP connections from the local machine; you cannot access your MamIRC web UI from the Internet or even LAN. To change this behavior, read the section below titled "Configuring the web server".
 
-0. Finally we view and interact with MamIRC through a web browser. Navigate to http://localhost:11972/ , according to the web server port number you set. Enter your password, and follow the graphical user interface. The only significant non-obvious UI feature is some items on screen be right-clicked to get a menu of available commands.
+0. Finally we view and interact with MamIRC through a web browser. Navigate to http://localhost:6264/ , according to the web server port number you set. Enter your password, and follow the graphical user interface. The only significant non-obvious UI feature is some items on screen be right-clicked to get a menu of available commands.
 
 
 Configuring the web server
