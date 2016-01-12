@@ -1131,6 +1131,7 @@ const inputBoxModule = new function() {
 // Manages a singleton context menu that can be shown with specific menu items or hidden.
 const menuModule = new function() {
 	/* Initialization */
+	const self = this;
 	const htmlElem = document.documentElement;
 	const bodyElem = document.querySelector("body");
 	htmlElem.onmousedown = closeMenu;
@@ -1140,44 +1141,53 @@ const menuModule = new function() {
 	});
 	
 	/* Exported functions */
+	
 	// Based on the given list of menu items, this returns an event handler function to pop open the context menu.
-	// Types: items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is function(ev:Event)->boolean.
+	// Types: items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is function(ev:Event)->void.
 	this.makeOpener = function(items) {
 		return function(ev) {
-			// If text is currently selected, show the native context menu instead -
-			// this allows the user to copy the highlight text, search the web, etc.
-			if (window.getSelection().toString() != "")
-				return;
-			closeMenu();
-			var div = document.createElement("div");
-			div.id = "menu";
-			div.style.left = (ev.clientX - bodyElem.getBoundingClientRect().left) + "px";
-			div.style.top  = ev.clientY + "px";
-			var ul = document.createElement("ul");
-			
-			items.forEach(function(item) {
-				var li = document.createElement("li");
-				var child;
-				if (item[1] == null) {
-					child = utilsModule.createElementWithText("span", item[0]);
-					child.className = "disabled";
-				} else {
-					child = utilsModule.createElementWithText("a", item[0]);
-					child.onclick = function() {
-						closeMenu();
-						item[1]();
-						return false;
-					};
-				}
-				li.appendChild(child);
-				ul.appendChild(li);
-			});
-			
-			div.appendChild(ul);
-			div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
-			bodyElem.appendChild(div);
-			return false;
+			// We use 'self' because in the event handler, 'this' is set to the element that fired the event
+			self.openMenu(ev, items);
 		};
+	};
+	
+	// Immediately opens a context menu based on the coordinates in the given event and the given list of menu items.
+	// Also prevents the event's default handler (such as popping up the system context menu) from running. Returns nothing.
+	// Types: ev is Event, items is list<pair<text:string, handler:(function(Event)->void)/null>>, result is void.
+	this.openMenu = function(ev, items) {
+		// If text is currently selected, show the native context menu instead -
+		// this allows the user to copy the highlight text, search the web, etc.
+		if (window.getSelection().toString() != "")
+			return;
+		closeMenu();
+		var div = document.createElement("div");
+		div.id = "menu";
+		div.style.left = (ev.clientX - bodyElem.getBoundingClientRect().left) + "px";
+		div.style.top  = ev.clientY + "px";
+		var ul = document.createElement("ul");
+		
+		items.forEach(function(item) {
+			var li = document.createElement("li");
+			var child;
+			if (item[1] == null) {
+				child = utilsModule.createElementWithText("span", item[0]);
+				child.className = "disabled";
+			} else {
+				child = utilsModule.createElementWithText("a", item[0]);
+				child.onclick = function() {
+					closeMenu();
+					item[1]();
+					return false;
+				};
+			}
+			li.appendChild(child);
+			ul.appendChild(li);
+		});
+		
+		div.appendChild(ul);
+		div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
+		bodyElem.appendChild(div);
+		ev.preventDefault();
 	};
 	
 	/* Private functions */
