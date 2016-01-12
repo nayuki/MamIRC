@@ -299,8 +299,8 @@ const windowModule = new function() {
 							j--;
 						} else  // colSpan == 3
 							lineseq = lines[j + 1][0];
-						utilsModule.setClasslistItem(row.classList, "read"  , lineseq <  seq);
-						utilsModule.setClasslistItem(row.classList, "unread", lineseq >= seq);
+						utilsModule.setClasslistItem(row, "read"  , lineseq <  seq);
+						utilsModule.setClasslistItem(row, "unread", lineseq >= seq);
 					}
 					activeWindowUpdated = true;
 				}
@@ -467,7 +467,7 @@ const windowModule = new function() {
 			return;
 		var windowLis = windowListElem.getElementsByTagName("li");
 		self.windowNames.forEach(function(name, i) {
-			utilsModule.setClasslistItem(windowLis[i].classList, "selected", name == self.activeWindow[2]);
+			utilsModule.setClasslistItem(windowLis[i], "selected", name == self.activeWindow[2]);
 		});
 	}
 	
@@ -513,7 +513,7 @@ const windowModule = new function() {
 			messageListElem.appendChild(msgRow);
 		}
 		reflowMessagesTable();
-		utilsModule.setClasslistItem(showMoreMessagesElem.classList, "hide", lines.length <= curWindowMaxMessages);
+		utilsModule.setClasslistItem(showMoreMessagesElem, "hide", lines.length <= curWindowMaxMessages);
 	}
 	
 	
@@ -1032,8 +1032,8 @@ const inputBoxModule = new function() {
 	// Change classes of text box based on '/commands' and overlong text
 	function colorizeLine() {
 		var text = inputBoxElem.value;
-		utilsModule.setClasslistItem(inputBoxElem.classList, "is-command", text.startsWith("/") && !text.startsWith("//"));
-		utilsModule.setClasslistItem(inputBoxElem.classList, "is-overlong", isLineOverlong(text));
+		utilsModule.setClasslistItem(inputBoxElem, "is-command", text.startsWith("/") && !text.startsWith("//"));
+		utilsModule.setClasslistItem(inputBoxElem, "is-overlong", isLineOverlong(text));
 	}
 	
 	// Tests whether the given input box text line is too long.
@@ -1363,9 +1363,10 @@ const utilsModule = new function() {
 		return result;
 	};
 	
-	// Modifies the given class list so that it contains / does not contain the given token name. Returns nothing.
-	// Types: clslst is DOMTokenList (mutable), name is string, enable is boolean, result is void.
-	this.setClasslistItem = function(clslst, name, enable) {
+	// Modifies the given element's class list so that it contains / not contain the given token name. Returns nothing.
+	// Types: elem is HTMLElement (mutable), name is string, enable is boolean, result is void.
+	this.setClasslistItem = function(elem, name, enable) {
+		var clslst = elem.classList;
 		if (clslst.contains(name) != enable)
 			clslst.toggle(name);
 	};
