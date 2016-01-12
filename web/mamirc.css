@@ -539,6 +539,10 @@ div.expander {
 
 /*---- Miscellaneous ----*/
 
+*.hide {
+	display: none;
+}
+
 a:not([href]) {
 	cursor: pointer;
 }

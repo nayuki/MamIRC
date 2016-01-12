@@ -323,7 +323,7 @@ const windowModule = new function() {
 							i--;
 					}
 					if (i < 0)
-						showMoreMessagesElem.style.display = "none";
+						showMoreMessagesElem.classList.add("hide");
 					activeWindowUpdated = true;
 				}
 			} else if (type == "CONNECTED") {
@@ -389,7 +389,6 @@ const windowModule = new function() {
 				ev.preventDefault();
 			}
 		});
-		showMoreMessagesElem.style.display = "none";
 		showMoreMessagesElem.querySelector("a").onclick = function() {
 			if (self.activeWindow == null)
 				return;
@@ -489,9 +488,9 @@ const windowModule = new function() {
 				li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(name, null); }]]);
 				memberListElem.appendChild(li);
 			});
-			memberListHeadingElem.style.removeProperty("display");
+			memberListHeadingElem.classList.remove("hide");
 		} else
-			memberListHeadingElem.style.display = "none";
+			memberListHeadingElem.classList.add("hide");
 	}
 	
 	
@@ -514,10 +513,7 @@ const windowModule = new function() {
 			messageListElem.appendChild(msgRow);
 		}
 		reflowMessagesTable();
-		if (lines.length <= curWindowMaxMessages)
-			showMoreMessagesElem.style.display = "none";
-		else
-			showMoreMessagesElem.style.removeProperty("display");
+		utilsModule.setClasslistItem(showMoreMessagesElem.classList, "hide", lines.length <= curWindowMaxMessages);
 	}
 	
 	
@@ -1388,7 +1384,7 @@ const errorMsgModule = new function() {
 	/* Initialization */
 	utilsModule.clearChildren(errorMsgElem);
 	errorMsgContainerElem.querySelector("a").onclick = function() {
-		errorMsgContainerElem.style.display = "none";
+		errorMsgContainerElem.classList.add("hide");
 		utilsModule.clearChildren(errorMsgElem);
 		return false;
 	};
@@ -1397,7 +1393,7 @@ const errorMsgModule = new function() {
 	// Appends the given text to the list of error messages, showing the panel if hidden.
 	// Types: str is string, result is void.
 	this.addMessage = function(str) {
-		errorMsgContainerElem.style.removeProperty("display");
+		errorMsgContainerElem.classList.remove("hide");
 		var li = utilsModule.createElementWithText("li", str);
 		errorMsgElem.appendChild(li);
 	};
@@ -1569,7 +1565,7 @@ const profileConfigModule = new function() {
 	// Sets click event handlers on HTML elements. Types: result is void.
 	function init() {
 		elemId("configure-profiles").onclick = function() {
-			if (screenElem.style.display == "block")
+			if (!screenElem.classList.contains("hide"))
 				return;
 			var xhr = new XMLHttpRequest();
 			xhr.onload = function() {
@@ -1597,7 +1593,7 @@ const profileConfigModule = new function() {
 		});
 		if (profileNames.length == 0)
 			elemId("add-irc-network").onclick();
-		screenElem.style.display = "block";
+		screenElem.classList.remove("hide");
 	}
 	
 	// Types: parentElem is HTMLElement, labelText is string, textBoxId is string, inputType is string,
@@ -1635,7 +1631,7 @@ const profileConfigModule = new function() {
 			(name == null ? "" : name), "e.g. Abcd Net " + i, "unique, required");
 		if (name != null) {
 			form.appendChild(utilsModule.createElementWithText("h3", name));
-			tbody.lastChild.style.display = "none";
+			tbody.lastChild.classList.add("hide");
 		}
 		
 		// "Connect" checkbox row
@@ -1808,7 +1804,7 @@ const profileConfigModule = new function() {
 	}
 	
 	function closeDialog() {
-		screenElem.style.display = "none";
+		screenElem.classList.add("hide");
 		utilsModule.clearChildren(containerElem);
 	}
 	
