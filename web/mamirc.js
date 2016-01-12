@@ -439,6 +439,13 @@ const windowModule = new function() {
 				menuItems.push(["Close window", null]);
 			else
 				menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
+			if (utilsModule.isChannelName(party) && profile in connectionData) {
+				var mode = party in connectionData[profile].channels;
+				var func = function() {
+					networkModule.sendAction([["send-line", profile, (mode ? "PART " : "JOIN ") + party]], null);
+				};
+				menuItems.push([(mode ? "Part" : "Join") + " channel", func]);
+			}
 			a.oncontextmenu = menuModule.makeOpener(menuItems);
 			
 			var li = document.createElement("li");
