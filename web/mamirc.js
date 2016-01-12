@@ -423,30 +423,32 @@ const windowModule = new function() {
 				self.setActiveWindow(windowName);
 				return false;
 			};
-			var menuItems = [];
-			if (windowData[windowName].isMuted)
-				menuItems.push(["Unmute window", function() { windowData[windowName].isMuted = false; }]);
-			else {
-				menuItems.push(["Mute window", function() {
-					var win = windowData[windowName];
-					win.isMuted = true;
-					win.numNewMessages = 0;
-					win.isNickflagged = false;
-					redrawWindowList();
-				}]);
-			}
-			if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
-				menuItems.push(["Close window", null]);
-			else
-				menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
-			if (utilsModule.isChannelName(party) && profile in connectionData) {
-				var mode = party in connectionData[profile].channels;
-				var func = function() {
-					networkModule.sendAction([["send-line", profile, (mode ? "PART " : "JOIN ") + party]], null);
-				};
-				menuItems.push([(mode ? "Part" : "Join") + " channel", func]);
-			}
-			a.oncontextmenu = menuModule.makeOpener(menuItems);
+			a.oncontextmenu = function(ev) {
+				var menuItems = [];
+				if (windowData[windowName].isMuted)
+					menuItems.push(["Unmute window", function() { windowData[windowName].isMuted = false; }]);
+				else {
+					menuItems.push(["Mute window", function() {
+						var win = windowData[windowName];
+						win.isMuted = true;
+						win.numNewMessages = 0;
+						win.isNickflagged = false;
+						redrawWindowList();
+					}]);
+				}
+				if (party == "" && profile in connectionData || profile in connectionData && party in connectionData[profile].channels)
+					menuItems.push(["Close window", null]);
+				else
+					menuItems.push(["Close window", function() { networkModule.sendAction([["close-window", profile, party]], null); }]);
+				if (utilsModule.isChannelName(party) && profile in connectionData) {
+					var mode = party in connectionData[profile].channels;
+					var func = function() {
+						networkModule.sendAction([["send-line", profile, (mode ? "PART " : "JOIN ") + party]], null);
+					};
+					menuItems.push([(mode ? "Part" : "Join") + " channel", func]);
+				}
+				menuModule.openMenu(ev, menuItems);
+			};
 			
 			var li = document.createElement("li");
 			li.appendChild(a);
