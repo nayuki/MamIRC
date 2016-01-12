@@ -15,17 +15,7 @@ Architecture
 
 Software components and data flow:
 
-      +--------+                                                   +-------------+  
-      |  IRC   | <-                                             -> |   Desktop   |  
-      | server |   \      +-----------+     +-----------+      /   | web browser |  
-      +--------+    \     |  MamIRC   |     |  MamIRC   |     /    +-------------+  
-                     +--> | Connector | <-> | Processor | <--+                      
-      +--------+    /     +-----------+     +-----------+     \    +-------------+  
-      |  IRC   |   /               |           ^               \   |   Mobile    |  
-      | server | <-                v           |                -> | web browser |  
-      +--------+                +-----------------+                +-------------+  
-                                | SQLite database |                                 
-                                +-----------------+                                 
+![doc/architecture.png](doc/architecture.png)
 
 
 Project links
