@@ -1,0 +1,55 @@
+/* 
+ * MamIRC
+ * Copyright (c) Project Nayuki
+ * 
+ * http://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://github.com/nayuki/MamIRC
+ */
+
+
+/*---- Reset browser defaults ----*/
+
+html, body, h1, h2, h3, p, ul, li, table, tbody, tr, td, th {
+	margin: 0;
+	padding: 0;
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	list-style-type: inherit;
+}
+
+input {
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+}
+
+
+/*---- Various declarations ----*/
+
+/* Full-screen layout. Note that width:100% is implied due to display:block/flex. */
+html, body {
+	height: 100%;
+}
+
+/* Default page text style. */
+html {
+	font-family: sans-serif;
+	font-size: default;
+	font-weight: normal;
+	color: #000000;
+}
+
+/* Preparations for Tomoe Mami background image. */
+html {
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	background-size: contain;
+	background-position: left;
+	background-color: #FFFFFF;
+}
+
+/* Using a class improves conciseness for HTML and JavaScript code. */
+*.hide {
+	display: none;
+}

@@ -7,38 +7,10 @@
  */
 
 
-/*---- Reset defaults ----*/
-
-html, body, h1, h2, h3, p, ul, li, table, tbody, tr, td, th {
-	margin: 0;
-	padding: 0;
-	font-family: inherit;
-	font-size: inherit;
-	font-weight: inherit;
-	list-style-type: inherit;
-}
-
-input {
-	font-family: inherit;
-	font-size: inherit;
-	font-weight: inherit;
-}
-
-
 /*---- Major elements ----*/
 
 html {
-	height: 100%;
 	background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami.png");
-	background-repeat: no-repeat;
-	background-attachment: fixed;
-	background-size: contain;
-	background-position: left;
-	background-color: #FFFFFF;
-	font-family: sans-serif;
-	font-size: default;
-	font-weight: normal;
-	color: #000000;
 	list-style-type: none;
 }
 
@@ -51,7 +23,6 @@ html {
 body {
 	position: relative;
 	max-width: 90em;
-	height: 100%;
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -538,10 +509,6 @@ div.expander {
 
 
 /*---- Miscellaneous ----*/
-
-*.hide {
-	display: none;
-}
 
 a:not([href]) {
 	cursor: pointer;
