@@ -22,6 +22,7 @@ const windowModule = new function() {
 	const nicknameText = textNode("");
 	// Miscellaneous
 	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
+	const MAX_CHANNEL_MEMBERS_TO_COLORIZE = 300;
 	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	
 	/* Variables */
@@ -494,6 +495,8 @@ const windowModule = new function() {
 			});
 			members.forEach(function(name) {
 				var li = utilsModule.createElementWithText("li", name);
+				if (members.length < MAX_CHANNEL_MEMBERS_TO_COLORIZE)
+					li.style.color = nickColorModule.getNickColor(name);
 				li.oncontextmenu = menuModule.makeOpener([["Open PM window", function() { self.openPrivateMessagingWindow(name, null); }]]);
 				memberListElem.appendChild(li);
 			});
