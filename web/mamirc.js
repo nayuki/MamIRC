@@ -17,6 +17,7 @@ const windowModule = new function() {
 	const messageListElem         = elemId("message-list");
 	const memberListHeadingElem = elemId("member-list-heading");
 	const memberListElem          = elemId("member-list");
+	const memberCountText          = textNode("");
 	const showMoreMessagesElem    = elemId("show-more-messages");
 	const channelIndicatorText    = textNode("");
 	const nicknameText = textNode("");
@@ -60,6 +61,7 @@ const windowModule = new function() {
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
 	elemId("channel-indicator").appendChild(channelIndicatorText);
+	elemId("member-count").appendChild(memberCountText);
 	init();
 	
 	
@@ -501,6 +503,7 @@ const windowModule = new function() {
 				memberListElem.appendChild(li);
 			});
 		}
+		memberCountText.data = show ? members.length.toString() : "";
 		utilsModule.setClasslistItem(memberListHeadingElem, "hide", !show);
 	}
 	
