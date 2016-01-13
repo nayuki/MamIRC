@@ -1164,10 +1164,8 @@ const menuModule = new function() {
 		closeMenu();
 		var div = document.createElement("div");
 		div.id = "menu";
-		div.style.left = (ev.clientX - bodyElem.getBoundingClientRect().left) + "px";
-		div.style.top  = ev.clientY + "px";
-		var ul = document.createElement("ul");
 		
+		var ul = document.createElement("ul");
 		items.forEach(function(item) {
 			var li = document.createElement("li");
 			var child;
@@ -1185,10 +1183,19 @@ const menuModule = new function() {
 			li.appendChild(child);
 			ul.appendChild(li);
 		});
-		
 		div.appendChild(ul);
+		
 		div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
+		var bodyRect = bodyElem.getBoundingClientRect();
 		bodyElem.appendChild(div);
+		var left = ev.clientX - bodyRect.left;
+		var top = ev.clientY;
+		if (bodyRect.width - left < div.offsetWidth)
+			left -= div.offsetWidth;
+		if (bodyRect.height - top < div.offsetHeight)
+			top -= div.offsetHeight;
+		div.style.left = left + "px";
+		div.style.top  = top + "px";
 		ev.preventDefault();
 	};
 	
