@@ -1455,6 +1455,12 @@ const networkModule = new function() {
 	
 	// Initializes this module. Must not be called more than once.
 	this.init = function() {
+		elemId("logout").onclick = function() {
+			document.cookie.split(/\s*;\s*/).forEach(function(s) {
+				document.cookie = s.split("=")[0] + "=;expires=" + new Date(0).toGMTString();
+			});
+			location.reload();
+		};
 		getState();
 		checkTimeSkew();
 	};
