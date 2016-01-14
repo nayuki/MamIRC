@@ -103,7 +103,7 @@ header {
 
 #footer {
 	flex-shrink: 0;
-	padding-bottom: 0.8em;
+	padding-bottom: 0.5em;
 }
 
 #network-profiles {
@@ -140,14 +140,29 @@ body.hide {
 }
 
 #left-sidebar hr {
-	margin: 1.0em 2.0em;
+	margin: 1.0em 0.5em;
 	border: none;
-	border-bottom: 1px dashed #A0A0A0;
+	border-bottom: 0.1em dashed #A0A0A0;
 }
 
-#left-sidebar p {
-	padding-bottom: 0.5em;
+#left-sidebar > p {
+	padding-bottom: 0.3rem;
+	font-size: 80%;
+	color: #B0B0B0;
 	text-align: center;
+}
+
+#left-sidebar > p:last-child {
+	padding-bottom: 0.8rem;
+}
+
+#left-sidebar > p a {
+	transition: color 0.2s linear;
+}
+
+#left-sidebar > p a:hover {
+	color: #000000;
+	transition: color 0.1s linear;
 }
 
 /* List of chat windows */
@@ -242,7 +257,7 @@ body.hide {
 }
 
 #messages tr:hover {
-	background-color: #F6F6F6;
+	background-color: rgba(0,0,0,0.035);
 }
 
 #messages td {
@@ -376,14 +391,17 @@ body.hide {
 	padding: 0em 1.0em;
 }
 
-#footer form > span:nth-child(2) {
+#input-box {
 	flex-grow: 1;
 	flex-shrink: 1;
 }
 
-#input-box {
-	width: 100%;
-    box-sizing: border-box;
+#footer form::after {
+	display: block;
+	width: 0.3em;
+	flex-grow: 0;
+	flex-shrink: 0;
+	content: "";
 }
 
 #input-box.is-command {
@@ -480,6 +498,10 @@ body.hide {
 #network-profiles input[type="number"] {
 	width: 3em;
 	-moz-appearance: textfield;
+}
+
+#network-profiles input[type=number]::-webkit-inner-spin-button {
+	-webkit-appearance: none;
 }
 
 #network-profiles input::-webkit-input-placeholder {
