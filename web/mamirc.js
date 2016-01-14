@@ -625,7 +625,19 @@ const windowModule = new function() {
 		} else if (type == Flags.SERVERREPLY) {
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		} else if (type == Flags.NAMES) {
-			lineElems.push(textNode("Users in channel: " + payload.join(", ")));
+			const ABBREVIATE_NAMES_LIMIT = 15;
+			var text = textNode("Users in channel: " + payload.slice(0, ABBREVIATE_NAMES_LIMIT).join(", "));
+			lineElems.push(text);
+			if (payload.length > ABBREVIATE_NAMES_LIMIT) {
+				text.data += ", ";
+				var moreText = "(... " + (payload.length - ABBREVIATE_NAMES_LIMIT) + " more members ...)";
+				var moreElem = utilsModule.createElementWithText("a", moreText);
+				moreElem.onclick = function() {
+					text.data = "Users in channel: " + payload.join(", ");
+					moreElem.parentNode.removeChild(moreElem);
+				};
+				lineElems.push(moreElem);
+			}
 			tr.classList.add("user-list");
 		} else if (type == Flags.MODE) {
 			lineElems.push(textNode(payload[0] + " set mode " + payload[1]));
