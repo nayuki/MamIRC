@@ -124,6 +124,12 @@ div.expander {
 
 /*---- Detailed elements ----*/
 
+body.hide {
+	display: flex;
+	opacity: 0;
+	transition: opacity 0.2s linear;
+}
+
 /* Left sidebar */
 
 #left-sidebar h2 {

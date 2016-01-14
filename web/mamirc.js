@@ -1471,7 +1471,8 @@ const networkModule = new function() {
 			document.cookie.split(/\s*;\s*/).forEach(function(s) {
 				document.cookie = s.split("=")[0] + "=;expires=" + new Date(0).toGMTString();
 			});
-			location.reload();
+			utilsModule.setClasslistItem(document.querySelector("body"), "hide", true);
+			setTimeout(function() { location.reload(); }, 500);
 		};
 		getState();
 		checkTimeSkew();
