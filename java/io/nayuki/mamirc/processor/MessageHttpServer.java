@@ -123,7 +123,7 @@ final class MessageHttpServer {
 							// Serve login page
 							String s = Utils.fromUtf8(readFile(new File("web", "login.html")));
 							s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
-							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\"" : "");
+							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\" " : "");
 							respHead.add("Cache-Control", "no-store");
 							writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
 						} else {  // Serve main page

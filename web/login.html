@@ -11,6 +11,7 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<title>Login - MamIRC</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1"/>
 		<meta http-equiv="Content-Style-Type" content="text/css"/>
 		<link rel="Stylesheet" href="common.css" type="text/css" media="all"/>
 		<link rel="icon" href="tomoe-mami-icon.png"/>
@@ -30,6 +31,9 @@
 			align-items: center;
 		}
 		form {
+			padding: 1.5rem;
+			background: rgba(255,255,255,0.9);
+			border-radius: 1.0rem;
 			font-size: 150%;
 			text-align: center;
 		}
@@ -64,5 +68,12 @@
 				<label for="optimize-mobile">Optimize for mobile</label>
 			</p>
 		</form>
+		
+		<script type="application/javascript">
+		// <![CDATA[
+		if (700 > document.documentElement.clientWidth || 700 > document.documentElement.clientHeight)
+			document.getElementById("optimize-mobile").checked = true;
+		// ]]>
+		</script>
 	</body>
 </html>

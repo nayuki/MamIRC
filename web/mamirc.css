@@ -67,6 +67,7 @@ header {
 }
 
 #messages {
+	min-width: 20em;
 	flex-grow: 1;
 	flex-shrink: 1;
 	display: flex;
