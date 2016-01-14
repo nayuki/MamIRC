@@ -15,6 +15,8 @@
 # https://github.com/nayuki/MamIRC
 # 
 
+# If any command returns a non-zero status, this script aborts immediately
+set -e
 
 # Clone the Git repository, if we are not in it already
 if [ ! -e ".git" ]; then
