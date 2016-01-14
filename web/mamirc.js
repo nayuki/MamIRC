@@ -109,6 +109,10 @@ const windowModule = new function() {
 			if (winName == null || this.windowNames.indexOf(winName) == -1)
 				winName = this.windowNames[0];
 			this.setActiveWindow(winName);
+		} else {
+			setTimeout(function() {
+				profileConfigModule.loadAndShowDialog();
+			}, 500);
 		}
 	};
 	
@@ -1596,24 +1600,30 @@ const profileConfigModule = new function() {
 	
 	// Sets click event handlers on HTML elements. Types: result is void.
 	function init() {
-		elemId("configure-profiles").onclick = function() {
-			if (!screenElem.classList.contains("hide"))
-				return;
-			var xhr = new XMLHttpRequest();
-			xhr.onload = function() {
-				var data = JSON.parse(xhr.response);
-				showDialog(data);
-			};
-			xhr.open("POST", "get-profiles.json", true);
-			xhr.responseType = "text";
-			xhr.send(JSON.stringify(""));
-		};
+		elemId("configure-profiles").onclick = loadAndShowDialog;
 		elemId("add-irc-network").onclick = function() {
 			containerElem.appendChild(createProfileForm(
 				containerElem.getElementsByTagName("form").length, null, blankProfile));
 		};
 		elemId("save-network-profiles").onclick = saveProfiles;
 		elemId("close-network-profiles").onclick = closeDialog;
+	}
+	
+	// If the network profile configuration screen is not already open, then this function
+	// makes a network request to load the data, and upon receiving it the screen shows.
+	// Types: result is void.
+	this.loadAndShowDialog = loadAndShowDialog;
+	function loadAndShowDialog() {
+		if (!screenElem.classList.contains("hide"))
+			return;
+		var xhr = new XMLHttpRequest();
+		xhr.onload = function() {
+			var data = JSON.parse(xhr.response);
+			showDialog(data);
+		};
+		xhr.open("POST", "get-profiles.json", true);
+		xhr.responseType = "text";
+		xhr.send(JSON.stringify(""));
 	}
 	
 	// Types: profileData is object, result is void.
