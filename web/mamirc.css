@@ -420,6 +420,18 @@ div.expander {
 
 /* Network profile configuration */
 
+#network-profiles {
+	transition: opacity 0.15s linear;
+}
+
+#network-profiles.hide {
+	display: initial;  /* Don't use display:none */
+	visibility: hidden;
+	opacity: 0;
+	/* Must match the setTimeout() delay in profileConfigModule's closeDialog() */
+	transition: opacity 0.30s linear, visibility 0s linear 0.30s;
+}
+
 #network-profiles h2 {
 	font-size: 150%;
 	font-weight: bold;

@@ -1837,7 +1837,9 @@ const profileConfigModule = new function() {
 	
 	function closeDialog() {
 		utilsModule.setClasslistItem(screenElem, "hide", true);
-		utilsModule.clearChildren(containerElem);
+		setTimeout(function() {
+			utilsModule.clearChildren(containerElem);
+		}, 300);
 	}
 	
 	// Splits a string by the separator sequence <any whitespace> <comma> <any whitespace>.
