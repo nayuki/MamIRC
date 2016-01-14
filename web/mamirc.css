@@ -380,11 +380,11 @@ div.expander {
 }
 
 #input-box.is-command {
-	color: #2060FF;
+	background-color: #E0FFD8;
 }
 
 #input-box.is-overlong {
-	color: #FF0000;
+	background-color: #FFE0E0;
 }
 
 
