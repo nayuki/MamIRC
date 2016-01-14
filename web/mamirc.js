@@ -1736,7 +1736,7 @@ const profileConfigModule = new function() {
 		var input = document.createElement("input");
 		input.type = "text";
 		input.value = hostname;
-		input.placeholder = "irc.example.com (hostname)";
+		input.placeholder = "hostname.irc.example.com";
 		li.appendChild(input);
 		li.appendChild(textNode(" "));
 		input = document.createElement("input");

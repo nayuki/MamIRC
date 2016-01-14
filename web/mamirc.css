@@ -475,6 +475,22 @@ div.expander {
 	-moz-appearance: textfield;
 }
 
+#network-profiles input::-webkit-input-placeholder {
+	color: #B0B0B0;
+	font-size: 85%;
+}
+
+#network-profiles input::-moz-placeholder {
+	opacity: 1;
+	color: #B0B0B0;
+	font-size: 85%;
+}
+
+#network-profiles input:placeholder-shown {
+	color: #B0B0B0;
+	font-size: 85%;
+}
+
 #network-profiles tr:nth-last-child(6) td:first-child {  /* Servers label */
 	vertical-align: top;
 }
