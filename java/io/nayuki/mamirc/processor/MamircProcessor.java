@@ -871,14 +871,12 @@ public final class MamircProcessor {
 			while (i >= 1 && (Integer)recentUpdates.get(i - 1)[0] >= startId)
 				i--;
 			
-			if (i == 0)
-				return null;  // No overlap
-			else if (i == recentUpdates.size() && maxWait > 0) {  // Result currently empty, wait for more
+			if (i == recentUpdates.size() && maxWait > 0) {  // Result currently empty, wait for more
 				try {
 					condNewUpdates.await(maxWait, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e) {}
 				return getUpdates(startId, 0);
-			} else {
+			} else if (nextUpdateId == 0 || i > 0) {  // Valid result to return, possibly empty
 				Map<String,Object> result = new HashMap<>();
 				List<List<Object>> updates = new ArrayList<>();
 				while (i < recentUpdates.size()) {
@@ -888,7 +886,8 @@ public final class MamircProcessor {
 				result.put("updates", updates);
 				result.put("nextUpdateId", nextUpdateId);
 				return result;
-			}
+			} else  // No overlap
+				return null;  // Tell the client to resynchronize
 		} finally {
 			lock.unlock();
 		}
