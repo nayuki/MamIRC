@@ -1196,6 +1196,7 @@ const inputBoxModule = new function() {
 /*---- Context menu module ----*/
 
 // Manages a singleton context menu that can be shown with specific menu items or hidden.
+// Dependencies: utilsModule, the subtree from the HTML element with id="menu".
 const menuModule = new function() {
 	/* Initialization */
 	const self = this;
@@ -1279,6 +1280,7 @@ const menuModule = new function() {
 /*---- Nickname colorization module ----*/
 
 // Associates each nickname with a color. The mapping is based on hashing, and thus is stateless and consistent.
+// Dependencies: None (this module is freestanding).
 const nickColorModule = new function() {
 	/* Constants */
 	const COLOR_TABLE = [
@@ -1328,6 +1330,7 @@ const nickColorModule = new function() {
 /*---- Toast notifications module ----*/
 
 // Manages desktop toast notifications and allows new ones to be posted.
+// Dependencies: formatTextModule, windowModule, desktop notifications.
 const notificationModule = new function() {
 	/* Variables */
 	var enabled = "Notification" in window;
@@ -1390,6 +1393,7 @@ const notificationModule = new function() {
 // A set of functions that are somewhat general, not too specific to the problem domain of MamIRC.
 // This module only contains public, stateless functions. These functions may return a new
 // value or change an argument's state. They never read/write global state or perform I/O.
+// Dependencies: None (this module is freestanding).
 const utilsModule = new function() {
 	/* Exported functions */
 	
@@ -1467,6 +1471,7 @@ const utilsModule = new function() {
 /*---- Alert messages module ----*/
 
 // Manages the panel of error messages and allows new lines to be added.
+// Dependencies: The subtree from the HTML element with id="err-msg-container".
 const errorMsgModule = new function() {
 	/* Constants */
 	const errorMsgContainerElem = elemId("error-msg-container");
@@ -1475,6 +1480,7 @@ const errorMsgModule = new function() {
 	/* Initialization */
 	utilsModule.clearChildren(errorMsgElem);
 	errorMsgContainerElem.querySelector("a").onclick = function() {
+		// Clear all items and hide panel
 		utilsModule.setClasslistItem(errorMsgContainerElem, "hide", true);
 		utilsModule.clearChildren(errorMsgElem);
 		return false;
@@ -1494,6 +1500,7 @@ const errorMsgModule = new function() {
 
 /*---- Network communication module ----*/
 
+// Dependencies: errorMsgModule, utilsModule, windowModule, XMLHttpRequest.
 const networkModule = new function() {
 	/* Variables */
 	const self = this;
@@ -1640,6 +1647,7 @@ const networkModule = new function() {
 
 /*---- Network profile configuration UI module ----*/
 
+// Dependencies: networkModule, utilsModule, the subtree from the HTML element with id="network-profiles-screen".
 const profileConfigModule = new function() {
 	/* Constants */
 	const screenElem = elemId("network-profiles-screen");
@@ -1930,7 +1938,7 @@ const profileConfigModule = new function() {
 /*---- Miscellaneous ----*/
 
 // This definition exists only for the purpose of abbreviation, because it is used so many times.
-// Types: name is string, result is HTMLElement/null. Pure function.
+// Types: name is string, result is HTMLElement/null.
 function elemId(name) {
 	return document.getElementById(name);
 }
