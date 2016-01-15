@@ -47,6 +47,18 @@ final class IrcSession {
 	// Not null, size at least 0. The string argument is case-insensitive but case-preserving.
 	private Map<String,ChannelState> currentChannels;
 	
+	// A Unix timestamp in milliseconds, for outbound throttling.
+	private long nextLineSendTime;
+	
+	// Must be positive, for outbound throttling.
+	private final int numBurstLines = 4;
+	
+	// In milliseconds, for outbound throttling.
+	private final int sendInterval = 2000;
+	
+	// In milliseconds, for outbound throttling.
+	private final int gracePeriod = (numBurstLines - 1) * sendInterval;
+	
 	
 	
 	/*---- Constructor ----*/
@@ -63,6 +75,7 @@ final class IrcSession {
 		currentNickname = null;
 		nickflagDetector = null;
 		currentChannels = new CaseInsensitiveTreeMap<>();
+		nextLineSendTime = System.currentTimeMillis() - gracePeriod;
 	}
 	
 	
@@ -152,6 +165,17 @@ final class IrcSession {
 		} else
 			nickflagDetector = Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(name) + "(?![A-Za-z0-9_])", Pattern.CASE_INSENSITIVE);
 		currentNickname = name;
+	}
+	
+	
+	// Returns the amount of time to delay sending the next line (zero or positive),
+	// and modifies/increments the internal state for subsequent calls to this method.
+	public int nextLineSendDelay() {
+		long now = System.currentTimeMillis();
+		nextLineSendTime = Math.max(now - gracePeriod, nextLineSendTime);
+		int result = Math.max((int)(nextLineSendTime - now), 0);
+		nextLineSendTime += sendInterval;
+		return result;
 	}
 	
 	

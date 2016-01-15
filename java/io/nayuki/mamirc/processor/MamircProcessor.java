@@ -64,7 +64,7 @@ public final class MamircProcessor {
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
 	private MessageHttpServer server;
-	private Timer namesRefresher;
+	private Timer timer;
 	
 	// Mutable current state
 	private final Map<Integer,IrcSession> ircSessions;
@@ -116,8 +116,8 @@ public final class MamircProcessor {
 		}
 		
 		// Refresh all channel names on all connections once a day
-		namesRefresher = new Timer();
-		namesRefresher.schedule(new TimerTask() {
+		timer = new Timer();
+		timer.schedule(new TimerTask() {
 			public void run() {
 				lock.lock();
 				try {
@@ -647,8 +647,8 @@ public final class MamircProcessor {
 		try {
 			if (server != null)
 				server.terminate();
-			if (namesRefresher != null)
-				namesRefresher.cancel();
+			if (timer != null)
+				timer.cancel();
 			isTerminating = true;
 			condTerminate.signalAll();
 			condNewUpdates.signalAll();
@@ -968,13 +968,30 @@ public final class MamircProcessor {
 	public boolean sendLine(String profile, String line) {
 		lock.lock();
 		try {
+			IrcSession session = null;
+			int conId = -1;
 			for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
 				if (entry.getValue().profile.name.equals(profile)) {
-					writer.postWrite("send " + entry.getKey() + " " + line);
-					return true;
+					conId = entry.getKey();
+					session = entry.getValue();
+					break;
 				}
 			}
-			return false;
+			if (session == null)
+				return false;
+			
+			final String outboundLine = "send " + conId + " " + line;
+			timer.schedule(new TimerTask() {
+				public void run() {
+					lock.lock();
+					try {
+						writer.postWrite(outboundLine);
+					} finally {
+						lock.unlock();
+					}
+				}
+			}, session.nextLineSendDelay());
+			return true;
 		} finally {
 			lock.unlock();
 		}
