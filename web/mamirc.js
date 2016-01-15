@@ -13,14 +13,14 @@
 const windowModule = new function() {
 	/* Constants */
 	// Document nodes
-	const windowListElem          = elemId("window-list");
-	const messageListElem         = elemId("message-list");
-	const memberListHeadingElem = elemId("member-list-heading");
-	const memberListElem          = elemId("member-list");
-	const memberCountText          = textNode("");
-	const showMoreMessagesElem    = elemId("show-more-messages");
-	const channelIndicatorText    = textNode("");
-	const nicknameText = textNode("");
+	const windowListElem        = elemId("window-list");
+	const memberListElem        = elemId("member-list");
+	const memberListHeadingElem = document.querySelector("#member-list-container h2");
+	const memberCountText       = textNode("");
+	const messageListElem       = elemId("message-list");
+	const showMoreMessagesElem  = elemId("show-more-messages");
+	const channelIndicatorText  = textNode("");
+	const nicknameText          = textNode("");
 	// Miscellaneous
 	const self = this;  // Private functions and closures must use 'self', whereas public functions can use 'self' or 'this' interchangeably
 	const MAX_CHANNEL_MEMBERS_TO_COLORIZE = 300;
@@ -60,8 +60,8 @@ const windowModule = new function() {
 	
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
-	document.querySelector("#channel-indicator > div").appendChild(channelIndicatorText);
 	elemId("member-count").appendChild(memberCountText);
+	document.querySelector("#channel-indicator > div").appendChild(channelIndicatorText);
 	init();
 	
 	
@@ -1350,22 +1350,29 @@ const notificationModule = new function() {
 	this.notifyMessage = function(windowName, channel, user, message) {
 		var s = (channel != null) ? (channel + " ") : "";
 		var match = formatTextModule.matchMeMessage(message);
-		s += (match == null) ? ("<" + user + ">") : ("* " + user);
-		s += " " + formatTextModule.fancyToPlainText((match == null) ? message : match[1]);
+		if (match == null)
+			s += "<" + user + ">";
+		else {
+			s += "* " + user;
+			message = match[1];
+		}
+		s += " " + formatTextModule.fancyToPlainText(message);
 		this.notifyRaw(windowName, s);
 	};
 	
 	// Posts a notification of the given raw text in the given window. 'windowName' is in the format 'profile+"\n"+party'.
 	// Types: windowName is string, text is string, result is void.
 	this.notifyRaw = function(windowName, text) {
-		if (enable) {
-			var opts = {icon: "tomoe-mami-icon-text.png"};
-			var notif = new Notification(truncateLongText(text), opts);
-			notif.onclick = function() {
-				windowModule.setActiveWindow(windowName);
-			};
-			setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
-		}
+		if (!enable)
+			return;
+		if (windowName.split("\n").length != 2)
+			throw "Invalid window name";
+		var opts = {icon: "tomoe-mami-icon-text.png"};
+		var notif = new Notification(truncateLongText(text), opts);
+		notif.onclick = function() {
+			windowModule.setActiveWindow(windowName);
+		};
+		setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
 	};
 	
 	/* Private functions */
@@ -1403,6 +1410,8 @@ const utilsModule = new function() {
 	// nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> throws exception.
 	// Types: str is string, n is integer, result is string. Pure function.
 	this.nthRemainingPart = function(str, n) {
+		if (n < 0)
+			throw "Negative count";
 		var j = 0;
 		for (var i = 0; i < n; i++) {
 			j = str.indexOf(" ", j) + 1;
@@ -1485,7 +1494,6 @@ const errorMsgModule = new function() {
 		// Clear all items and hide panel
 		utilsModule.setClasslistItem(errorMsgContainerElem, "hide", true);
 		utilsModule.clearChildren(errorMsgElem);
-		return false;
 	};
 	
 	/* Exported functions */
