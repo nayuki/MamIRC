@@ -101,7 +101,7 @@ header {
 	text-shadow: 0 0 0.2em #E0E0E0;
 }
 
-#footer {
+footer {
 	flex-grow: 0;
 	flex-shrink: 0;
 	padding-bottom: 0.5em;
@@ -141,7 +141,7 @@ body.hide {  /* For log out */
 	color: #D0D0D0;
 }
 
-#left-sidebar hr {
+#left-sidebar > hr {
 	margin: 1.0em 0.5em;
 	border: none;
 	border-bottom: 0.1em dashed #A0A0A0;
@@ -169,7 +169,7 @@ body.hide {  /* For log out */
 
 /* List of chat windows */
 
-#window-list li {
+#window-list {
 	word-wrap: break-word;
 	word-break: break-all;
 }
@@ -258,35 +258,35 @@ body.hide {  /* For log out */
 	display: none;
 }
 
-#messages tr:hover {
+#message-list tr:hover {
 	background-color: rgba(0,0,0,0.035);
 }
 
-#messages td {
+#message-list td {
 	padding: 0.1em 0.3em;
 	box-sizing: border-box;
 	vertical-align: top;
 }
 
-#messages td:nth-child(1), #messages td:nth-child(2) {
+#message-list td:nth-child(1), #message-list td:nth-child(2) {
 	width: 1%;
 	text-align: right;
 	white-space: pre;
 }
 
-#messages td:nth-child(1) {  /* Timestamp */
+#message-list td:nth-child(1) {  /* Timestamp */
 	font-kerning: none;
 	color: #A0A0A0;
 }
 
-#messages tbody td:nth-child(3) {  /* User text */
+#message-list td:nth-child(3) {  /* User text */
 	width: 98%;
 	text-align: left;
 	white-space: pre-wrap;
 	word-wrap: break-word;  /* Requires table-layout:fixed */
 }
 
-#messages tbody td[colspan="3"] {  /* Date heading */
+#message-list td[colspan="3"] {  /* Date heading */
 	padding-top: 1.0em;
 	overflow: hidden;
 	text-align: center;
@@ -294,7 +294,7 @@ body.hide {  /* For log out */
 	color: #A0A0A0;
 }
 
-#messages tbody td[colspan="3"] span::before, #messages tbody td[colspan="3"] span::after {
+#message-list td[colspan="3"] span::before, #message-list td[colspan="3"] span::after {
 	display: inline-block;
 	width: 50%;
 	height: 0;
@@ -304,66 +304,66 @@ body.hide {  /* For log out */
 	content: "";
 }
 
-#messages tbody td[colspan="3"] span::before {
+#message-list td[colspan="3"] span::before {
 	right: 0.5em;
 	margin-left: -50%;
 }
 
-#messages tbody td[colspan="3"] span::after {
+#message-list td[colspan="3"] span::after {
 	left: 0.5em;
 	margin-right: -50%;
 }
 
-#messages tr.nickflag td:nth-child(3) {
+#message-list tr.nickflag td:nth-child(3) {
 	background: #FFF4F0;
 }
 
-#messages tr.outgoing td:nth-child(2)::before {
+#message-list tr.outgoing td:nth-child(2)::before {
 	content: "\25A0\00A0";
 }
 
-#messages tr.me-action td:nth-child(2):before {
+#message-list tr.me-action td:nth-child(2):before {
 	content: "\2606\00A0";
 }
 
-#messages tr.me-action td + td {
+#message-list tr.me-action td + td {
 	font-style: italic;
 }
 
-#messages tr.user-enter td + td {
+#message-list tr.user-enter td + td {
 	color: #A9CE9F;
 }
 
-#messages tr.user-exit td + td {
+#message-list tr.user-exit td + td {
 	color: #E8BFB7;
 }
 
-#messages tr.nick-change td + td {
+#message-list tr.nick-change td + td {
 	color: #E0DC9A;
 }
 
-#messages tr.mode-change td + td {
+#message-list tr.mode-change td + td {
 	color: #A0B8E5;
 }
 
-#messages tr.user-list td + td {
+#message-list tr.user-list td + td {
 	color: #C0C0C0;
 }
 
-#messages tr.read {
+#message-list tr.read {
 	background: #F4F4F4;
 	color: #B0B0B0;
 }
 
-#messages td a:link {
+#message-list td a:link {
 	color: #D8B100
 }
 
-#messages td a:visited {
+#message-list td a:visited {
 	color: #7F6800;
 }
 
-#messages td span a:link, #messages td span a:visited {
+#message-list span a:link, #message-list span a:visited {
 	color: inherit;
 }
 
@@ -379,7 +379,7 @@ body.hide {  /* For log out */
 
 /* Input text box line */
 
-#footer form {
+footer form {
 	display: flex;
 	align-items: center;
 }
@@ -396,7 +396,7 @@ body.hide {  /* For log out */
 	height: 1.5em;
 }
 
-#footer form::after {  /* Workaround mechanism for padding, because padding <textarea> goes internally */
+footer form::after {  /* Workaround mechanism for padding, because padding <textarea> goes internally */
 	display: block;
 	width: 0.3em;
 	flex-grow: 0;
@@ -485,70 +485,70 @@ body.hide {  /* For log out */
 	border-radius: 1.0em;
 }
 
-#network-profiles h3 {
+#network-profiles-container h3 {
 	margin-bottom: -0.65rem;
 	text-align: right;
 	font-size: 130%;
 	font-weight: bold;
 }
 
-#network-profiles small {
+#network-profiles-container small {
 	font-size: 75%;
 	color: #A0A0A0;
 }
 
-#network-profiles input[type="text"], #network-profiles input[type="password"] {
+#network-profiles-container input[type="text"], #network-profiles-container input[type="password"] {
 	width: 10em;
 }
 
-#network-profiles input[type="number"] {
+#network-profiles-container input[type="number"] {
 	width: 3em;
 	-moz-appearance: textfield;
 }
 
-#network-profiles input[type=number]::-webkit-inner-spin-button {
+#network-profiles-container input[type=number]::-webkit-inner-spin-button {
 	-webkit-appearance: none;
 }
 
-#network-profiles input::-webkit-input-placeholder {
+#network-profiles-container input::-webkit-input-placeholder {
 	color: #B0B0B0;
 	font-size: 85%;
 }
 
-#network-profiles input::-moz-placeholder {
+#network-profiles-container input::-moz-placeholder {
 	opacity: 1;
 	color: #B0B0B0;
 	font-size: 85%;
 }
 
-#network-profiles input:placeholder-shown {
+#network-profiles-container input:placeholder-shown {
 	color: #B0B0B0;
 	font-size: 85%;
 }
 
-#network-profiles tr:nth-last-child(6) td:first-child {  /* Servers label */
+#network-profiles-container tr:nth-last-child(6) td:first-child {  /* Servers label */
 	vertical-align: top;
 }
 
-#network-profiles li {  /* Servers list */
+#network-profiles-container li {  /* Servers list */
 	margin-bottom: 0.2em;
 }
 
-#network-profiles a {  /* Add another server link */
+#network-profiles-container a {  /* Add another server link */
 	display: inline-block;
 	margin-top: 0.2em;
 	margin-bottom: 0.4em;
 }
 
-#network-profiles li input:first-child {  /* Hostname text box */
+#network-profiles-container li input:first-child {  /* Hostname text box */
 	width: 14em;
 }
 
-#network-profiles tr:nth-last-child(5) input {  /* Nicknames text box */
+#network-profiles-container tr:nth-last-child(5) input {  /* Nicknames text box */
 	width: 15em;
 }
 
-#network-profiles tr:last-child input {  /* Channels-to-join text box */
+#network-profiles-container tr:last-child input {  /* Channels-to-join text box */
 	width: 20em;
 }
 
