@@ -1286,14 +1286,11 @@ const nickColorModule = new function() {
 	const COLOR_TABLE = [
 		// 8 hand-tuned colors that are fairly perceptually uniform
 		"DC7979", "E1A056", "C6CA34", "5EA34D", "62B5C6", "7274CF", "B97DC2", "949494",
-		// 56 averages of pairs of the colors above, blended in sRGB
-		"DF8E69", "D1A85E", "AC9066", "AD9BA5", "B177AB", "CB7BA3", "BD8787", "DF8E69",
-		"D4B747", "B0A252", "B1AB9B", "B58CA1", "CE9099", "C09A7A", "D1A85E", "D4B747",
-		"9DB842", "9EC095", "A3A69B", "C0A992", "AFB271", "AC9066", "B0A252", "9DB842",
-		"60AC99", "698E9F", "959296", "7D9C77", "AD9BA5", "B1AB9B", "9EC095", "60AC99",
-		"6A99CB", "969CC4", "7EA6AF", "B177AB", "B58CA1", "A3A69B", "698E9F", "6A99CB",
-		"9B79C9", "8485B5", "CB7BA3", "CE9099", "C0A992", "959296", "969CC4", "9B79C9",
-		"A889AD", "BD8787", "C09A7A", "AFB271", "7D9C77", "7EA6AF", "8485B5", "A889AD",
+		// 28 averages of pairs of the colors above, blended in sRGB
+		"DF8E69", "D1A85E", "AC9066", "AD9BA5", "B177AB", "CB7BA3", "BD8787",
+		"D4B747", "B0A252", "B1AB9B", "B58CA1", "CE9099", "C09A7A", "9DB842",
+		"9EC095", "A3A69B", "C0A992", "AFB271", "60AC99", "698E9F", "959296",
+		"7D9C77", "6A99CB", "969CC4", "7EA6AF", "9B79C9", "8485B5", "A889AD",
 	];
 	const MAX_CACHE_SIZE = 100;
 	
