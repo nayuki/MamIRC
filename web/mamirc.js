@@ -1295,6 +1295,7 @@ const nickColorModule = new function() {
 		"9B79C9", "8485B5", "CB7BA3", "CE9099", "C0A992", "959296", "969CC4", "9B79C9",
 		"A889AD", "BD8787", "C09A7A", "AFB271", "7D9C77", "7EA6AF", "8485B5", "A889AD",
 	];
+	const MAX_CACHE_SIZE = 100;
 	
 	/* Variables */
 	var nickColorCache = {};
@@ -1314,7 +1315,7 @@ const nickColorModule = new function() {
 					hash = (hash >>> 1) ^ (-(hash & 1) & 0xEDB88320);
 				}
 			}
-			if (nickColorCacheSize > 100) {
+			if (nickColorCacheSize > MAX_CACHE_SIZE) {
 				nickColorCache = {};
 				nickColorCacheSize = 0;
 			}
@@ -1332,11 +1333,13 @@ const nickColorModule = new function() {
 // Manages desktop toast notifications and allows new ones to be posted.
 // Dependencies: formatTextModule, windowModule, desktop notifications.
 const notificationModule = new function() {
+	/* Constants */
+	const TEXT_LENGTH_LIMIT = 150;  // In Unicode code points (not UTF-16 code units)
 	/* Variables */
-	var enabled = "Notification" in window;
+	var enable = "Notification" in window;
 	
 	/* Initialization */
-	if (enabled)
+	if (enable)
 		Notification.requestPermission();
 	
 	/* Exported functions */
@@ -1355,7 +1358,7 @@ const notificationModule = new function() {
 	// Posts a notification of the given raw text in the given window. 'windowName' is in the format 'profile+"\n"+party'.
 	// Types: windowName is string, text is string, result is void.
 	this.notifyRaw = function(windowName, text) {
-		if (enabled) {
+		if (enable) {
 			var opts = {icon: "tomoe-mami-icon-text.png"};
 			var notif = new Notification(truncateLongText(text), opts);
 			notif.onclick = function() {
@@ -1371,12 +1374,11 @@ const notificationModule = new function() {
 	// The function is needed because Mozilla Firefox allows ridiculously long notification lines to be displayed.
 	// Types: str is string, result is string. Pure function.
 	function truncateLongText(str) {
-		var LIMIT = 150;
 		var i = 0;
 		// count is the number of Unicode code points seen, not UTF-16 code units
-		for (var count = 0; i < str.length && count < LIMIT; i++) {
-			var cc = str.charCodeAt(i);
-			if (cc < 0xD800 || cc >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
+		for (var count = 0; i < str.length && count < TEXT_LENGTH_LIMIT; i++) {
+			var c = str.charCodeAt(i);
+			if (c < 0xD800 || c >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
 				count++;
 		}
 		if (i == str.length)
