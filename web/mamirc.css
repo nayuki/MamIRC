@@ -10,13 +10,13 @@
 /*---- Major elements ----*/
 
 html {
-	background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami.png");
+	background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami.jpg");
 	list-style-type: none;
 }
 
 @media (min-height: 734px) {
 	html {
-		background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami-2x.png");
+		background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami-2x.jpg");
 	}
 }
 
