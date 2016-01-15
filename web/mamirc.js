@@ -507,7 +507,7 @@ const windowModule = new function() {
 				memberListElem.appendChild(li);
 			});
 		}
-		memberCountText.data = show ? members.length.toString() : "";
+		memberCountText.data = show ? members.length.toString() : "N/A";
 		utilsModule.setClasslistItem(memberListHeadingElem, "hide", !show);
 	}
 	
@@ -1292,7 +1292,7 @@ const nickColorModule = new function() {
 		"9EC095", "A3A69B", "C0A992", "AFB271", "60AC99", "698E9F", "959296",
 		"7D9C77", "6A99CB", "969CC4", "7EA6AF", "9B79C9", "8485B5", "A889AD",
 	];
-	const MAX_CACHE_SIZE = 100;
+	const MAX_CACHE_SIZE = 300;
 	
 	/* Variables */
 	var nickColorCache = {};
