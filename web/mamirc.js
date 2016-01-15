@@ -915,7 +915,7 @@ const inputBoxModule = new function() {
 	// is generally limited to 512 bytes, including prefix and parameters and newline
 	const maxBytesPerLine = 400;  // Type integer
 	// For grabbing the prefix to perform tab completion
-	const TAB_COMPLETION_REGEX = /^(|.* )([^ ]*)$/;
+	const TAB_COMPLETION_REGEX = /^(|[\s\S]* )([^ ]*)$/;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
 	// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
 	const OUTGOING_COMMAND_PARAM_COUNTS = {
@@ -975,7 +975,13 @@ const inputBoxModule = new function() {
 				return false;
 			} else {
 				clearTabCompletion();
-				return true;
+				if (ev.keyCode == 13) {
+					if (!ev.shiftKey && inputBoxElem.value.indexOf("\n") == -1)
+						return handleLine();
+					else if (ev.ctrlKey && inputBoxElem.value.indexOf("\n") != -1)
+						return handleMultiline();
+				} else
+					return true;
 			}
 		};
 		inputBoxElem.value = "";
@@ -1050,21 +1056,58 @@ const inputBoxModule = new function() {
 			}
 		}
 		inputBoxElem.value = "";
+		inputBoxElem.oninput();
 		return false;  // To prevent the form submitting
+	}
+	
+	function handleMultiline() {
+		var inputStr = inputBoxElem.value;
+		if (isLineOverlong(inputStr)) {
+			alert("Line is too long");
+			return false;
+		}
+		var lines = inputStr.split("\n");
+		var onerror = function(reason) {
+			errorMsgModule.addMessage("Sending lines failed (" + reason + "):");
+			lines.forEach(function(line) {
+				errorMsgModule.addMessage(line);
+			});
+		};
+		var actions = [];
+		var profile = windowModule.activeWindow[0];
+		var party = windowModule.activeWindow[1];
+		lines.forEach(function(line) {
+			actions.push(["send-line", profile, "PRIVMSG " + party + " :" + line]);
+		});
+		networkModule.sendAction(actions, onerror);
+		inputBoxElem.value = "";
+		inputBoxElem.oninput();
+		return false;
 	}
 	
 	// Change classes of text box based on '/commands' and overlong text
 	function colorizeLine() {
 		var text = inputBoxElem.value;
-		utilsModule.setClasslistItem(inputBoxElem, "is-command", text.startsWith("/") && !text.startsWith("//"));
+		var multiline = text.indexOf("\n") != -1;
+		utilsModule.setClasslistItem(inputBoxElem, "is-command", !multiline && text.startsWith("/") && !text.startsWith("//"));
 		utilsModule.setClasslistItem(inputBoxElem, "is-overlong", isLineOverlong(text));
+		utilsModule.setClasslistItem(inputBoxElem, "is-multiline", multiline);
 	}
 	
 	// Tests whether the given input box text line is too long.
 	// Types: text is string, result is boolean. Pure function.
 	function isLineOverlong(text) {
 		var checktext;
-		if (text.startsWith("//"))  // Message beginning with slash
+		if (text.indexOf("\n") != -1) {  // Multi-line message
+			var lines = text.split("\n");
+			if (lines.length > 100)
+				return true;
+			for (var i = 0; i < lines.length; i++) {
+				if (utilsModule.countUtf8Bytes(lines[i]) > maxBytesPerLine)
+					return true;
+			}
+			return false;
+		} else if (text.startsWith("//"))  // Message beginning with slash
 			checktext = text.substring(1);
 		else if (!text.startsWith("/"))  // Ordinary message
 			checktext = text;

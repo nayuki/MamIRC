@@ -394,6 +394,8 @@ body.hide {
 #input-box {
 	flex-grow: 1;
 	flex-shrink: 1;
+	height: 1.5em;
+	font-family: inherit;
 }
 
 #footer form::after {
@@ -406,6 +408,12 @@ body.hide {
 
 #input-box.is-command {
 	background-color: #E0FFD8;
+}
+
+#input-box.is-multiline {
+	height: 6em;
+	padding: 0.3em;
+	background-color: #F0F4FF;
 }
 
 #input-box.is-overlong {
