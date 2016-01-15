@@ -60,7 +60,7 @@ const windowModule = new function() {
 	
 	/* Initialization */
 	elemId("nickname").appendChild(nicknameText);
-	elemId("channel-indicator").appendChild(channelIndicatorText);
+	document.querySelector("#channel-indicator > div").appendChild(channelIndicatorText);
 	elemId("member-count").appendChild(memberCountText);
 	init();
 	
@@ -143,7 +143,7 @@ const windowModule = new function() {
 		// Redraw all message lines in this window
 		curWindowMaxMessages = 300;
 		redrawMessagesTable();
-		var scrollElem = document.querySelector("#messages div");
+		var scrollElem = elemId("messages-scroller");
 		scrollElem.scrollTop = scrollElem.scrollHeight;
 		
 		// Tell the processor that this window was selected
@@ -154,7 +154,7 @@ const windowModule = new function() {
 	// Called by networkModule.updateState(). inData is an elaborate object parsed from JSON text.
 	// Types: inData is object, result is void.
 	this.loadUpdates = function(inData) {
-		const scrollElem = document.querySelector("#messages div");
+		const scrollElem = elemId("messages-scroller");
 		const scrollPosition = scrollElem.scrollTop;
 		const scrollToBottom = scrollPosition + scrollElem.clientHeight > scrollElem.scrollHeight - 30;
 		var activeWindowUpdated = false;
@@ -1642,7 +1642,7 @@ const networkModule = new function() {
 
 const profileConfigModule = new function() {
 	/* Constants */
-	const screenElem = elemId("network-profiles");
+	const screenElem = elemId("network-profiles-screen");
 	const containerElem = elemId("network-profiles-container");
 	const exampleFullnames = ["Alice Margatroid", "Bob Kovsky", "Carol Hong Zhou", "Dave M. Smith"];
 	const blankProfile = {

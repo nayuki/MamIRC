@@ -24,7 +24,7 @@
 			<h1>MamIRC</h1>
 		</header>
 		
-		<article id="network-profiles" class="hide">
+		<article id="network-profiles-screen" class="hide">
 			<h2>Network profiles</h2>
 			<div id="network-profiles-container"></div>
 			<form action="#" method="get">
@@ -36,7 +36,7 @@
 			</form>
 		</article>
 		
-		<article id="main">
+		<article id="main-screen">
 			<nav id="left-sidebar">
 				<div id="member-list-container">
 					<h2 id="member-list-heading">Channel members (<span id="member-count"></span>)</h2>
@@ -58,7 +58,7 @@
 			</nav>
 			
 			<section id="messages">
-				<div>
+				<div id="messages-scroller">
 					<h2>Messages</h2>
 					<div class="expander"></div>
 					<div id="show-more-messages" class="hide"><a>↑ Show more messages ↑</a></div>
@@ -76,9 +76,9 @@
 							</tr>
 						</tbody>
 					</table>
-					<div id="channel-indicator-container">
-						<div id="channel-indicator"></div>
-					</div>
+					<aside id="channel-indicator">
+						<div></div>
+					</aside>
 				</div>
 				
 				<footer id="footer">
