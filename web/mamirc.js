@@ -143,8 +143,8 @@ const windowModule = new function() {
 		// Redraw all message lines in this window
 		curWindowMaxMessages = 300;
 		redrawMessagesTable();
-		var messagesElem = elemId("messages");
-		messagesElem.scrollTop = messagesElem.scrollHeight;
+		var scrollElem = document.querySelector("#messages div");
+		scrollElem.scrollTop = scrollElem.scrollHeight;
 		
 		// Tell the processor that this window was selected
 		networkModule.setInitialWindowDelayed(profile, party, 10000);
@@ -154,9 +154,9 @@ const windowModule = new function() {
 	// Called by networkModule.updateState(). inData is an elaborate object parsed from JSON text.
 	// Types: inData is object, result is void.
 	this.loadUpdates = function(inData) {
-		const messagesElem = elemId("messages");
-		const scrollPosition = messagesElem.scrollTop;
-		const scrollToBottom = scrollPosition + messagesElem.clientHeight > messagesElem.scrollHeight - 30;
+		const scrollElem = document.querySelector("#messages div");
+		const scrollPosition = scrollElem.scrollTop;
+		const scrollToBottom = scrollPosition + scrollElem.clientHeight > scrollElem.scrollHeight - 30;
 		var activeWindowUpdated = false;
 		inData.updates.forEach(function(payload) {
 			var type = payload[0];
@@ -349,7 +349,7 @@ const windowModule = new function() {
 					j++;
 			}
 			reflowMessagesTable();
-			messagesElem.scrollTop = scrollToBottom ? messagesElem.scrollHeight : scrollPosition;
+			scrollElem.scrollTop = scrollToBottom ? scrollElem.scrollHeight : scrollPosition;
 		}
 	};
 	
