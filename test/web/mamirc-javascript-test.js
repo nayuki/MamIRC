@@ -46,6 +46,19 @@
 	}
 	
 	
+	function testTruncateLongText() {
+		var f = utilsModule.truncateLongText;
+		check(f, "", "", 3);
+		check(f, "", "", 4);
+		check(f, "lorem", "lorem", 5);
+		check(f, "lo...", "lorems", 5);
+		check(f, "\uD83D\uDE04_+XZ *\uD83D\uDE05", "\uD83D\uDE04_+XZ *\uD83D\uDE05", 8);
+		check(f, "abc\uD83D\uDE04v...", "abc\uD83D\uDE04vwxyz", 8);
+		check(f, "abc\uD83D\uDE04...", "abc\uD83D\uDE04vwxyz", 7);
+		check(f, "abc...", "abc\uD83D\uDE04vwxyz", 6);
+	}
+	
+	
 	function testIsChannelName() {
 		var f = utilsModule.isChannelName;
 		check(f, false, "Alice");
@@ -71,6 +84,7 @@
 	const TEST_SUITE = [
 		testNthRemainingPart,
 		testCountUtf8Bytes,
+		testTruncateLongText,
 		testIsChannelName,
 		testTwoDigits,
 	];

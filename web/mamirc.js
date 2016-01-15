@@ -1368,31 +1368,13 @@ const notificationModule = new function() {
 		if (windowName.split("\n").length != 2)
 			throw "Invalid window name";
 		var opts = {icon: "tomoe-mami-icon-text.png"};
-		var notif = new Notification(truncateLongText(text), opts);
+		var notif = new Notification(utilsModule.truncateLongText(text, TEXT_LENGTH_LIMIT), opts);
 		notif.onclick = function() {
 			windowModule.setActiveWindow(windowName);
 		};
 		setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
 	};
 	
-	/* Private functions */
-	
-	// Returns either str if short enough, or some prefix of str with "..." appended.
-	// The function is needed because Mozilla Firefox allows ridiculously long notification lines to be displayed.
-	// Types: str is string, result is string. Pure function.
-	function truncateLongText(str) {
-		var i = 0;
-		// count is the number of Unicode code points seen, not UTF-16 code units
-		for (var count = 0; i < str.length && count < TEXT_LENGTH_LIMIT; i++) {
-			var c = str.charCodeAt(i);
-			if (c < 0xD800 || c >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
-				count++;
-		}
-		if (i == str.length)
-			return str;
-		else
-			return str.substr(0, i) + "...";
-	}
 };
 
 
@@ -1439,6 +1421,28 @@ const utilsModule = new function() {
 				result += 3;
 		}
 		return result;
+	};
+	
+	// Returns the original string if it has fewer than the given number of code points, or a prefix of str
+	// plus "..." such that it equals the length limit. The function is needed because Mozilla Firefox
+	// allows ridiculously long notification lines to be displayed. Limit must be at least 3.
+	// Types: str is string, limit is integer, result is string. Pure function.
+	this.truncateLongText = function(str, limit) {
+		var i = 0;
+		var count = 0;  // The number of Unicode code points seen, not UTF-16 code units
+		var truncated = null;
+		while (true) {
+			if (i == str.length)
+				return str;
+			if (count == limit)
+				return truncated + "...";
+			var c = str.charCodeAt(i);
+			if (c < 0xD800 || c >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
+				count++;
+			if (count == limit - 3 && truncated == null)
+				truncated = str.substr(0, i + 1);
+			i++;
+		}
 	};
 	
 	// Tests whether the given string is the name of a channel.
