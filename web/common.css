@@ -18,7 +18,7 @@ html, body, h1, h2, h3, p, ul, li, table, tbody, tr, td, th {
 	list-style-type: inherit;
 }
 
-input {
+input, textarea {
 	font-family: inherit;
 	font-size: inherit;
 	font-weight: inherit;
