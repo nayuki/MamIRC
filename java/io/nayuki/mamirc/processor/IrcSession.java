@@ -8,8 +8,10 @@
 
 package io.nayuki.mamirc.processor;
 
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -59,6 +61,9 @@ final class IrcSession {
 	// In milliseconds, for outbound throttling.
 	private final int gracePeriod = (numBurstLines - 1) * sendInterval;
 	
+	// Raw lines to send to the Connector, for outbound throttling.
+	private Queue<String> queuedLines;
+	
 	
 	
 	/*---- Constructor ----*/
@@ -76,6 +81,7 @@ final class IrcSession {
 		nickflagDetector = null;
 		currentChannels = new CaseInsensitiveTreeMap<>();
 		nextLineSendTime = System.currentTimeMillis() - gracePeriod;
+		queuedLines = new ArrayDeque<>();
 	}
 	
 	
@@ -168,14 +174,24 @@ final class IrcSession {
 	}
 	
 	
-	// Returns the amount of time to delay sending the next line (zero or positive),
-	// and modifies/increments the internal state for subsequent calls to this method.
-	public int nextLineSendDelay() {
+	// Enqueues the given raw line and returns the amount of time to delay
+	// sending this line (zero or positive). Also modifies/increments the
+	// internal state for subsequent calls to this method.
+	public int enqueueLineAndGetDelay(String rawLine) {
+		if (rawLine == null)
+			throw new NullPointerException();
+		queuedLines.add(rawLine);
 		long now = System.currentTimeMillis();
 		nextLineSendTime = Math.max(now - gracePeriod, nextLineSendTime);
 		int result = Math.max((int)(nextLineSendTime - now), 0);
 		nextLineSendTime += sendInterval;
 		return result;
+	}
+	
+	
+	// Removes and returns the next raw line to be sent.
+	public String dequeueLine() {
+		return queuedLines.remove();
 	}
 	
 	

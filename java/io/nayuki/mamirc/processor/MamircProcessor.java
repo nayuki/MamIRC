@@ -979,18 +979,18 @@ public final class MamircProcessor {
 			}
 			if (session == null)
 				return false;
-			
-			final String outboundLine = "send " + conId + " " + line;
+			int delay = session.enqueueLineAndGetDelay("send " + conId + " " + line);
+			final IrcSession ssn = session;
 			timer.schedule(new TimerTask() {
 				public void run() {
 					lock.lock();
 					try {
-						writer.postWrite(outboundLine);
+						writer.postWrite(ssn.dequeueLine());
 					} finally {
 						lock.unlock();
 					}
 				}
-			}, session.nextLineSendDelay());
+			}, delay);
 			return true;
 		} finally {
 			lock.unlock();
