@@ -244,6 +244,10 @@ body.hide {  /* For log out */
 
 /* Main table of messages */
 
+#main-screen > hr {
+	display: none;
+}
+
 #messages h2 {
 	display: none;
 }
@@ -314,7 +318,7 @@ body.hide {  /* For log out */
 	margin-right: -50%;
 }
 
-#message-list tr.nickflag td:nth-child(3) {
+#message-list tr.nickflag td + td {
 	background: #FFF4F0;
 }
 
