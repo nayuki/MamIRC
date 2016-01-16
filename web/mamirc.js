@@ -761,6 +761,7 @@ const windowModule = new function() {
 /*---- Text formatting module ----*/
 
 // Handles formatting codes and URLs in raw IRC message strings. Stateless module.
+// Dependencies: utilsModule.
 const formatTextModule = new function() {
 	/* Constants */
 	const DETECTION_REGEX = /[\u0002\u0003\u000F\u0016\u001D\u001F]|https?:\/\//;
@@ -779,7 +780,7 @@ const formatTextModule = new function() {
 	
 	/* Exported functions */
 	
-	// Given a string with possible IRC formatting control codes and plain text URLs,
+	// Given a string possibly containing IRC formatting control codes and plain text URLs,
 	// this returns an array of DOM nodes representing text with formatting and anchor links.
 	// Types: str is string, result is list<HTMLElement/Text>. Pure function.
 	this.fancyTextToElems = function(str) {
@@ -820,6 +821,7 @@ const formatTextModule = new function() {
 					chunk = chunk.substring(urlMatch[0].length);
 				}
 				
+				// Wrap text/link elements to effect formatting
 				if (background != DEFAULT_BACKGROUND || foreground != DEFAULT_FOREGROUND) {
 					var wrapper = document.createElement("span");
 					if (background != DEFAULT_BACKGROUND)
@@ -1234,6 +1236,7 @@ const menuModule = new function() {
 		var div = document.createElement("div");
 		div.id = "menu";
 		
+		// Add items to menu list
 		var ul = document.createElement("ul");
 		items.forEach(function(item) {
 			var li = document.createElement("li");
@@ -1254,6 +1257,7 @@ const menuModule = new function() {
 		});
 		div.appendChild(ul);
 		
+		// Position the menu below and to the right of the cursor, unless insufficient space below and/or to the right
 		var bodyRect = bodyElem.getBoundingClientRect();
 		var left = ev.clientX - bodyRect.left;
 		var top = ev.clientY;
@@ -1265,6 +1269,7 @@ const menuModule = new function() {
 		div.style.left = left + "px";
 		div.style.top  = top  + "px";
 		
+		// Event-handling logic
 		div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
 		ev.preventDefault();
 	};
@@ -1484,7 +1489,7 @@ const utilsModule = new function() {
 
 
 
-/*---- Alert messages module ----*/
+/*---- Error messages module ----*/
 
 // Manages the panel of error messages and allows new lines to be added.
 // Dependencies: The subtree from the HTML element with id="err-msg-container".
