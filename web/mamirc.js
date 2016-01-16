@@ -798,60 +798,35 @@ const formatTextModule = new function() {
 		// Process formatting commands and chunks of text
 		var result = [];
 		while (str != "") {
-			var formatMatch = FORMAT_CODE_REGEX.exec(str);
-			var strPartEnd = formatMatch != null ? formatMatch[1].length : str.length;
-			if (strPartEnd > 0) {
-				// Process text
-				var chunk = str.substr(0, strPartEnd);
-				var elems = [];
-				while (chunk != "") {
-					var urlMatch = URL_REGEX0.exec(chunk);
-					if (urlMatch == null)
-						urlMatch = URL_REGEX1.exec(chunk);
-					var chunkPartEnd = urlMatch != null ? urlMatch[1].length : chunk.length;
-					if (chunkPartEnd > 0)
-						elems.push(textNode(chunk.substr(0, chunkPartEnd)));
-					if (urlMatch == null)
-						break;
-					var a = utilsModule.createElementWithText("a", urlMatch[2]);
-					a.href = urlMatch[2];
-					a.target = "_blank";
-					a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
-					elems.push(a);
-					chunk = chunk.substring(urlMatch[0].length);
-				}
-				
+			var match = FORMAT_CODE_REGEX.exec(str);
+			var prefixEndIndex = match != null ? match[1].length : str.length;
+			if (prefixEndIndex > 0) {
 				// Wrap text/link elements to effect formatting
+				var elem = textWithUrlsToFragment(str.substr(0, prefixEndIndex));
 				if (background != DEFAULT_BACKGROUND || foreground != DEFAULT_FOREGROUND) {
 					var wrapper = document.createElement("span");
 					if (background != DEFAULT_BACKGROUND)
 						wrapper.style.backgroundColor = TEXT_COLORS[background];
 					if (foreground != DEFAULT_FOREGROUND)
 						wrapper.style.color = TEXT_COLORS[foreground];
-					elems.forEach(function(e) {
-						wrapper.appendChild(e);
-					});
-					elems = [wrapper];
+					wrapper.appendChild(elem);
+					elem = wrapper;
 				}
 				var temp = {"b":bold, "i":italic, "u":underline};
 				for (var key in temp) {
 					if (temp[key]) {
 						var wrapper = document.createElement(key);
-						elems.forEach(function(e) {
-							wrapper.appendChild(e);
-						});
-						elems = [wrapper];
+						wrapper.appendChild(elem);
+						elem = wrapper;
 					}
 				}
-				elems.forEach(function(e) {
-					result.push(e);
-				});
+				result.push(elem);
 			}
-			if (formatMatch == null)
+			if (match == null)
 				break;
 			
 			// Update state based on format code
-			switch (str.charCodeAt(strPartEnd)) {
+			switch (str.charCodeAt(prefixEndIndex)) {
 				case 0x02:
 					bold = !bold;
 					break;
@@ -874,20 +849,43 @@ const formatTextModule = new function() {
 					foreground = DEFAULT_FOREGROUND;
 					break;
 				case 0x03:  // Color
-					var fore = formatMatch[2] != undefined ? parseInt(formatMatch[2], 10) : DEFAULT_FOREGROUND;
-					var back = formatMatch[3] != undefined ? parseInt(formatMatch[3], 10) : DEFAULT_BACKGROUND;
+					var fore = match[2] !== undefined ? parseInt(match[2], 10) : DEFAULT_FOREGROUND;
+					var back = match[3] !== undefined ? parseInt(match[3], 10) : DEFAULT_BACKGROUND;
 					if (fore < TEXT_COLORS.length) foreground = fore;
 					if (back < TEXT_COLORS.length) background = back;
 					break;
 				default:
 					throw "Assertion error";
 			}
-			str = str.substring(formatMatch[0].length);
+			str = str.substring(match[0].length);
 		}
 		
 		// Epilog
 		if (result.length == 0)  // Prevent having an empty <td> to avoid style/display problems
 			result.push(textNode(""));
+		return result;
+	}
+	
+	// Given text containing no formatting codes but possibly plain text URLs, this returns
+	// a DocumentFragment containing nodes that represents the text. Pure function.
+	function textWithUrlsToFragment(str) {
+		var result = document.createDocumentFragment();
+		while (str != "") {
+			var match = URL_REGEX0.exec(str);
+			if (match == null)
+				match = URL_REGEX1.exec(str);
+			var prefixEndIndex = match != null ? match[1].length : str.length;
+			if (prefixEndIndex > 0)
+				result.appendChild(textNode(str.substr(0, prefixEndIndex)));
+			if (match == null)
+				break;
+			var a = utilsModule.createElementWithText("a", match[2]);
+			a.href = match[2];
+			a.target = "_blank";
+			a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
+			result.appendChild(a);
+			str = str.substring(match[0].length);
+		}
 		return result;
 	}
 	
