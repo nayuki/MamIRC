@@ -1551,24 +1551,23 @@ const networkModule = new function() {
 	// Sends the given payload of commands to the MamIRC processor. If an error occurs, the onerror callback is called.
 	// Types: payload is list<list<object>>, onerror is function(reason:string)->void / null, result is void.
 	this.sendAction = function(payload, onerror) {
-		var xhr = new XMLHttpRequest();
+		var newOnload = null;
+		var newOnerror = null;
+		var newOntimeout = null;
 		if (onerror != null) {
-			xhr.onload = function() {
-				var data = JSON.parse(xhr.response);
+			newOnload = function(xhr, data) {
 				if (data != "OK")
 					onerror(data.toString());
 			};
-			xhr.ontimeout = function() {
-				onerror("Connection timeout");
-			};
-			xhr.error = function() {
+			newOnerror = function(xhr) {
 				onerror("Network error");
 			};
+			newOntimeout = function(xhr) {
+				onerror("Connection timeout");
+			};
 		}
-		xhr.open("POST", "do-actions.json", true);
-		xhr.responseType = "text";
-		xhr.timeout = 5000;
-		xhr.send(JSON.stringify({"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId}));
+		var reqData = {"payload":payload, "csrfToken":csrfToken, "nextUpdateId":nextUpdateId};
+		doJsonXhr("do-actions.json", reqData, 5000, newOnload, newOnerror, newOntimeout);
 	};
 	
 	// Sends a request to the MamIRC processor to send an IRC PRIVMSG to the given party.
@@ -1595,9 +1594,7 @@ const networkModule = new function() {
 	
 	// Called by init(), or from updateState() after a severe state desynchronization. Returns nothing.
 	function getState() {
-		var xhr = new XMLHttpRequest();
-		xhr.onload = function() {
-			var data = JSON.parse(xhr.response);
+		var onload = function(xhr, data) {
 			if (typeof data != "string") {  // Good data
 				nextUpdateId = data.nextUpdateId;
 				csrfToken = data.csrfToken;
@@ -1606,61 +1603,85 @@ const networkModule = new function() {
 				updateState();  // Start polling
 			}
 		};
-		xhr.ontimeout = xhr.onerror = function() {
+		var onerror = function(xhr) {
 			var li = utilsModule.createElementWithText("li", "(Unable to connect to data provider)");
 			windowListElem.appendChild(li);
 		};
-		xhr.open("POST", "get-state.json", true);
-		xhr.responseType = "text";
-		xhr.timeout = 10000;
-		xhr.send(JSON.stringify({"maxMessagesPerWindow":maxMessagesPerWindow}));
+		doJsonXhr("get-state.json", {"maxMessagesPerWindow":maxMessagesPerWindow},
+			10000, onload, onerror, onerror);
 	}
 	
 	// Called by only getState() or updateState(). Returns nothing.
 	function updateState() {
-		var xhr = new XMLHttpRequest();
-		xhr.onload = function() {
-			if (xhr.status != 200)
-				xhr.onerror();
-			else {
-				var data = JSON.parse(xhr.response);
-				if (data != null) {  // Success
-					nextUpdateId = data.nextUpdateId;
-					windowModule.loadUpdates(data);
-					retryTimeout = 1000;
-					updateState();
-				} else {  // Lost synchronization or fell behind too much; do full update and re-render text
-					setTimeout(getState, retryTimeout);
-					if (retryTimeout < 300000)
-						retryTimeout *= 2;
-				}
+		var onload = function(xhr, data) {
+			if (data != null) {  // Success
+				nextUpdateId = data.nextUpdateId;
+				windowModule.loadUpdates(data);
+				retryTimeout = 1000;
+				updateState();
+			} else {  // Lost synchronization or fell behind too much; do full update and re-render text
+				setTimeout(getState, retryTimeout);
+				if (retryTimeout < 300000)
+					retryTimeout *= 2;
 			}
 		};
-		xhr.ontimeout = xhr.onerror = function() {
+		var retry = function(xhr) {
 			setTimeout(updateState, retryTimeout);
 			if (retryTimeout < 300000)
 				retryTimeout *= 2;
 		};
 		var maxWait = 60000;
-		xhr.open("POST", "get-updates.json", true);
-		xhr.responseType = "text";
-		xhr.timeout = maxWait + 20000;
-		xhr.send(JSON.stringify({"nextUpdateId":nextUpdateId, "maxWait":maxWait}));
+		doJsonXhr("get-updates.json", {"nextUpdateId":nextUpdateId, "maxWait":maxWait},
+			maxWait + 20000, onload, retry, retry);
 	}
 	
 	// Called by only init() or checkTimeSkew(). Returns nothing.
 	function checkTimeSkew() {
+		var onload = function(xhr, data) {
+			if (typeof data != "number")
+				return;
+			var skew = Date.now() - data;
+			if (Math.abs(skew) > 10000) {
+				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000)
+					+ " seconds " + (skew > 0 ? "ahead of" : "behind") + " server time");
+			}
+		};
+		doJsonXhr("get-time.json", "", 10000, onload, null, null);
+		setTimeout(checkTimeSkew, 100000000);  // About once a day
+	}
+	
+	// Performs an XMLHttpRequest to send JSON data and receive JSON data,
+	// returns the XMLHttpRequest object, and later calls one of the three callbacks.
+	// Note that unlike a raw XHR, onerror instead of onload will be called if the status is not 200 OK.
+	// Also note that the returned XHR object gives the caller the option to cancel the XHR.
+	// Types: url is string, reqData is JSON object, timeout is integer,
+	// onload is (func(xhr:XMLHttpRequest, data:JSON object))/null,
+	// {onerror,ontimeout} are (func(XMLHttpRequest)->any)/null, result is XMLHttpRequest.
+	function doJsonXhr(url, reqData, timeout, onload, onerror, ontimeout) {
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
-			var skew = Date.now() - JSON.parse(xhr.response);
-			if (Math.abs(skew) > 10000)
-				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead of" : "behind") + " server time");
+			if (xhr.status == 200) {
+				var respData = undefined;
+				try {
+					respData = JSON.parse(xhr.response);
+				} catch (e) {}
+				if (respData !== undefined) {
+					if (onload != null)
+						onload(xhr, respData);
+					return;
+				}
+			}
+			if (onerror != null)
+				onerror(xhr);
 		};
-		xhr.open("POST", "get-time.json", true);
+		if (onerror != null)
+			xhr.onerror = function() { onerror(xhr); };
+		if (ontimeout != null)
+			xhr.ontimeout = function() { ontimeout(xhr); };
+		xhr.timeout = timeout;
+		xhr.open("POST", url, true);
 		xhr.responseType = "text";
-		xhr.timeout = 5000;
-		xhr.send(JSON.stringify(""));
-		setTimeout(checkTimeSkew, 100000000);  // About once a day
+		xhr.send(JSON.stringify(reqData));
 	}
 };
 
