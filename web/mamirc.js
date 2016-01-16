@@ -1654,10 +1654,11 @@ const networkModule = new function() {
 		xhr.onload = function() {
 			var skew = Date.now() - JSON.parse(xhr.response);
 			if (Math.abs(skew) > 10000)
-				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead" : "behind") + " server time");
+				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000) + " seconds " + (skew > 0 ? "ahead of" : "behind") + " server time");
 		};
 		xhr.open("POST", "get-time.json", true);
 		xhr.responseType = "text";
+		xhr.timeout = 5000;
 		xhr.send(JSON.stringify(""));
 		setTimeout(checkTimeSkew, 100000000);  // About once a day
 	}
