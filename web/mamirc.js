@@ -1536,12 +1536,13 @@ const networkModule = new function() {
 	
 	// Initializes this module. Must not be called more than once.
 	this.init = function() {
-		elemId("logout").onclick = function() {
+		elemId("logout").onclick = function() {  // Clears all cookies and refresh the page
 			document.cookie.split(/\s*;\s*/).forEach(function(s) {
+				// Set the key to map to the empty string and expire immediately
 				document.cookie = s.split("=")[0] + "=;expires=" + new Date(0).toGMTString();
 			});
 			utilsModule.setClasslistItem(document.querySelector("body"), "hide", true);
-			setTimeout(function() { location.reload(); }, 500);
+			setTimeout(function() { location.reload(); }, 500);  // Slightly longer delay than the CSS fade-out
 		};
 		getState();
 		checkTimeSkew();
