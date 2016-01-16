@@ -460,7 +460,7 @@ const windowModule = new function() {
 			var li = document.createElement("li");
 			li.appendChild(a);
 			if (party == "")
-				li.className = "profile";
+				utilsModule.setClasslistItem(li, "profile", true);
 			windowListElem.appendChild(li);
 		});
 		refreshWindowSelection();
@@ -831,16 +831,16 @@ const formatTextModule = new function() {
 					});
 					elems = [wrapper];
 				}
-				var temp = [[bold, "b"], [italic, "i"], [underline, "u"]];
-				temp.forEach(function(pair) {
-					if (pair[0]) {
-						var elem = document.createElement(pair[1]);
+				var temp = {"b":bold, "i":italic, "u":underline};
+				for (var key in temp) {
+					if (temp[key]) {
+						var wrapper = document.createElement(key);
 						elems.forEach(function(e) {
-							elem.appendChild(e);
+							wrapper.appendChild(e);
 						});
-						elems = [elem];
+						elems = [wrapper];
 					}
-				});
+				}
 				elems.forEach(function(e) {
 					result.push(e);
 				});
@@ -914,6 +914,9 @@ const inputBoxModule = new function() {
 	// The default of 400 is a safe number to use, because an IRC protocol line
 	// is generally limited to 512 bytes, including prefix and parameters and newline
 	const MAX_BYTES_PER_MESSAGE = 400;  // Type integer
+	// Prevents the user from trying to send an excessive number of lines of text,
+	// which would result in a very long send queue in the Processor.
+	const MAX_MULTILINES = 100;  // Type integer
 	// For grabbing the prefix to perform tab completion
 	const TAB_COMPLETION_REGEX = /^(|[\s\S]* )([^ ]*)$/;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
@@ -1100,7 +1103,7 @@ const inputBoxModule = new function() {
 		var checktext;
 		if (text.indexOf("\n") != -1) {  // Multi-line message
 			var lines = text.split("\n");
-			if (lines.length > 100)
+			if (lines.length > MAX_MULTILINES)
 				return true;
 			for (var i = 0; i < lines.length; i++) {
 				if (utilsModule.countUtf8Bytes(lines[i]) > MAX_BYTES_PER_MESSAGE)
@@ -1202,7 +1205,7 @@ const menuModule = new function() {
 	const self = this;
 	const htmlElem = document.documentElement;
 	const bodyElem = document.querySelector("body");
-	htmlElem.onmousedown = closeMenu;
+	htmlElem.addEventListener("mousedown", closeMenu);
 	htmlElem.addEventListener("keydown", function(ev) {
 		if (ev.keyCode == 27)  // Escape
 			closeMenu();
@@ -1237,7 +1240,7 @@ const menuModule = new function() {
 			var child;
 			if (item[1] == null) {
 				child = utilsModule.createElementWithText("span", item[0]);
-				child.className = "disabled";
+				utilsModule.setClasslistItem(child, "disabled", true);
 			} else {
 				child = utilsModule.createElementWithText("a", item[0]);
 				child.onclick = function() {
@@ -1251,17 +1254,18 @@ const menuModule = new function() {
 		});
 		div.appendChild(ul);
 		
-		div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
 		var bodyRect = bodyElem.getBoundingClientRect();
-		bodyElem.appendChild(div);
 		var left = ev.clientX - bodyRect.left;
 		var top = ev.clientY;
+		bodyElem.appendChild(div);
 		if (bodyRect.width - left < div.offsetWidth)
 			left -= div.offsetWidth;
 		if (bodyRect.height - top < div.offsetHeight)
 			top -= div.offsetHeight;
 		div.style.left = left + "px";
-		div.style.top  = top + "px";
+		div.style.top  = top  + "px";
+		
+		div.onmousedown = function(ev) { ev.stopPropagation(); };  // Prevent entire-document event handler from dismissing menu
 		ev.preventDefault();
 	};
 	
@@ -1537,6 +1541,7 @@ const networkModule = new function() {
 		};
 		getState();
 		checkTimeSkew();
+		this.init = null;
 	};
 	
 	// Sends the given payload of commands to the MamIRC processor. If an error occurs, the onerror callback is called.
