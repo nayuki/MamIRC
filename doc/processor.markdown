@@ -140,4 +140,4 @@ Project links
 
 * Online documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
 
-Copyright © Project Nayuki
+Copyright © [Project Nayuki](http://www.nayuki.io/)

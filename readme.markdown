@@ -31,4 +31,4 @@ Project links
 License
 -------
 
-Copyright © Project Nayuki. All rights reserved. No warranty.  
+Copyright © [Project Nayuki](http://www.nayuki.io/). All rights reserved. No warranty.
