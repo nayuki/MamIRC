@@ -273,7 +273,7 @@ const windowModule = new function() {
 					self.windowNames.sort();
 					windowData[windowName] = createBlankWindow();
 					redrawWindowList();
-					inputBoxModule.putText("");
+					inputBoxModule.clearText(true);
 					self.setActiveWindow(windowName);
 				}
 			} else if (type == "CLOSEWIN") {
@@ -284,7 +284,7 @@ const windowModule = new function() {
 					delete windowData[windowName];
 					redrawWindowList();
 					if (self.activeWindow != null && windowName == self.activeWindow[2]) {
-						inputBoxModule.clearText();
+						inputBoxModule.clearText(false);
 						if (self.windowNames.length > 0)
 							self.setActiveWindow(self.windowNames[Math.min(index, self.windowNames.length - 1)]);
 						else
@@ -364,7 +364,7 @@ const windowModule = new function() {
 			networkModule.sendAction([["open-window", profile, party]], onerror);
 		else {
 			this.setActiveWindow(windowName);
-			inputBoxModule.putText("");
+			inputBoxModule.clearText(true);
 		}
 	};
 	
@@ -674,7 +674,7 @@ const windowModule = new function() {
 		var menuItems = [["Quote text", null]];
 		if (quoteText != null) {
 			menuItems[0][1] = function() {
-				inputBoxModule.putText(quoteText);
+				inputBoxModule.putText(quoteText, true);
 			};
 		}
 		menuItems.push(["Mark read to here", function() {
@@ -1014,6 +1014,7 @@ const utilsModule = new function() {
 // Handles the input text box - command parsing, tab completion, and text setting.
 const inputBoxModule = new function() {
 	/* Constants */
+	const self = this;
 	const inputBoxElem = elemId("input-box");
 	// The default of 400 is a safe number to use, because an IRC protocol line
 	// is generally limited to 512 bytes, including prefix and parameters and newline
@@ -1045,23 +1046,22 @@ const inputBoxModule = new function() {
 	/* Variables */
 	var prevTabCompletion = null;  // Type tuple<begin:integer, end:integer, prefix:string, name:string> / null.
 	
-	/* Initialization */
-	init();
-	
 	/* Exported functions */
 	
 	// Sets the text box to the given string, gives input focus, and puts the caret at the end.
-	// Types: str is string, result is void.
-	this.putText = function(str) {
+	// Types: str is string, focus is boolean, result is void.
+	this.putText = function(str, focus) {
 		inputBoxElem.value = str;
-		inputBoxElem.focus();
+		colorizeLine();
+		if (focus)
+			inputBoxElem.focus();
 		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = str.length;
 	};
 	
 	// Clears the text in the text box. Returns nothing.
-	// Types: result is void.
-	this.clearText = function() {
-		inputBoxElem.value = "";
+	// Types: focus is boolean, result is void.
+	this.clearText = function(focus) {
+		this.putText("", focus);
 	};
 	
 	// Sets whether the input text box is enabled or disabled.
@@ -1069,6 +1069,9 @@ const inputBoxModule = new function() {
 	this.setEnabled = function(enable) {
 		inputBoxElem.disabled = !enable;
 	};
+	
+	/* Initialization */
+	init();
 	
 	/* Private functions */
 	
@@ -1091,7 +1094,7 @@ const inputBoxModule = new function() {
 					return true;
 			}
 		};
-		inputBoxElem.value = "";
+		self.clearText(false);
 	}
 	
 	function handleLine() {
@@ -1162,8 +1165,7 @@ const inputBoxModule = new function() {
 				return false;  // Don't clear the text box
 			}
 		}
-		inputBoxElem.value = "";
-		inputBoxElem.oninput();
+		self.clearText(false);
 		return false;  // To prevent the form submitting
 	}
 	
@@ -1187,8 +1189,7 @@ const inputBoxModule = new function() {
 			actions.push(["send-line", profile, "PRIVMSG " + party + " :" + line]);
 		});
 		networkModule.sendAction(actions, onerror);
-		inputBoxElem.value = "";
-		inputBoxElem.oninput();
+		self.clearText(false);
 		return false;
 	}
 	
@@ -1284,7 +1285,7 @@ const inputBoxModule = new function() {
 				tabcomp += ": ";
 			else if (index < text.length)
 				tabcomp += " ";
-			inputBoxElem.value = beginning + tabcomp + text.substring(index);
+			self.putText(beginning + tabcomp + text.substring(index), false);
 			prevTabCompletion = [beginning.length, beginning.length + tabcomp.length, prefix, candidate];
 			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion[1];
 			return;  // Don't clear the current tab completion
