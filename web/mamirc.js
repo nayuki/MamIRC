@@ -821,15 +821,15 @@ const formatTextModule = new function() {
 				}
 				
 				if (background != DEFAULT_BACKGROUND || foreground != DEFAULT_FOREGROUND) {
-					var elem = document.createElement("span");
+					var wrapper = document.createElement("span");
 					if (background != DEFAULT_BACKGROUND)
-						elem.style.backgroundColor = TEXT_COLORS[background];
+						wrapper.style.backgroundColor = TEXT_COLORS[background];
 					if (foreground != DEFAULT_FOREGROUND)
-						elem.style.color = TEXT_COLORS[foreground];
+						wrapper.style.color = TEXT_COLORS[foreground];
 					elems.forEach(function(e) {
-						elem.appendChild(e);
+						wrapper.appendChild(e);
 					});
-					elems = [elem];
+					elems = [wrapper];
 				}
 				var temp = [[bold, "b"], [italic, "i"], [underline, "u"]];
 				temp.forEach(function(pair) {
@@ -913,7 +913,7 @@ const inputBoxModule = new function() {
 	const inputBoxElem = elemId("input-box");
 	// The default of 400 is a safe number to use, because an IRC protocol line
 	// is generally limited to 512 bytes, including prefix and parameters and newline
-	const maxBytesPerLine = 400;  // Type integer
+	const MAX_BYTES_PER_MESSAGE = 400;  // Type integer
 	// For grabbing the prefix to perform tab completion
 	const TAB_COMPLETION_REGEX = /^(|[\s\S]* )([^ ]*)$/;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
@@ -1103,7 +1103,7 @@ const inputBoxModule = new function() {
 			if (lines.length > 100)
 				return true;
 			for (var i = 0; i < lines.length; i++) {
-				if (utilsModule.countUtf8Bytes(lines[i]) > maxBytesPerLine)
+				if (utilsModule.countUtf8Bytes(lines[i]) > MAX_BYTES_PER_MESSAGE)
 					return true;
 			}
 			return false;
@@ -1121,7 +1121,7 @@ const inputBoxModule = new function() {
 			else
 				checktext = text;
 		}
-		return utilsModule.countUtf8Bytes(checktext) > maxBytesPerLine;
+		return utilsModule.countUtf8Bytes(checktext) > MAX_BYTES_PER_MESSAGE;
 	}
 	
 	function doTabCompletion() {
