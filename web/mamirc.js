@@ -905,6 +905,110 @@ const formatTextModule = new function() {
 
 
 
+/*---- Utilities module ----*/
+
+// A set of functions that are somewhat general, not too specific to the problem domain of MamIRC.
+// This module only contains public, stateless functions. These functions may return a new
+// value or change an argument's state. They never read/write global state or perform I/O.
+// Dependencies: None (this module is freestanding).
+const utilsModule = new function() {
+	/* Exported functions */
+	
+	// Returns the rest of the string after exactly n spaces. For example: nthRemainingPart("a b c", 0) -> "a b c";
+	// nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> throws exception.
+	// Types: str is string, n is integer, result is string. Pure function.
+	this.nthRemainingPart = function(str, n) {
+		if (n < 0)
+			throw "Negative count";
+		var j = 0;
+		for (var i = 0; i < n; i++) {
+			j = str.indexOf(" ", j) + 1;
+			if (j == 0)
+				throw "Space not found";
+		}
+		return str.substring(j);
+	};
+	
+	// Returns the number of bytes in the UTF-8 encoded representation of the given string. Handles paired
+	// and unpaired UTF-16 surrogates correctly. Types: str is string, result is integer. Pure function.
+	this.countUtf8Bytes = function(str) {
+		var result = 0;
+		for (var i = 0; i < str.length; i++) {
+			var c = str.charCodeAt(i);
+			if (c < 0x80)
+				result += 1;
+			else if (c < 0x800)
+				result += 2;
+			else if (0xD800 <= c && c < 0xDC00 && i + 1 < str.length  // Check for properly paired UTF-16 high and low surrogates
+					&& 0xDC00 <= str.charCodeAt(i + 1) && str.charCodeAt(i + 1) < 0xE000) {
+				result += 4;
+				i++;
+			} else
+				result += 3;
+		}
+		return result;
+	};
+	
+	// Returns the original string if it has fewer than the given number of code points, or a prefix of str
+	// plus "..." such that it equals the length limit. The function is needed because Mozilla Firefox
+	// allows ridiculously long notification lines to be displayed. Limit must be at least 3.
+	// Types: str is string, limit is integer, result is string. Pure function.
+	this.truncateLongText = function(str, limit) {
+		var i = 0;
+		var count = 0;  // The number of Unicode code points seen, not UTF-16 code units
+		var truncated = null;
+		while (true) {
+			if (i == str.length)
+				return str;
+			if (count == limit)
+				return truncated + "...";
+			var c = str.charCodeAt(i);
+			if (c < 0xD800 || c >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
+				count++;
+			if (count == limit - 3 && truncated == null)
+				truncated = str.substr(0, i + 1);
+			i++;
+		}
+	};
+	
+	// Tests whether the given string is the name of a channel.
+	// Types: name is string, result is boolean. Pure function.
+	this.isChannelName = function(name) {
+		return name.startsWith("#") || name.startsWith("&");
+	}
+	
+	// Converts the given integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
+	// Types: n is integer, result is string. Pure function.
+	this.twoDigits = function(n) {
+		return (n < 10 ? "0" : "") + n;
+	};
+	
+	// Removes all the children of the given DOM element. Returns nothing.
+	// Types: elem is HTMLElement (mutable), result is void.
+	this.clearChildren = function(elem) {
+		while (elem.firstChild != null)
+			elem.removeChild(elem.firstChild);
+	};
+	
+	// Returns a new DOM element with the given tag name, with a text node of the given content
+	// as its only child. Types: tagName is string, text is string, result is HTMLElement. Pure function.
+	this.createElementWithText = function(tagName, text) {
+		var result = document.createElement(tagName);
+		result.appendChild(textNode(text));
+		return result;
+	};
+	
+	// Modifies the given element's class list so that it contains / not contain the given token name. Returns nothing.
+	// Types: elem is HTMLElement (mutable), name is string, enable is boolean, result is void.
+	this.setClasslistItem = function(elem, name, enable) {
+		var clslst = elem.classList;
+		if (clslst.contains(name) != enable)
+			clslst.toggle(name);
+	};
+};
+
+
+
 /*---- Input text box module ----*/
 
 // Handles the input text box - command parsing, tab completion, and text setting.
@@ -1379,110 +1483,6 @@ const notificationModule = new function() {
 		setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
 	};
 	
-};
-
-
-
-/*---- Utilities module ----*/
-
-// A set of functions that are somewhat general, not too specific to the problem domain of MamIRC.
-// This module only contains public, stateless functions. These functions may return a new
-// value or change an argument's state. They never read/write global state or perform I/O.
-// Dependencies: None (this module is freestanding).
-const utilsModule = new function() {
-	/* Exported functions */
-	
-	// Returns the rest of the string after exactly n spaces. For example: nthRemainingPart("a b c", 0) -> "a b c";
-	// nthRemainingPart("a b c", 1) -> "b c"; nthRemainingPart("a b c", 3) -> throws exception.
-	// Types: str is string, n is integer, result is string. Pure function.
-	this.nthRemainingPart = function(str, n) {
-		if (n < 0)
-			throw "Negative count";
-		var j = 0;
-		for (var i = 0; i < n; i++) {
-			j = str.indexOf(" ", j) + 1;
-			if (j == 0)
-				throw "Space not found";
-		}
-		return str.substring(j);
-	};
-	
-	// Returns the number of bytes in the UTF-8 encoded representation of the given string. Handles paired
-	// and unpaired UTF-16 surrogates correctly. Types: str is string, result is integer. Pure function.
-	this.countUtf8Bytes = function(str) {
-		var result = 0;
-		for (var i = 0; i < str.length; i++) {
-			var c = str.charCodeAt(i);
-			if (c < 0x80)
-				result += 1;
-			else if (c < 0x800)
-				result += 2;
-			else if (0xD800 <= c && c < 0xDC00 && i + 1 < str.length  // Check for properly paired UTF-16 high and low surrogates
-					&& 0xDC00 <= str.charCodeAt(i + 1) && str.charCodeAt(i + 1) < 0xE000) {
-				result += 4;
-				i++;
-			} else
-				result += 3;
-		}
-		return result;
-	};
-	
-	// Returns the original string if it has fewer than the given number of code points, or a prefix of str
-	// plus "..." such that it equals the length limit. The function is needed because Mozilla Firefox
-	// allows ridiculously long notification lines to be displayed. Limit must be at least 3.
-	// Types: str is string, limit is integer, result is string. Pure function.
-	this.truncateLongText = function(str, limit) {
-		var i = 0;
-		var count = 0;  // The number of Unicode code points seen, not UTF-16 code units
-		var truncated = null;
-		while (true) {
-			if (i == str.length)
-				return str;
-			if (count == limit)
-				return truncated + "...";
-			var c = str.charCodeAt(i);
-			if (c < 0xD800 || c >= 0xDC00)  // Increment if ordinary character or low surrogate, but not high surrogate
-				count++;
-			if (count == limit - 3 && truncated == null)
-				truncated = str.substr(0, i + 1);
-			i++;
-		}
-	};
-	
-	// Tests whether the given string is the name of a channel.
-	// Types: name is string, result is boolean. Pure function.
-	this.isChannelName = function(name) {
-		return name.startsWith("#") || name.startsWith("&");
-	}
-	
-	// Converts the given integer to a two-digit string. For example, 0 -> "00", 9 -> "09", 23 -> "23".
-	// Types: n is integer, result is string. Pure function.
-	this.twoDigits = function(n) {
-		return (n < 10 ? "0" : "") + n;
-	};
-	
-	// Removes all the children of the given DOM element. Returns nothing.
-	// Types: elem is HTMLElement (mutable), result is void.
-	this.clearChildren = function(elem) {
-		while (elem.firstChild != null)
-			elem.removeChild(elem.firstChild);
-	};
-	
-	// Returns a new DOM element with the given tag name, with a text node of the given content
-	// as its only child. Types: tagName is string, text is string, result is HTMLElement. Pure function.
-	this.createElementWithText = function(tagName, text) {
-		var result = document.createElement(tagName);
-		result.appendChild(textNode(text));
-		return result;
-	};
-	
-	// Modifies the given element's class list so that it contains / not contain the given token name. Returns nothing.
-	// Types: elem is HTMLElement (mutable), name is string, enable is boolean, result is void.
-	this.setClasslistItem = function(elem, name, enable) {
-		var clslst = elem.classList;
-		if (clslst.contains(name) != enable)
-			clslst.toggle(name);
-	};
 };
 
 
