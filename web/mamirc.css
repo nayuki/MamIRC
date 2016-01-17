@@ -101,6 +101,11 @@ html.desktop #main-screen {
 	align-items: stretch;
 }
 
+/* The next 3 groups of rules achieve the following logic: #member-list-container and #window-list-container
+   both start out with 10em height. If #left-sidebar's height minus these two containers and the hr's and p's
+   is still positive, then fill the remaining height as follows: First expand #window-list-container until it reaches
+   its inner content height, and then expand #member-list-container to fill the rest (if any). Note that due to the
+   minimum heights, the total height may exceed the #left-sidebar height, in which case scrolling is activated. */
 html.desktop #left-sidebar {
 	width: 11.5em;
 	flex-grow: 0;
@@ -112,18 +117,16 @@ html.desktop #left-sidebar {
 	flex-direction: column;
 }
 
-html.desktop #window-list-container, html.desktop #member-list-container {
-	min-height: 10em;
-	height: 0em;
-	flex-shrink: 0;
-}
-
 html.desktop #member-list-container {
-	flex-grow: 3;
+	flex-shrink: 0;
+	flex-grow: 1;
+	height: 10em;
 }
 
 html.desktop #window-list-container {
-	flex-grow: 2;
+	flex-grow: 0;
+	flex-shrink: 1;
+	min-height: 10em;
 	display: flex;
 	flex-direction: column;
 }
