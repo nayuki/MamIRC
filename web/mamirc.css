@@ -22,54 +22,17 @@ html {
 
 body {
 	position: relative;  /* For right-click menu to work */
-	max-width: 90em;
-	margin-left: auto;
-	margin-right: auto;
-}
-
-header {
-	display: none;
 }
 
 #main-screen {
 	height: 100%;
-	display: flex;
-	flex-direction: row;
-	align-items: stretch;
-}
-
-#left-sidebar {
-	width: 11.5em;
-	flex-grow: 0;
-	flex-shrink: 0;
-	padding: 1.0em 0.5em 0em 1.0em;
-	background-color: rgba(0,0,0,0.03);
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
 }
 
 #member-list-container, #window-list-container {
-	min-height: 10em;
-	height: 0em;
-	flex-shrink: 0;
 	overflow-y: auto;
 }
 
-#member-list-container {
-	flex-grow: 3;
-}
-
-#window-list-container {
-	flex-grow: 2;
-	display: flex;
-	flex-direction: column;
-}
-
 #main-screen > section {
-	min-width: 20em;
-	flex-grow: 1;
-	flex-shrink: 1;
 	display: flex;
 	flex-direction: column;
 }
@@ -118,6 +81,55 @@ footer {
 }
 
 div.expander {
+	flex-grow: 1;
+	flex-shrink: 1;
+}
+
+html.desktop body {
+	max-width: 90em;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+html.desktop header {
+	display: none;
+}
+
+html.desktop #main-screen {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+}
+
+html.desktop #left-sidebar {
+	width: 11.5em;
+	flex-grow: 0;
+	flex-shrink: 0;
+	padding: 1.0em 0.5em 0em 1.0em;
+	background-color: rgba(0,0,0,0.03);
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+html.desktop #window-list-container, html.desktop #member-list-container {
+	min-height: 10em;
+	height: 0em;
+	flex-shrink: 0;
+}
+
+html.desktop #member-list-container {
+	flex-grow: 3;
+}
+
+html.desktop #window-list-container {
+	flex-grow: 2;
+	display: flex;
+	flex-direction: column;
+}
+
+html.desktop #main-screen > section {
+	min-width: 20em;
 	flex-grow: 1;
 	flex-shrink: 1;
 }
