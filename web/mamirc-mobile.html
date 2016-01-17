@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!--
+  - MamIRC
+  - Copyright (c) Project Nayuki
+  - 
+  - http://www.nayuki.io/page/mamirc-the-headless-irc-client
+  - https://github.com/nayuki/MamIRC
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" class="mobile">
+	<head>
+		<meta charset="UTF-8"/>
+		<title>MamIRC</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1"/>
+		<meta http-equiv="Content-Style-Type" content="text/css"/>
+		<link rel="Stylesheet" href="common.css" type="text/css" media="all"/>
+		<link rel="Stylesheet" href="mamirc.css" type="text/css" media="all"/>
+		<link rel="icon" href="tomoe-mami-icon.png"/>
+		<link rel="icon" sizes="192x192" href="tomoe-mami-icon-192.png"/>
+	</head>
+	
+	<body>
+		<article id="network-profiles-screen" class="hide">
+			<h2>Network profiles</h2>
+			<div id="network-profiles-container"></div>
+			<form action="#" method="get">
+				<p><input type="button" value="Add an IRC network" id="add-irc-network"/></p>
+				<p>
+					<input type="button" value="Save" id="save-network-profiles"/>
+					<input type="button" value="Cancel" id="close-network-profiles"/>
+				</p>
+			</form>
+		</article>
+		
+		<article id="main-screen">
+			<nav>
+				<div id="member-list-container" class="hide">
+					<h2>Channel members (<span id="member-count"></span>)</h2>
+					<ul id="member-list">
+						<li>(None)</li>
+					</ul>
+				</div>
+				<div id="window-list-container" class="hide">
+					<h2>Windows</h2>
+					<ul id="window-list">
+						<li>(None)</li>
+					</ul>
+					<hr/>
+					<p><a id="configure-profiles">Configure profiles</a></p>
+					<p><a id="logout">Log out</a></p>
+				</div>
+			</nav>
+			<hr/>
+			
+			<section>
+				<header>
+					<h1>MamIRC</h1>
+					<div id="channel-members-button">Usr</div>
+					<div id="window-list-button">Win</div>
+				</header>
+				
+				<div id="messages-scroller">
+					<h2>Messages</h2>
+					<div class="expander"></div>
+					<div id="show-more-messages" class="hide"><a>↑ Show more messages ↑</a></div>
+					<table>
+						<thead>
+							<tr>
+								<th>Time</th>
+								<th>Nickname</th>
+								<th>Message</th>
+							</tr>
+						</thead>
+						<tbody id="message-list">
+							<tr>
+								<td colspan="3">(None)</td>
+							</tr>
+						</tbody>
+					</table>
+					<aside id="channel-indicator">
+						<div></div>
+					</aside>
+				</div>
+				
+				<footer id="footer">
+					<form action="#" method="get">
+						<span id="nickname" title="Current nickname"></span>
+						<textarea id="input-box"></textarea>
+					</form>
+					<div id="error-msg-container" class="hide">
+						<p>Errors / warnings:</p>
+						<ul id="error-msg">
+							<li>(None)</li>
+						</ul>
+						<p><a>Clear all</a></p>
+					</div>
+				</footer>
+			</section>
+		</article>
+		
+		<script type="application/javascript" src="mamirc.js"></script>
+	</body>
+</html>

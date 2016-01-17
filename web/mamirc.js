@@ -1978,6 +1978,22 @@ const profileConfigModule = new function() {
 
 
 
+/*---- Mobile specialization module ----*/
+
+const mobileModule = new function() {
+	this.init = function() {
+		elemId("channel-members-button").onclick = function() {
+			elemId("member-list-container").classList.toggle("hide");
+		};
+		elemId("window-list-button").onclick = function() {
+			elemId("window-list-container").classList.toggle("hide");
+		};
+		delete this.init;
+	};
+};
+
+
+
 /*---- Miscellaneous ----*/
 
 // This definition exists only for the purpose of abbreviation, because it is used so many times.
@@ -2026,8 +2042,10 @@ function init() {
 		if (s.startsWith("optimize-mobile="))
 			optimizeMobile = s.substring(16) == "true";
 	});
-	if (optimizeMobile)
+	if (optimizeMobile) {
 		maxMessagesPerWindow = 500;
+		mobileModule.init();
+	}
 	
 	// Fetch data
 	networkModule.init();

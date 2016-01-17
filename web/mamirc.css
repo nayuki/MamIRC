@@ -134,6 +134,56 @@ html.desktop #main-screen > section {
 	flex-shrink: 1;
 }
 
+html.mobile #main-screen > section {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+html.mobile header {
+	flex-grow: 0;
+	flex-shrink: 0;
+	border-bottom: 0.1rem solid #D0D0D0;
+}
+
+html.mobile #member-list-container,
+html.mobile #window-list-container {
+	width: 12em;
+	max-height: 100%;
+	padding: 1.0em 0.5em;
+	box-sizing: border-box;
+	position: fixed;
+	top: 0;
+	z-index: 1;
+	background-color: #F0F0F0;
+}
+
+html.mobile #member-list-container.hide,
+html.mobile #window-list-container.hide {
+	display: initial;
+	visibility: hidden;
+}
+
+html.mobile #member-list-container {
+	left: 0;
+	transition: left 0.2s ease;
+}
+
+html.mobile #window-list-container {
+	right: 0;
+	transition: right 0.2s ease;
+}
+
+html.mobile #member-list-container.hide {
+	left: -15em;
+	transition: left 0.4s ease, visibility 0s 0.4s;
+}
+
+html.mobile #window-list-container.hide {
+	right: -15em;
+	transition: right 0.4s ease, visibility 0s 0.4s;
+}
+
 
 /*---- Detailed elements ----*/
 
@@ -583,6 +633,49 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 #error-msg-container ul {
 	margin-left: 2.0em;
 	list-style-type: disc;
+}
+
+
+/* Detailed mobile elements */
+
+html.mobile header h1 {
+	background-color: #FFFFFF;
+	color: #808080;
+	text-align: center;
+}
+
+html.mobile #channel-members-button,
+html.mobile #window-list-button {
+	width: 3.0rem;
+	height: 3.0rem;
+	position: fixed;
+	top: 0;
+	z-index: 2;
+	border-bottom: 0.1rem solid #D0D0D0;
+	background-color: #F0F0F0;
+	font-size: 110%;
+	color: #A0A0A0;
+	cursor: default;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+html.mobile #channel-members-button {
+	left: 0;
+	border-right: 0.1rem solid #D0D0D0;
+	border-bottom-right-radius: 1.0rem;
+}
+
+html.mobile #window-list-button {
+	right: 0;
+	border-left: 0.1rem solid #D0D0D0;
+	border-bottom-left-radius: 1.0rem;
+}
+
+html.mobile #main-screen > nav p:last-child {
+	padding-bottom: 0em;
 }
 
 

@@ -128,7 +128,8 @@ final class MessageHttpServer {
 							writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
 						} else {  // Serve main page
 							respHead.add("Cache-Control", "no-store");
-							writeResponse(readFile(new File("web", "mamirc.html")), "application/xhtml+xml", true, he);
+							String page = cookies.get("optimize-mobile").equals("true") ? "mamirc-mobile.html" : "mamirc.html";
+							writeResponse(readFile(new File("web", page)), "application/xhtml+xml", true, he);
 						}
 					} else
 						throw new IllegalArgumentException();
