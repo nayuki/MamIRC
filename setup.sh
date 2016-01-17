@@ -25,6 +25,12 @@ if [ ! -e ".git" ]; then
 	rm -rf "MamIRC/"
 fi
 
+# Go into bin/ subdirectory
+if [ ! -e "bin/" ]; then
+	mkdir bin
+fi
+cd bin
+
 # Download a JAR file
 if [ ! -e "nayuki-json-lib.jar" ]; then
 	wget "http://www.nayuki.io/res/json-library-java/nayuki-json-lib.jar"
@@ -37,12 +43,13 @@ if [ ! -e "sqlite4java.jar" ]; then
 	mv sqlite4java-392/*.jar sqlite4java-392/*.so "."
 	rm -rf "sqlite4java-392/" "sqlite4java-392.zip"
 fi
+cd ..
 
 # Delete all .class files in java/
 find "java/" -name '*.class' | xargs rm -f -v
 
 # Compile the MamIRC Connector and Processor
 echo "Compiling Java source code..."
-javac -sourcepath "java/" -d "java/" -cp "sqlite4java.jar:nayuki-json-lib.jar" \
+javac -sourcepath "java/" -d "java/" -cp "bin/sqlite4java.jar:bin/nayuki-json-lib.jar" \
 	"java/io/nayuki/mamirc/connector/MamircConnector.java" \
 	"java/io/nayuki/mamirc/processor/MamircProcessor.java"

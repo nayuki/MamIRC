@@ -25,5 +25,9 @@ if [ ! -f $1 -o ! -f $2 ]; then
 	exit 1
 fi
 
+# Set up paths
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)"/bin/"
+export CLASSPATH="java/":"bin/sqlite4java.jar":"bin/nayuki-json-lib.jar"
+
 # Run command in background
-nohup java -mx200M -cp "java/:sqlite4java.jar:nayuki-json-lib.jar" io/nayuki/mamirc/processor/MamircProcessor $1 $2 >/dev/null 2>&1 &
+nohup java -mx200M io/nayuki/mamirc/processor/MamircProcessor $1 $2 >/dev/null 2>&1 &
