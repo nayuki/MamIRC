@@ -1,0 +1,11 @@
+# Compiled Java code, Java libraries, native libraries
+*.class
+*.jar
+*.dll
+*.so
+/bin/
+
+# Recommended names for user-generated files
+backend-config.json
+user-config.json
+mamirc-archive.sqlite
