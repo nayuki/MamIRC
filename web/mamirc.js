@@ -469,8 +469,12 @@ const windowModule = new function() {
 		for (var key in windowData)
 			totalNewMsg += windowData[key].numNewMessages;
 		var activeWin = self.activeWindow
-		if (activeWin != null)
-			document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + (activeWin[1] != "" ? activeWin[1] + " - " : "") + activeWin[0] + " - MamIRC";
+		if (activeWin != null) {
+			var s = (activeWin[1] != "" ? activeWin[1] + " - " : "") + activeWin[0] + " - MamIRC";
+			document.title = (totalNewMsg > 0 ? "(" + totalNewMsg + ") " : "") + s;
+			if (optimizeMobile)
+				document.querySelector("#main-screen header h1").firstChild.data = s;
+		}
 	}
 	
 	
