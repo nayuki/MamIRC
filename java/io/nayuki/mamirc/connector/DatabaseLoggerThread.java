@@ -143,8 +143,7 @@ final class DatabaseLoggerThread extends Thread {
 	}
 	
 	
-	private static final int GATHER_DATA_DELAY     =  2000;  // In milliseconds
-	private static final int DATABASE_COMMIT_DELAY = 10000;  // In milliseconds
+	private static final int WRITE_DELAY = 10000;  // In milliseconds
 	
 	// Must hold 'lock' before and after the method call.
 	private boolean processBatchOfEvents() throws SQLiteException, InterruptedException {
@@ -170,8 +169,8 @@ final class DatabaseLoggerThread extends Thread {
 			return !terminateRequested;
 			
 		} else {
-			// Wait to gather quick request-response events
-			condUrgent.await(GATHER_DATA_DELAY, TimeUnit.MILLISECONDS);
+			// Wait to gather a burst of messages
+			condUrgent.await(WRITE_DELAY, TimeUnit.MILLISECONDS);
 			
 			// Drain the queue without blocking on I/O
 			Event[] events = new Event[queue.size()];
@@ -194,9 +193,6 @@ final class DatabaseLoggerThread extends Thread {
 				lock.lock();
 			}
 			// At this point, the queue may be non-empty and the flags may have changed
-			
-			if (!flushRequested)
-				condUrgent.await(DATABASE_COMMIT_DELAY, TimeUnit.MILLISECONDS);
 			return true;  // Re-evaluate the full situation even if termination is requested
 		}
 	}
