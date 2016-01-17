@@ -151,14 +151,7 @@ final class DatabaseLoggerThread extends Thread {
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
 		
-		if (queue.isEmpty()) {
-			if (flushRequested) {
-				flushRequested = false;
-				condFlushed.signal();
-			}
-			return !terminateRequested;
-			
-		} else if (flushRequested) {
+		if (flushRequested || terminateRequested) {
 			// Drain the queue straightforwardly
 			Utils.stepStatement(beginTransaction, false);
 			while (!queue.isEmpty())
