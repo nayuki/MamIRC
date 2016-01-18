@@ -123,18 +123,20 @@ final class MessageHttpServer {
 							// Serve login page
 							String s = Utils.fromUtf8(readFile(new File("web", "login.html")));
 							s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
-							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && cookies.get("optimize-mobile").equals("true") ? "checked=\"checked\" " : "");
+							s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && "true".equals(cookies.get("optimize-mobile")) ? "checked=\"checked\" " : "");
 							respHead.add("Cache-Control", "no-store");
 							writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
 						} else {  // Serve main page
 							respHead.add("Cache-Control", "no-store");
-							String page = cookies.get("optimize-mobile").equals("true") ? "mamirc-mobile.html" : "mamirc.html";
+							String page = "true".equals(cookies.get("optimize-mobile")) ? "mamirc-mobile.html" : "mamirc.html";
 							writeResponse(readFile(new File("web", page)), "application/xhtml+xml", true, he);
 						}
 					} else
 						throw new IllegalArgumentException();
 				} catch (IllegalArgumentException e) {
 					he.sendResponseHeaders(404, -1);
+				} catch (RuntimeException e) {
+					e.printStackTrace();
 				} finally {
 					he.close();
 				}
