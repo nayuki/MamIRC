@@ -1027,7 +1027,7 @@ const inputBoxModule = new function() {
 	// which would result in a very long send queue in the Processor.
 	const MAX_MULTILINES = 100;  // Type integer
 	// For grabbing the prefix to perform tab completion
-	const TAB_COMPLETION_REGEX = /^(|[\s\S]* )([^ ]*)$/;
+	const TAB_COMPLETION_REGEX = /^(|[\s\S]*[ \n])([^ \n]*)$/;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
 	// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
 	const OUTGOING_COMMAND_PARAM_COUNTS = {
@@ -1098,7 +1098,7 @@ const inputBoxModule = new function() {
 					return true;
 			}
 		};
-		self.clearText(false);
+		self.clearText(true);  // The input box shall get keyboard focus on page load
 	}
 	
 	function handleLine() {
@@ -1161,11 +1161,11 @@ const inputBoxModule = new function() {
 					var params = numParams > 0 ? " " + parts.slice(1).join(" ") : "";
 					networkModule.sendAction([["send-line", profile, cmd.substring(1).toUpperCase() + params]], onerror);
 				} else {
-					alert("Invalid command");
+					alert("Invalid number of parameters for command");
 					return false;  // Don't clear the text box
 				}
 			} else {
-				alert("Invalid command");
+				alert("Unrecognized command");
 				return false;  // Don't clear the text box
 			}
 		}
