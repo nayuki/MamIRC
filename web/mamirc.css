@@ -654,6 +654,7 @@ html.mobile #window-list-button {
 	position: fixed;
 	top: 0;
 	z-index: 2;
+	box-sizing: border-box;
 	border-bottom: 0.1rem solid #D0D0D0;
 	background-color: #F0F0F0;
 	font-size: 110%;
@@ -667,12 +668,14 @@ html.mobile #window-list-button {
 
 html.mobile #channel-members-button {
 	left: 0;
+	padding: 0.30rem;
 	border-right: 0.1rem solid #D0D0D0;
 	border-bottom-right-radius: 1.0rem;
 }
 
 html.mobile #window-list-button {
 	right: 0;
+	padding: 0.55rem;
 	border-left: 0.1rem solid #D0D0D0;
 	border-bottom-left-radius: 1.0rem;
 }

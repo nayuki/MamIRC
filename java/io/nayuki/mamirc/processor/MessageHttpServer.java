@@ -269,6 +269,7 @@ final class MessageHttpServer {
 		m.put("jpeg", "image/jpeg");
 		m.put("js"  , "application/javascript");
 		m.put("png" , "image/png");
+		m.put("svg" , "image/svg+xml");
 	};
 	
 	
