@@ -10,14 +10,7 @@
 /*---- Major elements ----*/
 
 html {
-	background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami.jpg");
 	list-style-type: none;
-}
-
-@media (min-height: 734px) {
-	html {
-		background-image: linear-gradient(rgba(255,255,255,0.97),rgba(255,255,255,0.97)),url("tomoe-mami-2x.jpg");
-	}
 }
 
 body {
@@ -26,6 +19,10 @@ body {
 
 #main-screen {
 	height: 100%;
+	background-image: linear-gradient(rgba(255,255,255,0.95),rgba(255,255,255,0.95)),url("mamirc-background.png");
+	background-repeat: no-repeat;
+	background-size: contain;
+	background-position: top right;
 }
 
 #member-list-container, #window-list-container {
