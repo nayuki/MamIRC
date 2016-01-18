@@ -1027,7 +1027,7 @@ const inputBoxModule = new function() {
 	// which would result in a very long send queue in the Processor.
 	const MAX_MULTILINES = 100;  // Type integer
 	// For grabbing the prefix to perform tab completion
-	const TAB_COMPLETION_REGEX = /^(|[\s\S]*[ \n])([^ \n]*)$/;
+	const TAB_COMPLETION_REGEX = /^(|[\s\S]*[ \n])([^ \n]+)$/;
 	// A table of commands with regular structures (does not include all commands, such as /msg). Format per entry:
 	// key is command name with slash, value is {minimum number of parameters, maximum number of parameters}.
 	const OUTGOING_COMMAND_PARAM_COUNTS = {
@@ -1048,7 +1048,8 @@ const inputBoxModule = new function() {
 	};
 	
 	/* Variables */
-	var prevTabCompletion = null;  // Type tuple<begin:integer, end:integer, prefix:string, name:string> / null.
+	// Type object<textPrefix:string, textSuffix:string, matchPrefix:string, chosenName:string/null, caretIndex:integer> / null.
+	var prevTabCompletion = null;
 	
 	/* Exported functions */
 	
@@ -1085,10 +1086,11 @@ const inputBoxModule = new function() {
 		inputBoxElem.onblur = clearTabCompletion;
 		inputBoxElem.onkeydown = function(ev) {
 			if (ev.keyCode == 9) {  // Tab key
-				doTabCompletion();
+				doTabCompletion(ev.shiftKey);
 				return false;
 			} else {
-				clearTabCompletion();
+				if (ev.keyCode != 16)  // Shift key
+					clearTabCompletion();
 				if (ev.keyCode == 13) {  // Enter key
 					if (!ev.shiftKey && inputBoxElem.value.indexOf("\n") == -1)
 						return handleLine();
@@ -1236,66 +1238,71 @@ const inputBoxModule = new function() {
 		return utilsModule.countUtf8Bytes(checktext) > MAX_BYTES_PER_MESSAGE;
 	}
 	
-	function doTabCompletion() {
-		do {  // Simulate goto
-			if (document.activeElement != inputBoxElem)
-				break;
-			var index = inputBoxElem.selectionStart;
-			if (index != inputBoxElem.selectionEnd)
-				break;
-			if (windowModule.activeWindow == null)
-				break;
-			var profile = windowModule.activeWindow[0];
-			var party = windowModule.activeWindow[1];
-			var candidates = windowModule.getChannelMembers(profile, party);
-			if (candidates == null)
-				break;
-			
+	// Types: reverse is boolean, result is void.
+	function doTabCompletion(reverse) {
+		if (!doTabCompletionHelper(reverse))
+			clearTabCompletion();
+	}
+	
+	// Types: reverse is boolean, result is boolean.
+	function doTabCompletionHelper(reverse) {
+		if (document.activeElement != inputBoxElem || windowModule.activeWindow == null
+				|| inputBoxElem.selectionStart != inputBoxElem.selectionEnd)
+			return false;
+		
+		// Compute strings if new tab completion is needed
+		var index = inputBoxElem.selectionStart;
+		if (prevTabCompletion == null || index != prevTabCompletion.caretIndex) {
 			var text = inputBoxElem.value;
-			var match;
-			var prefix;
-			if (prevTabCompletion == null) {
-				match = TAB_COMPLETION_REGEX.exec(text.substr(0, index));
-				prefix = match[2].toLowerCase();
-				if (prefix.length == 0)
-					break;
-			} else {
-				match = null;
-				prefix = prevTabCompletion[2];
+			var match = TAB_COMPLETION_REGEX.exec(text.substr(0, index));
+			if (match == null)
+				return false;
+			prevTabCompletion = {
+				textPrefix: match[1],
+				textSuffix: text.substring(index),
+				matchPrefix: match[2].toLowerCase(),
+				chosenName: null,
+				caretIndex: -1,
+			};
+		}
+		
+		// Get current channel members, filter candidates, sort case-insensitively
+		var candidates = windowModule.getChannelMembers(windowModule.activeWindow[0], windowModule.activeWindow[1]);
+		if (candidates == null)
+			return false;
+		candidates = candidates.filter(function(name) {
+			return name.toLowerCase().startsWith(prevTabCompletion.matchPrefix); });
+		if (candidates.length == 0)
+			return true;
+		candidates.sort(function(s, t) {
+			return s.toLowerCase().localeCompare(t.toLowerCase()); });
+		
+		// Grab next or previous matching nickname
+		if (prevTabCompletion.chosenName == null)
+			prevTabCompletion.chosenName = candidates[reverse ? candidates.length - 1 : 0];
+		else {
+			var oldChoice = prevTabCompletion.chosenName.toLowerCase();
+			var i;
+			if (!reverse) {  // Skip elements until one is strictly larger
+				for (i = 0; i < candidates.length && candidates[i].toLowerCase() <= oldChoice; i++);
+			} else {  // Skip elements until one is strictly smaller
+				candidates.reverse();
+				for (i = 0; i < candidates.length && candidates[i].toLowerCase() >= oldChoice; i++);
 			}
-			
-			candidates = candidates.filter(function(name) {
-				return name.toLowerCase().startsWith(prefix); });
-			if (candidates.length == 0)
-				break;
-			candidates.sort(function(s, t) {
-				return s.toLowerCase().localeCompare(t.toLowerCase()); });
-			
-			var candidate;
-			var beginning;
-			if (prevTabCompletion == null) {
-				candidate = candidates[0];
-				beginning = match[1];
-			} else {
-				var oldcandidate = prevTabCompletion[3].toLowerCase();
-				var i;  // Skip elements until one is strictly larger
-				for (i = 0; i < candidates.length && candidates[i].toLowerCase() <= oldcandidate; i++);
-				candidates.push(candidates[0]);  // Wrap-around
-				candidate = candidates[i];
-				beginning = text.substr(0, prevTabCompletion[0]);
-			}
-			var tabcomp = candidate;
-			if (beginning.length == 0)
-				tabcomp += ": ";
-			else if (index < text.length)
-				tabcomp += " ";
-			self.putText(beginning + tabcomp + text.substring(index), false);
-			prevTabCompletion = [beginning.length, beginning.length + tabcomp.length, prefix, candidate];
-			inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion[1];
-			return;  // Don't clear the current tab completion
-			
-		} while (false);
-		clearTabCompletion();
+			candidates.push(candidates[0]);  // Wrap-around
+			prevTabCompletion.chosenName = candidates[i];
+		}
+		
+		// Postprocessing and setting the text box
+		var tabcmpl = prevTabCompletion.chosenName;
+		if (prevTabCompletion.textPrefix.length == 0)
+			tabcmpl += ": ";
+		else if (prevTabCompletion.textSuffix.length > 0)
+			tabcmpl += " ";
+		self.putText(prevTabCompletion.textPrefix + tabcmpl + prevTabCompletion.textSuffix, false);
+		var caretIndex = prevTabCompletion.textPrefix.length + tabcmpl.length;
+		inputBoxElem.selectionStart = inputBoxElem.selectionEnd = prevTabCompletion.caretIndex = caretIndex;
+		return true;  // Don't clear the current tab completion
 	}
 	
 	function clearTabCompletion() {
