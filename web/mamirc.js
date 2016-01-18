@@ -2007,23 +2007,23 @@ const mobileModule = new function() {
 	
 	this.init = function() {
 		elemId("channel-members-button").onclick = function() {
-			elemId("member-list-container").classList.toggle("hide");
+			setSidebarState("left", "toggle");
 		};
 		elemId("window-list-button").onclick = function() {
-			elemId("window-list-container").classList.toggle("hide");
+			setSidebarState("right", "toggle");
 		};
 		
-		document.addEventListener('touchstart', function(ev) {
+		document.addEventListener("touchstart", function(ev) {
 			touchStartX = touchEndX = ev.touches[0].clientX;
 			touchStartY = touchEndY = ev.touches[0].clientY;
 			touchStartTime = Date.now();
 		});
-		document.addEventListener('touchmove', function(ev) {
+		document.addEventListener("touchmove", function(ev) {
 			touchEndX = ev.touches[0].clientX;
 			touchEndY = ev.touches[0].clientY;
 		});
 		
-		document.addEventListener('touchend', function(ev) {
+		document.addEventListener("touchend", function(ev) {
 			if (touchStartTime == null)
 				return;
 			var duration = Date.now() - touchStartTime;
@@ -2036,15 +2036,15 @@ const mobileModule = new function() {
 				var angle = Math.atan2(dy, dx) / Math.PI * 180;
 				if (Math.abs(angle) >= 180 - ANGLE_TOLERANCE) {  // Left swipe
 					if (touchStartX > document.documentElement.offsetWidth - sidebarWidth / 4)
-						elemId("window-list-container").classList.remove("hide");
+						setSidebarState("right", "show");
 					else
-						elemId("member-list-container").classList.add("hide");
+						setSidebarState("left", "hide");
 				}
 				if (Math.abs(angle) <= ANGLE_TOLERANCE) {  // Right swipe
 					if (touchStartX < sidebarWidth / 4)
-						elemId("member-list-container").classList.remove("hide");
+						setSidebarState("left", "show");
 					else
-						elemId("window-list-container").classList.add("hide");
+						setSidebarState("right", "hide");
 				}
 			}
 			touchStartX = touchStartY = null;
@@ -2054,6 +2054,18 @@ const mobileModule = new function() {
 		
 		delete this.init;
 	};
+	
+	function setSidebarState(which, state) {
+		var id;
+		if      (which == "left" ) id = "member-list-container";
+		else if (which == "right") id = "window-list-container";
+		else                       throw "Assertion error";
+		var classlist = elemId(id).classList;
+		if      (state == "show"  ) classlist.remove("hide");
+		else if (state == "hide"  ) classlist.add   ("hide");
+		else if (state == "toggle") classlist.toggle("hide");
+		else                        throw "Assertion error";
+	}
 };
 
 
