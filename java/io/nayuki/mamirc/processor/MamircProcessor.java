@@ -652,6 +652,8 @@ public final class MamircProcessor {
 	public void terminate() {
 		lock.lock();
 		try {
+			if (reader != null)
+				reader.terminate();
 			if (server != null)
 				server.terminate();
 			if (timer != null)
@@ -659,6 +661,8 @@ public final class MamircProcessor {
 			isTerminating = true;
 			condTerminate.signalAll();
 			condNewUpdates.signalAll();
+		} catch (IOException e) {
+			e.printStackTrace();
 		} finally {
 			lock.unlock();
 		}

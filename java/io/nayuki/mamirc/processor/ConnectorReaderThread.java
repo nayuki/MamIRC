@@ -148,6 +148,11 @@ final class ConnectorReaderThread extends Thread {
 	}
 	
 	
+	public void terminate() throws IOException {
+		socket.close();
+	}
+	
+	
 	// Returns the next line from the given reader decoded as UTF-8, or null if the end of stream is reached.
 	private static String readStringLine(LineReader reader) throws IOException {
 		byte[] line = reader.readLine();
