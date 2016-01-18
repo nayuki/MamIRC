@@ -1992,6 +1992,19 @@ const profileConfigModule = new function() {
 /*---- Mobile specialization module ----*/
 
 const mobileModule = new function() {
+	/* Constants */
+	const MIN_DURATION = 50;  // In milliseconds
+	const MAX_DURATION = 350;  // In milliseconds
+	const ANGLE_TOLERANCE = 25;  // In degrees
+	
+	/* Variables */
+	// Each has type integer/null.
+	var touchStartX = null, touchStartY = null;
+	var touchEndX = null, touchEndY = null;
+	var touchStartTime = null;
+	
+	/* Initialization */
+	
 	this.init = function() {
 		elemId("channel-members-button").onclick = function() {
 			elemId("member-list-container").classList.toggle("hide");
@@ -1999,6 +2012,46 @@ const mobileModule = new function() {
 		elemId("window-list-button").onclick = function() {
 			elemId("window-list-container").classList.toggle("hide");
 		};
+		
+		document.addEventListener('touchstart', function(ev) {
+			touchStartX = touchEndX = ev.touches[0].clientX;
+			touchStartY = touchEndY = ev.touches[0].clientY;
+			touchStartTime = Date.now();
+		});
+		document.addEventListener('touchmove', function(ev) {
+			touchEndX = ev.touches[0].clientX;
+			touchEndY = ev.touches[0].clientY;
+		});
+		
+		document.addEventListener('touchend', function(ev) {
+			if (touchStartTime == null)
+				return;
+			var duration = Date.now() - touchStartTime;
+			if (MIN_DURATION <= duration && duration <= MAX_DURATION) {
+				var dx = touchEndX - touchStartX;
+				var dy = touchEndY - touchStartY;
+				var sidebarWidth = elemId("member-list-container").offsetWidth;
+				if (Math.hypot(dx, dy) < sidebarWidth / 6)
+					return;
+				var angle = Math.atan2(dy, dx) / Math.PI * 180;
+				if (Math.abs(angle) >= 180 - ANGLE_TOLERANCE) {  // Left swipe
+					if (touchStartX > document.documentElement.offsetWidth - sidebarWidth / 4)
+						elemId("window-list-container").classList.remove("hide");
+					else
+						elemId("member-list-container").classList.add("hide");
+				}
+				if (Math.abs(angle) <= ANGLE_TOLERANCE) {  // Right swipe
+					if (touchStartX < sidebarWidth / 4)
+						elemId("member-list-container").classList.remove("hide");
+					else
+						elemId("window-list-container").classList.add("hide");
+				}
+			}
+			touchStartX = touchStartY = null;
+			touchEndX = touchEndY = null;
+			touchStartTime = null;
+		});
+		
 		delete this.init;
 	};
 };
