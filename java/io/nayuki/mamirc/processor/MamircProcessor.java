@@ -105,18 +105,25 @@ public final class MamircProcessor {
 		condNewUpdates = lock.newCondition();
 		condTerminate = lock.newCondition();
 		
-		writer = null;
-		reader = new ConnectorReaderThread(this, backendConfig);
-		reader.start();
-		try {
+		lock.lock();
+		try {  // Do these things in mutex so another thread cannot call terminate() before initialization is complete
+			// Initialize connection to Connector
+			writer = null;
+			reader = new ConnectorReaderThread(this, backendConfig);
+			reader.start();
+			// Initialize HTTP server
 			server = new MessageHttpServer(this, backendConfig.webServerPort, backendConfig.webUiPassword);
+			// Initialize asynchronous event executor
+			timer = new Timer("MamircProcessor.timer");
 		} catch (IOException e) {
 			e.printStackTrace();
 			terminate();
+			return;
+		} finally {
+			lock.unlock();
 		}
 		
 		// Refresh all channel names on all connections once a day
-		timer = new Timer();
 		timer.schedule(new TimerTask() {
 			public void run() {
 				lock.lock();
