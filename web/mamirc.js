@@ -1487,7 +1487,7 @@ const notificationModule = new function() {
 			return;
 		if (windowName.split("\n").length != 2)
 			throw "Invalid window name";
-		var opts = {icon: "tomoe-mami-icon-text.png"};
+		var opts = {icon: "mamirc-icon-64.png"};
 		var notif = new Notification(utilsModule.truncateLongText(text, TEXT_LENGTH_LIMIT), opts);
 		notif.onclick = function() {
 			windowModule.setActiveWindow(windowName);
