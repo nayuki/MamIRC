@@ -1084,12 +1084,12 @@ const inputBoxModule = new function() {
 		inputBoxElem.oninput = colorizeLine;
 		inputBoxElem.onblur = clearTabCompletion;
 		inputBoxElem.onkeydown = function(ev) {
-			if (ev.keyCode == 9) {
+			if (ev.keyCode == 9) {  // Tab key
 				doTabCompletion();
 				return false;
 			} else {
 				clearTabCompletion();
-				if (ev.keyCode == 13) {
+				if (ev.keyCode == 13) {  // Enter key
 					if (!ev.shiftKey && inputBoxElem.value.indexOf("\n") == -1)
 						return handleLine();
 					else if (ev.ctrlKey && inputBoxElem.value.indexOf("\n") != -1)
@@ -1101,16 +1101,17 @@ const inputBoxModule = new function() {
 		self.clearText(true);  // The input box shall get keyboard focus on page load
 	}
 	
+	// Always returns false to cancel the event propagation.
 	function handleLine() {
 		var inputStr = inputBoxElem.value;
-		var activeWindow = windowModule.activeWindow;
-		if (activeWindow == null || inputStr == "")
+		if (windowModule.activeWindow == null || inputStr == "")
 			return false;
 		if (isLineOverlong(inputStr)) {
 			alert("Line is too long");
 			return false;
 		}
-		
+		var profile = windowModule.activeWindow[0];
+		var party   = windowModule.activeWindow[1];
 		var onerror = function(reason) {
 			errorMsgModule.addMessage("Sending line failed (" + reason + "): " + inputStr);
 		};
@@ -1118,17 +1119,16 @@ const inputBoxModule = new function() {
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
 			if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
 				inputStr = inputStr.substring(1);
-			networkModule.sendMessage(activeWindow[0], activeWindow[1], inputStr, onerror);
+			networkModule.sendMessage(profile, party, inputStr, onerror);
 			
 		} else {  // Command or special message
 			// The user input command is case-insensitive. The command sent to the server will be in uppercase.
 			var parts = inputStr.split(" ");
 			var cmd = parts[0].toLowerCase();
-			var profile = activeWindow[0];
 			
 			// Irregular commands
 			if (cmd == "/msg" && parts.length >= 3) {
-				var party = parts[1];
+				party = parts[1];
 				var windowName = profile + "\n" + party;
 				var text = utilsModule.nthRemainingPart(inputStr, 2);
 				if (windowModule.windowNames.indexOf(windowName) == -1) {
@@ -1138,20 +1138,20 @@ const inputBoxModule = new function() {
 					networkModule.sendMessage(profile, party, text, onerror);
 				}
 			} else if (cmd == "/me" && parts.length >= 2) {
-				networkModule.sendMessage(profile, activeWindow[1], "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
+				networkModule.sendMessage(profile, party, "\u0001ACTION " + utilsModule.nthRemainingPart(inputStr, 1) + "\u0001", onerror);
 			} else if (cmd == "/notice" && parts.length >= 3) {
 				networkModule.sendAction([["send-line", profile, "NOTICE " + parts[1] + " :" + utilsModule.nthRemainingPart(inputStr, 2)]], onerror);
 			} else if (cmd == "/part" && parts.length == 1) {
-				networkModule.sendAction([["send-line", profile, "PART " + activeWindow[1]]], onerror);
+				networkModule.sendAction([["send-line", profile, "PART " + party]], onerror);
 			} else if (cmd == "/query" && parts.length == 2) {
 				windowModule.openPrivateMessagingWindow(parts[1], onerror);
 			} else if (cmd == "/topic" && parts.length >= 2) {
-				networkModule.sendAction([["send-line", profile, "TOPIC " + activeWindow[1] + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
+				networkModule.sendAction([["send-line", profile, "TOPIC " + party + " :" + utilsModule.nthRemainingPart(inputStr, 1)]], onerror);
 			} else if (cmd == "/kick" && parts.length >= 2) {
 				var reason = parts.length == 2 ? "" : utilsModule.nthRemainingPart(inputStr, 2);
-				networkModule.sendAction([["send-line", profile, "KICK " + activeWindow[1] + " " + parts[1] + " :" + reason]], onerror);
+				networkModule.sendAction([["send-line", profile, "KICK " + party + " " + parts[1] + " :" + reason]], onerror);
 			} else if (cmd == "/names" && parts.length == 1) {
-				var params = activeWindow[1] != "" ? " " + activeWindow[1] : "";
+				var params = party != "" ? " " + party : "";
 				networkModule.sendAction([["send-line", profile, "NAMES" + params]], onerror);
 			} else if (cmd in OUTGOING_COMMAND_PARAM_COUNTS) {
 				// Regular commands
