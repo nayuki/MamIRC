@@ -1075,6 +1075,11 @@ const inputBoxModule = new function() {
 		inputBoxElem.disabled = !enable;
 	};
 	
+	// Gives focus to the input text box. Types: result is void.
+	this.doFocus = function() {
+		inputBoxElem.focus();
+	};
+	
 	/* Initialization */
 	init();
 	
@@ -1491,6 +1496,7 @@ const notificationModule = new function() {
 		var notif = new Notification(utilsModule.truncateLongText(text, TEXT_LENGTH_LIMIT), opts);
 		notif.onclick = function() {
 			windowModule.setActiveWindow(windowName);
+			inputBoxModule.doFocus();
 		};
 		setTimeout(function() { notif.close(); }, 10000);  // Hide the notification sooner than Google Chrome's ~20-second timeout
 	};
