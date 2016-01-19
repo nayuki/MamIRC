@@ -72,7 +72,7 @@ footer {
 	padding: 1.0em 2.0em;
 	box-sizing: border-box;
 	position: absolute;
-	z-index: 3;
+	z-index: 4;
 	overflow-y: auto;
 	background-color: #FFFFFF;
 }
@@ -154,7 +154,7 @@ html.mobile #window-list-container {
 	box-sizing: border-box;
 	position: fixed;
 	top: 0;
-	z-index: 1;
+	z-index: 2;
 	background-color: #F0F0F0;
 }
 
@@ -498,7 +498,7 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 
 #menu {
 	position: absolute;
-	z-index: 4;
+	z-index: 5;
 	padding: 0.1em;
 	border: 1px solid #C0C0C0;
 	border-radius: 0.2em;
@@ -661,7 +661,7 @@ html.mobile #window-list-button {
 	height: 3.0rem;
 	position: fixed;
 	top: 0;
-	z-index: 2;
+	z-index: 3;
 	box-sizing: border-box;
 	border-bottom: 0.1rem solid #D0D0D0;
 	background-color: #F0F0F0;
