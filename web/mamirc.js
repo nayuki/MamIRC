@@ -1654,8 +1654,8 @@ const networkModule = new function() {
 				return;
 			var skew = Date.now() - data;
 			if (Math.abs(skew) > 10000) {
-				errorMsgModule.addMessage("Warning: Client time is " + Math.abs(skew / 1000)
-					+ " seconds " + (skew > 0 ? "ahead of" : "behind") + " server time");
+				errorMsgModule.addMessage("Warning: Inaccurate time - your web browser's clock is " + Math.abs(skew / 1000)
+					+ " seconds " + (skew > 0 ? "ahead of" : "behind") + " the MamIRC Processor's clock");
 			}
 		};
 		doJsonXhr("get-time.json", "", 10000, onload, null, null);
