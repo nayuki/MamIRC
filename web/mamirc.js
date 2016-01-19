@@ -1203,9 +1203,9 @@ const inputBoxModule = new function() {
 	function colorizeLine() {
 		var text = inputBoxElem.value;
 		var multiline = text.indexOf("\n") != -1;
-		utilsModule.setClasslistItem(inputBoxElem, "is-command", !multiline && text.startsWith("/") && !text.startsWith("//"));
-		utilsModule.setClasslistItem(inputBoxElem, "is-overlong", isLineOverlong(text));
-		utilsModule.setClasslistItem(inputBoxElem, "is-multiline", multiline);
+		utilsModule.setClasslistItem(inputBoxElem, "command", !multiline && text.startsWith("/") && !text.startsWith("//"));
+		utilsModule.setClasslistItem(inputBoxElem, "overlong", isLineOverlong(text));
+		utilsModule.setClasslistItem(inputBoxElem, "multiline", multiline);
 	}
 	
 	// Tests whether the given input box text line is too long.
