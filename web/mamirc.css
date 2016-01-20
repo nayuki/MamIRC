@@ -66,15 +66,23 @@ footer {
 	padding-bottom: 0.5em;
 }
 
-#network-profiles-screen {
+#network-profiles-screen, #debug-screen {
 	width: 100%;
 	height: 100%;
 	padding: 1.0em 2.0em;
 	box-sizing: border-box;
 	position: absolute;
-	z-index: 4;
 	overflow-y: auto;
+}
+
+#network-profiles-screen {
+	z-index: 4;
 	background-color: #FFFFFF;
+}
+
+#debug-screen {
+	z-index: 5;
+	background-color: #F0F0F0;
 }
 
 div.expander {
@@ -646,6 +654,30 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 #error-msg-container ul {
 	margin-left: 2.0em;
 	list-style-type: disc;
+}
+
+
+/* Debug screen */
+
+#debug-screen h2 {
+	margin-bottom: 0.5em;
+	font-size: 150%;
+	font-weight: bold;
+}
+
+#debug-screen p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+#debug-screen ul {
+	margin-left: 1.5em;
+	list-style-type: disc;
+}
+
+#debug-screen li {
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
 }
 
 

@@ -382,6 +382,12 @@ const windowModule = new function() {
 	};
 	
 	
+	// Returns the raw window data elaborate structure. Do not modify the contents of it.
+	this.getWindowData = function() {
+		return windowData;
+	};
+	
+	
 	/* Private functions */
 	
 	// Performs module initialization. Types: result is void.
@@ -1663,6 +1669,8 @@ const networkModule = new function() {
 				errorMsgModule.addMessage("Warning: Inaccurate time - your web browser's clock is " + Math.abs(skew / 1000)
 					+ " seconds " + (skew > 0 ? "ahead of" : "behind") + " the MamIRC Processor's clock");
 			}
+			debugModule.timeSkewAmount = skew;
+			debugModule.timeSkewDate = new Date();
 		};
 		doJsonXhr("get-time.json", "", 10000, onload, null, null);
 		setTimeout(checkTimeSkew, 100000000);  // About once a day
@@ -2072,6 +2080,69 @@ const mobileModule = new function() {
 		else if (state == "toggle") classlist.toggle("hide");
 		else                        throw "Assertion error";
 	}
+};
+
+
+
+/*---- Debug module ----*/
+
+const debugModule = new function() {
+	/* Constants */
+	const screenElem = elemId("debug-screen");
+	const listElem = elemId("debug-messages");
+	const loadDate = new Date();
+	const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+	
+	/* Exported variables */
+	var timeSkewAmount = null;
+	var timeSkewDate = null;
+	
+	/* Exported functions */
+	this.toggleVisibility = function() {
+		utilsModule.clearChildren(listElem);
+		if (screenElem.classList.toggle("hide"))
+			return;
+		addMessage(loadDate, "Web UI loaded");
+		if (this.timeSkewDate != null)
+			addMessage(this.timeSkewDate, "Web client clock minus MamIRC Processor clock = " + this.timeSkewAmount + " ms");
+		
+		var now = new Date();
+		addMessage(now, "Current number of windows: " + windowModule.windowNames.length);
+		var windowData = windowModule.getWindowData();
+		windowModule.windowNames.forEach(function(winName) {
+			var win = windowData[winName];
+			var read = 0;
+			var unread = 0;
+			for (var i = 0; i < win.lines.length; i++) {
+				if (win.lines[i][0] < win.markedReadUntil)
+					read++;
+				else
+					unread++;
+			}
+			addMessage(now, 'Window "' + winName.replace(/\n/, " - ") + '": ' + read + ' read + ' + unread + ' unread = ' + win.lines.length + ' lines');
+		});
+	};
+	
+	/* Initialization */
+	elemId("debug-close").onclick = this.toggleVisibility;
+	
+	/* Private functions */
+	function addMessage(date, text) {
+		listElem.appendChild(utilsModule.createElementWithText("li", dateToString(date) + ": " + text));
+	}
+	
+	function dateToString(date) {
+		var s = "";
+		s += date.getUTCFullYear() + "-";
+		s += utilsModule.twoDigits(date.getUTCMonth() + 1) + "-";
+		s += utilsModule.twoDigits(date.getUTCDate()) + "-";
+		s += DAYS_OF_WEEK[date.getUTCDay()] + " ";
+		s += utilsModule.twoDigits(date.getUTCHours()) + ":";
+		s += utilsModule.twoDigits(date.getUTCMinutes()) + ":";
+		s += utilsModule.twoDigits(date.getUTCSeconds()) + " UTC";
+		return s;
+	}
+	
 };
 
 
