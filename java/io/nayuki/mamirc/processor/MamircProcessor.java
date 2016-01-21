@@ -577,22 +577,19 @@ public final class MamircProcessor {
 	
 	// Must be called from one of the locking methods above.
 	private void tryConnect(final IrcNetwork net) {
-		final int delay;
+		int delay;
 		if (!connectionAttemptState.containsKey(net)) {
 			connectionAttemptState.put(net, new int[]{0, 1000});
 			delay = 0;
 		} else
 			delay = connectionAttemptState.get(net)[1];
 		
-		new Thread() {
+		timer.schedule(new TimerTask() {
 			public void run() {
 				lock.lock();
 				try {
-					// Sleep for the full amount of time unless terminating
-					condTerminate.await(delay, TimeUnit.MILLISECONDS);
 					if (isTerminating)
 						return;
-					
 					for (IrcSession state : ircSessions.values()) {
 						if (state.profile == net)
 							break;
@@ -611,12 +608,11 @@ public final class MamircProcessor {
 						if (attemptState[1] == 1000)
 							attemptState[1] *= 2;
 					}
-				} catch (InterruptedException e) {}
-				finally {
+				} finally {
 					lock.unlock();
 				}
 			}
-		}.start();
+		}, delay);
 	}
 	
 	
