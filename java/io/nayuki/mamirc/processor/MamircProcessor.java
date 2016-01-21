@@ -566,7 +566,7 @@ public final class MamircProcessor {
 			
 			// Connect to networks
 			for (IrcNetwork net : userConfiguration.ircNetworks.values()) {
-				if (!activeProfiles.contains(net))
+				if (net.connect && !activeProfiles.contains(net))
 					tryConnect(net);
 			}
 		} finally {
