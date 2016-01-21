@@ -1840,7 +1840,7 @@ const profileConfigModule = new function() {
 			ul.appendChild(createServerRow(i, j, serverEntry.hostname, serverEntry.port, serverEntry.ssl));
 		});
 		var li = document.createElement("li");
-		var a = utilsModule.createElementWithText("a", "+ Add another server");
+		var a = utilsModule.createElementWithText("a", "+ Add alternate server");
 		a.onclick = function() {
 			ul.insertBefore(createServerRow(i, ul.children.length - 1, "", -1, false), li);
 		};
