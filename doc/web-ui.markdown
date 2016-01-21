@@ -51,6 +51,25 @@ Main screen
 </dl>
 
 
+Technologies required
+---------------------
+
+Your web browser needs these technologies to run MamIRC properly:
+
+* CSS: [box-shadow](https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow)
+* CSS: display:[flex](https://developer.mozilla.org/en-US/docs/Web/CSS/flex)
+* CSS: [:placeholder-shown](https://developer.mozilla.org/en-US/docs/Web/CSS/:-moz-placeholder)
+* CSS: [transition](https://developer.mozilla.org/en-US/docs/Web/CSS/transition)
+* CSS: [word-break](https://developer.mozilla.org/en-US/docs/Web/CSS/word-break)
+* CSS: [word-wrap](https://developer.mozilla.org/en-US/docs/Web/CSS/word-wrap)
+* JS: [const](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/const)
+* JS: [Math.hypot](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/hypot)
+* JS: [Notification](https://developer.mozilla.org/en/docs/Web/API/notification)
+* HTML: XML/[XHTML](https://www.w3.org/TR/html5/the-xhtml-syntax.html) syntax
+* HTML: HTML5 block [elements](https://developer.mozilla.org/en/docs/Web/HTML/Element)
+* HTML: \<input type="number">
+
+
 Project links
 -------------
 
