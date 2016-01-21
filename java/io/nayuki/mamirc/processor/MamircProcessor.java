@@ -69,7 +69,6 @@ public final class MamircProcessor {
 	// Mutable current state
 	private final Map<Integer,IrcSession> ircSessions;
 	private final Map<String,Map<String,Window>> windows;
-	private final Map<String,String> windowCaseMap;
 	private List<String> initialWindow;  // Either null or {String profile, String party}
 	private final List<Object[]> recentUpdates;  // Payload is {int id, List<Object> update}
 	private int nextUpdateId;
@@ -95,7 +94,6 @@ public final class MamircProcessor {
 		userConfiguration = new UserConfiguration(userConfigFile);
 		ircSessions = new HashMap<>();
 		windows = new TreeMap<>();
-		windowCaseMap = new HashMap<>();
 		initialWindow = null;
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
@@ -692,19 +690,14 @@ public final class MamircProcessor {
 	// Must be called in a locked context. Should only be called by the stub methods below, not directly by any methods above.
 	private void addWindowLine(String profile, String party, int flags, long timestamp, Object... payload) {
 		if (!windows.containsKey(profile))
-			windows.put(profile, new TreeMap<String,Window>());
+			windows.put(profile, new CaseInsensitiveTreeMap<Window>());
 		Map<String,Window> innerMap = windows.get(profile);
-		if (!innerMap.containsKey(party)) {
-			String lower = profile + "\n" + party.toLowerCase();
-			if (windowCaseMap.containsKey(lower))
-				party = windowCaseMap.get(lower).split("\n", 2)[1];
-			else {
-				innerMap.put(party, new Window());
-				windowCaseMap.put(lower, profile + "\n" + party);
-			}
+		Window win = innerMap.get(party);
+		if (win == null) {
+			win = new Window();
+			innerMap.put(party, win);
 		}
 		timestamp = divideAndFloor(timestamp, 1000);
-		Window win = innerMap.get(party);
 		int sequence = win.nextSequence;
 		win.addLine(flags, timestamp, payload);
 		List<Window.Line> list = win.lines;
@@ -1034,14 +1027,12 @@ public final class MamircProcessor {
 	public void openWindow(String profile, String party) {
 		lock.lock();
 		try {
-			String lower = profile + "\n" + party.toLowerCase();
-			if (windowCaseMap.containsKey(lower))
-				return;
 			if (!windows.containsKey(profile))
-				windows.put(profile, new TreeMap<String,Window>());
+				windows.put(profile, new CaseInsensitiveTreeMap<Window>());
 			Map<String,Window> inner = windows.get(profile);
+			if (inner.containsKey(party))
+				return;
 			inner.put(party, new Window());
-			windowCaseMap.put(lower, profile + "\n" + party);
 			addUpdate("OPENWIN", profile, party);
 		} finally {
 			lock.unlock();
@@ -1053,7 +1044,7 @@ public final class MamircProcessor {
 		lock.lock();
 		try {
 			Map<String,Window> inner = windows.get(profile);
-			if (inner != null && inner.remove(party) != null && windowCaseMap.remove(profile + "\n" + party.toLowerCase()) != null)
+			if (inner != null && inner.remove(party) != null)
 				addUpdate("CLOSEWIN", profile, party);
 		} finally {
 			lock.unlock();
