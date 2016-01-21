@@ -76,12 +76,12 @@ footer {
 }
 
 #network-profiles-screen {
-	z-index: 4;
+	z-index: 10;
 	background-color: #FFFFFF;
 }
 
 #debug-screen {
-	z-index: 5;
+	z-index: 11;
 	background-color: #F0F0F0;
 }
 
@@ -508,7 +508,7 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 
 #menu {
 	position: absolute;
-	z-index: 5;
+	z-index: 20;
 	padding: 0.1em;
 	border: 1px solid #C0C0C0;
 	border-radius: 0.2em;
