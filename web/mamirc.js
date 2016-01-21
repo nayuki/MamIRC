@@ -7,6 +7,16 @@
  */
 
 
+// Polyfill for Apple Safari and Microsoft Internet Explorer.
+if (!("startsWith" in String.prototype)) {
+	String.prototype.startsWith = function(text, pos) {
+		if (pos == undefined)
+			pos = 0;
+		return this.length - pos >= text.length && this.substr(pos, text.length) == text;
+	};
+}
+
+
 /*---- Window module ----*/
 
 // Holds data for windows and connections, and handles the rendering/display of window data.
@@ -2164,16 +2174,6 @@ function elemId(name) {
 // Types: text is string, result is Text (Node). Pure function.
 function textNode(text) {
 	return document.createTextNode(text);
-}
-
-
-// Polyfill for Apple Safari and Microsoft Internet Explorer.
-if (!("startsWith" in String.prototype)) {
-	String.prototype.startsWith = function(text, pos) {
-		if (pos == undefined)
-			pos = 0;
-		return this.length - pos >= text.length && this.substr(pos, text.length) == text;
-	};
 }
 
 
