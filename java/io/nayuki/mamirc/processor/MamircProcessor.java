@@ -336,7 +336,7 @@ public final class MamircProcessor {
 				break;
 			}
 			
-			case "432": // ERR_ERRONEUSNICKNAME
+			case "432":  // ERR_ERRONEUSNICKNAME
 			case "433": {  // ERR_NICKNAMEINUSE
 				if (state.getRegistrationState() != RegState.REGISTERED) {
 					state.moveNicknameToRejected();
@@ -802,7 +802,7 @@ public final class MamircProcessor {
 	// Returns a JSON object containing updates with id >= startId (the list might be empty),
 	// or null to indicate that the request is invalid and the client must request the full state.
 	@SuppressWarnings("unchecked")
-		public Map<String,Object> getUpdates(int startId, int maxWait) {
+	public Map<String,Object> getUpdates(int startId, int maxWait) {
 		if (maxWait < 0)
 			throw new IllegalArgumentException();
 		lock.lock();
