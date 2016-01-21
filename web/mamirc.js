@@ -603,6 +603,8 @@ const windowModule = new function() {
 			}
 			
 		} else if (type == Flags.NOTICE) {
+			if ((flags & Flags.OUTGOING) != 0)
+				tr.classList.add("outgoing");
 			who = "(" + payload[0] + ")";
 			lineElems = formatTextModule.fancyTextToElems(payload[1]);
 		} else if (type == Flags.NICK) {

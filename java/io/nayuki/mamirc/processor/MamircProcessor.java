@@ -495,7 +495,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				addNoticeLine(profile.name, party, 0, ev.timestamp, src, text);
+				addNoticeLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
 				break;
 			}
 			
