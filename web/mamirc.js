@@ -142,6 +142,8 @@ const windowModule = new function() {
 		
 		// Redraw all message lines in this window
 		curWindowMaxMessages = 300;
+		if (optimizeMobile)
+			curWindowMaxMessages = 100;
 		redrawMessagesTable();
 		var scrollElem = elemId("messages-scroller");
 		scrollElem.scrollTop = scrollElem.scrollHeight;
