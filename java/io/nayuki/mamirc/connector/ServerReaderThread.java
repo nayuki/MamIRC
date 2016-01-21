@@ -9,6 +9,7 @@
 package io.nayuki.mamirc.connector;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -68,13 +69,13 @@ final class ServerReaderThread extends Thread {
 	/*---- Methods ----*/
 	
 	public void run() {
+		socket = new Socket();
 		OutputWriterThread writer = null;
 		try {
 			// Create socket
+			socket.connect(InetSocketAddress.createUnresolved(hostname, port), 30000);
 			if (useSsl)
-				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(hostname, port);
-			else
-				socket = new Socket(hostname, port);
+				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, null, true);
 			
 			// Successfully connected; make a writer worker thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
