@@ -591,7 +591,7 @@ public final class MamircProcessor {
 					if (isTerminating)
 						return;
 					for (IrcSession state : ircSessions.values()) {
-						if (state.profile == net)
+						if (state.profile.name.equals(net.name))
 							break;
 					}
 					
