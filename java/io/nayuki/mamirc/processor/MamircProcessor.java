@@ -854,13 +854,26 @@ public final class MamircProcessor {
 			// Manipulate existing connections
 			Set<String> activeProfileNames = new HashSet<>();
 			for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
-				Integer conId = entry.getKey();
+				final Integer conId = entry.getKey();
 				IrcSession session = entry.getValue();
 				String name = session.profile.name;
 				IrcNetwork profile = newProfiles.get(name);
-				if (profile == null || !profile.connect)
-					writer.postWrite("disconnect " + conId);
-				else {
+				if (profile == null || !profile.connect) {
+					// Send QUIT line, delay a bit for the write to flush, then
+					// close connection forcefully if server hasn't done so already
+					sendIrcLine(conId, "QUIT", "MamIRC, the headless IRC client");
+					timer.schedule(new TimerTask() {
+						public void run() {
+							lock.lock();
+							try {
+								if (ircSessions.containsKey(conId))
+									writer.postWrite("disconnect " + conId);
+							} finally {
+								lock.unlock();
+							}
+						}
+					}, 1000);
+				} else {
 					activeProfileNames.add(name);
 					IrcSession state = ircSessions.get(conId);
 					if (state.getRegistrationState() == RegState.REGISTERED) {
