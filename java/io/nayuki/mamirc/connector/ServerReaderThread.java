@@ -73,9 +73,9 @@ final class ServerReaderThread extends Thread {
 		OutputWriterThread writer = null;
 		try {
 			// Create socket
-			socket.connect(InetSocketAddress.createUnresolved(hostname, port), 30000);
+			socket.connect(new InetSocketAddress(hostname, port), 30000);
 			if (useSsl)
-				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, null, true);
+				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, hostname, port, true);
 			
 			// Successfully connected; make a writer worker thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
