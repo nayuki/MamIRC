@@ -350,7 +350,7 @@ public final class MamircProcessor {
 							}
 						}
 						if (!found)
-							writer.postWrite("disconnect " + conId);
+							sendDisconnect(conId, false);
 					} else
 						state.setNickname(null);
 				}
@@ -543,7 +543,7 @@ public final class MamircProcessor {
 								}
 							}
 							if (!found)
-								writer.postWrite("disconnect " + conId);
+								sendDisconnect(conId, false);
 						} else if (state.getRegistrationState() == RegState.NICK_SENT)
 							sendIrcLine(conId, "USER", profile.username, "0", "*", profile.realname);
 						break;
@@ -630,6 +630,29 @@ public final class MamircProcessor {
 			sb.append(params[i]);
 		}
 		writer.postWrite(sb.toString());
+	}
+	
+	
+	// Must be called from one of the locking methods.
+	private void sendDisconnect(final int conId, boolean sendQuit) {
+		if (!sendQuit)
+			writer.postWrite("disconnect " + conId);
+		else {
+			// Send QUIT line, delay a bit for the write to flush, then
+			// close connection forcefully if server hasn't done so already
+			sendIrcLine(conId, "QUIT", "MamIRC, the headless IRC client");
+			timer.schedule(new TimerTask() {
+				public void run() {
+					lock.lock();
+					try {
+						if (ircSessions.containsKey(conId))
+							sendDisconnect(conId, false);
+					} finally {
+						lock.unlock();
+					}
+				}
+			}, 1000);
+		}
 	}
 	
 	
@@ -858,22 +881,9 @@ public final class MamircProcessor {
 				IrcSession session = entry.getValue();
 				String name = session.profile.name;
 				IrcNetwork profile = newProfiles.get(name);
-				if (profile == null || !profile.connect) {
-					// Send QUIT line, delay a bit for the write to flush, then
-					// close connection forcefully if server hasn't done so already
-					sendIrcLine(conId, "QUIT", "MamIRC, the headless IRC client");
-					timer.schedule(new TimerTask() {
-						public void run() {
-							lock.lock();
-							try {
-								if (ircSessions.containsKey(conId))
-									writer.postWrite("disconnect " + conId);
-							} finally {
-								lock.unlock();
-							}
-						}
-					}, 1000);
-				} else {
+				if (profile == null || !profile.connect)
+					sendDisconnect(conId, true);
+				else {
 					activeProfileNames.add(name);
 					IrcSession state = ircSessions.get(conId);
 					if (state.getRegistrationState() == RegState.REGISTERED) {
