@@ -21,7 +21,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -68,7 +67,7 @@ public final class MamircProcessor {
 	
 	// Mutable current state
 	private final Map<Integer,IrcSession> ircSessions;
-	private final Map<String,Map<String,Window>> windows;
+	private AllWindows windows;
 	private List<String> initialWindow;  // Either null or {String profile, String party}
 	private final List<Object[]> recentUpdates;  // Payload is {int id, List<Object> update}
 	private int nextUpdateId;
@@ -93,7 +92,7 @@ public final class MamircProcessor {
 		userConfigurationFile = userConfigFile;
 		userConfiguration = new UserConfiguration(userConfigFile);
 		ircSessions = new HashMap<>();
-		windows = new TreeMap<>();
+		windows = new AllWindows(this);
 		initialWindow = null;
 		recentUpdates = new ArrayList<>();
 		nextUpdateId = 0;
@@ -180,14 +179,14 @@ public final class MamircProcessor {
 			if (!userConfiguration.ircNetworks.containsKey(metadata))
 				throw new IllegalStateException("No profile: " + metadata);
 			ircSessions.put(conId, new IrcSession(userConfiguration.ircNetworks.get(metadata)));
-			addConnectingLine(metadata, ev.timestamp, parts[1], Integer.parseInt(parts[2]), parts[3].equals("ssl"));
+			windows.addConnectingLine(metadata, ev.timestamp, parts[1], Integer.parseInt(parts[2]), parts[3].equals("ssl"));
 			
 		} else if (line.startsWith("opened ")) {
 			state.setRegistrationState(RegState.OPENED);
 			if (realtime)
 				sendIrcLine(conId, "NICK", state.profile.nicknames.get(0));
 			addUpdate("CONNECTED", state.profile.name);
-			addConnectedLine(state.profile.name, ev.timestamp, line.split(" ", 2)[1]);
+			windows.addConnectedLine(state.profile.name, ev.timestamp, line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
 			// Do nothing
@@ -195,8 +194,8 @@ public final class MamircProcessor {
 		} else if (line.equals("closed")) {
 			if (state != null) {
 				for (String chan : state.getCurrentChannels().keySet())
-					addDisconnectedLine(state.profile.name, chan, ev.timestamp);
-				addDisconnectedLine(state.profile.name, "", ev.timestamp);
+					windows.addDisconnectedLine(state.profile.name, chan, ev.timestamp);
+				windows.addDisconnectedLine(state.profile.name, "", ev.timestamp);
 				ircSessions.remove(conId);
 				IrcNetwork profile = userConfiguration.ircNetworks.get(state.profile.name);
 				if (profile != null && profile.connect)
@@ -226,7 +225,7 @@ public final class MamircProcessor {
 					Set<String> members = entry.getValue().members;
 					if (members.remove(fromname)) {
 						members.add(toname);
-						addNickLine(profile.name, entry.getKey(), ev.timestamp, fromname, toname);
+						windows.addNickLine(profile.name, entry.getKey(), ev.timestamp, fromname, toname);
 					}
 				}
 				break;
@@ -240,7 +239,7 @@ public final class MamircProcessor {
 					addUpdate("JOINED", state.profile.name, chan);
 				}
 				if (curchans.containsKey(chan) && curchans.get(chan).members.add(who))
-					addJoinLine(profile.name, msg.getParameter(0), ev.timestamp, who);
+					windows.addJoinLine(profile.name, msg.getParameter(0), ev.timestamp, who);
 				break;
 			}
 			
@@ -249,7 +248,7 @@ public final class MamircProcessor {
 				String party = msg.getParameter(0);
 				if (party.equals(state.getCurrentNickname()))
 					party = who;
-				addNoticeLine(profile.name, party, 0, ev.timestamp, who, msg.getParameter(1));
+				windows.addNoticeLine(profile.name, party, 0, ev.timestamp, who, msg.getParameter(1));
 				break;
 			}
 			
@@ -257,7 +256,7 @@ public final class MamircProcessor {
 				String who = msg.prefixName;
 				String chan = msg.getParameter(0);
 				if (curchans.containsKey(chan) && curchans.get(chan).members.remove(who))
-					addPartLine(profile.name, chan, ev.timestamp, who);
+					windows.addPartLine(profile.name, chan, ev.timestamp, who);
 				if (who.equals(state.getCurrentNickname())) {
 					curchans.remove(chan);
 					addUpdate("PARTED", state.profile.name, chan);
@@ -274,12 +273,12 @@ public final class MamircProcessor {
 							if (party.equalsIgnoreCase(state.getCurrentNickname()))
 								mekicked = true;
 							else
-								addKickLine(profile.name, chan, ev.timestamp, party, msg.prefixName, reason);
+								windows.addKickLine(profile.name, chan, ev.timestamp, party, msg.prefixName, reason);
 							curchans.get(chan).members.remove(party);
 						}
 					}
 					if (mekicked) {  // Save this part for last
-						addKickLine(profile.name, chan, ev.timestamp, state.getCurrentNickname(), msg.prefixName, reason);
+						windows.addKickLine(profile.name, chan, ev.timestamp, state.getCurrentNickname(), msg.prefixName, reason);
 						addUpdate("KICKED", state.profile.name, chan, msg.prefixName, reason);
 						curchans.remove(chan);
 					}
@@ -297,7 +296,7 @@ public final class MamircProcessor {
 						text += " ";
 					text += msg.getParameter(i);
 				}
-				addModeLine(profile.name, party, ev.timestamp, msg.prefixName, text);
+				windows.addModeLine(profile.name, party, ev.timestamp, msg.prefixName, text);
 				break;
 			}
 			
@@ -310,7 +309,7 @@ public final class MamircProcessor {
 				int flags = 0;
 				if (state.getNickflagDetector().matcher(text).find())
 					flags |= Window.Flags.NICKFLAG.value;
-				addPrivmsgLine(profile.name, party, flags, ev.timestamp, who, text);
+				windows.addPrivmsgLine(profile.name, party, flags, ev.timestamp, who, text);
 				break;
 			}
 			
@@ -319,7 +318,7 @@ public final class MamircProcessor {
 				if (!who.equals(state.getCurrentNickname())) {
 					for (Map.Entry<String,IrcSession.ChannelState> entry : curchans.entrySet()) {
 						if (entry.getValue().members.remove(who))
-							addQuitLine(profile.name, entry.getKey(), ev.timestamp, who, msg.getParameter(0));
+							windows.addQuitLine(profile.name, entry.getKey(), ev.timestamp, who, msg.getParameter(0));
 					}
 				} else {
 					addUpdate("QUITTED", state.profile.name);
@@ -333,7 +332,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(1);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addTopicLine(profile.name, chan, ev.timestamp, who, text);
+				windows.addTopicLine(profile.name, chan, ev.timestamp, who, text);
 				break;
 			}
 			
@@ -386,7 +385,7 @@ public final class MamircProcessor {
 				String chan = msg.getParameter(1);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = null;
-				addInitNoTopicLine(profile.name, chan, ev.timestamp);
+				windows.addInitNoTopicLine(profile.name, chan, ev.timestamp);
 				break;
 			}
 			
@@ -395,7 +394,7 @@ public final class MamircProcessor {
 				String text = msg.getParameter(2);
 				if (state.getCurrentChannels().containsKey(chan))
 					state.getCurrentChannels().get(chan).topic = text;
-				addInitTopicLine(profile.name, chan, ev.timestamp, text);
+				windows.addInitTopicLine(profile.name, chan, ev.timestamp, text);
 				break;
 			}
 			
@@ -422,7 +421,7 @@ public final class MamircProcessor {
 					if (chanstate.processingNamesReply) {
 						chanstate.processingNamesReply = false;
 						String[] names = chanstate.members.toArray(new String[0]);
-						addNamesLine(profile.name, entry.getKey(), ev.timestamp, names);
+						windows.addNamesLine(profile.name, entry.getKey(), ev.timestamp, names);
 					}
 				}
 				break;
@@ -455,7 +454,7 @@ public final class MamircProcessor {
 							text += " ";
 						text += msg.getParameter(i);
 					}
-					addServerReplyLine(profile.name, ev.timestamp, msg.command, text);
+					windows.addServerReplyLine(profile.name, ev.timestamp, msg.command, text);
 					break;
 				}
 			}
@@ -493,7 +492,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				addNoticeLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
+				windows.addNoticeLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
 				break;
 			}
 			
@@ -503,7 +502,7 @@ public final class MamircProcessor {
 				String src = state.getCurrentNickname();
 				String party = msg.getParameter(0);
 				String text = msg.getParameter(1);
-				addPrivmsgLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
+				windows.addPrivmsgLine(profile.name, party, Window.Flags.OUTGOING.value, ev.timestamp, src, text);
 				break;
 			}
 			
@@ -685,25 +684,8 @@ public final class MamircProcessor {
 	}
 	
 	
-	/*---- Window line adding methods ----*/
-	
-	// Must be called in a locked context. Should only be called by the stub methods below, not directly by any methods above.
-	private void addWindowLine(String profile, String party, int flags, long timestamp, Object... payload) {
-		if (!windows.containsKey(profile))
-			windows.put(profile, new CaseInsensitiveTreeMap<Window>());
-		Map<String,Window> innerMap = windows.get(profile);
-		Window win = innerMap.get(party);
-		if (win == null) {
-			win = new Window();
-			innerMap.put(party, win);
-		}
-		timestamp = divideAndFloor(timestamp, 1000);
-		int sequence = win.nextSequence;
-		win.addLine(flags, timestamp, payload);
-		List<Window.Line> list = win.lines;
-		if (list.size() - 100 >= 10000)
-			list.subList(0, 100).clear();
-		
+	// Must be called in a locked context, and only be called by AllWindows.
+	public void addWindowUpdate(String profile, String party, int sequence, int flags, long timestamp, Object... payload) {
 		Object[] temp = new Object[6 + payload.length];
 		temp[0] = "APPEND";
 		temp[1] = profile;
@@ -715,72 +697,6 @@ public final class MamircProcessor {
 		addUpdate(temp);
 	}
 	
-	
-	// All of these addXxxLine methods must only be called from a locking method above.
-	
-	private void addConnectingLine(String profile, long timestamp, String hostname, int port, boolean ssl) {
-		addWindowLine(profile, "", Window.Flags.CONNECTING.value, timestamp, hostname, port, ssl);
-	}
-	
-	private void addConnectedLine(String profile, long timestamp, String ipAddr) {
-		addWindowLine(profile, "", Window.Flags.CONNECTED.value, timestamp, ipAddr);
-	}
-	
-	private void addDisconnectedLine(String profile, String party, long timestamp) {
-		addWindowLine(profile, party, Window.Flags.DISCONNECTED.value, timestamp);
-	}
-	
-	private void addInitNoTopicLine(String profile, String party, long timestamp) {
-		addWindowLine(profile, party, Window.Flags.INITNOTOPIC.value, timestamp);
-	}
-	
-	private void addInitTopicLine(String profile, String party, long timestamp, String text) {
-		addWindowLine(profile, party, Window.Flags.INITTOPIC.value, timestamp, text);
-	}
-	
-	private void addJoinLine(String profile, String party, long timestamp, String nick) {
-		addWindowLine(profile, party, Window.Flags.JOIN.value, timestamp, nick);
-	}
-	
-	private void addKickLine(String profile, String party, long timestamp, String kickee, String kicker, String text) {
-		addWindowLine(profile, party, Window.Flags.KICK.value, timestamp, kickee, kicker, text);
-	}
-	
-	private void addModeLine(String profile, String party, long timestamp, String source, String text) {
-		addWindowLine(profile, party, Window.Flags.MODE.value, timestamp, source, text);
-	}
-	
-	private void addNamesLine(String profile, String party, long timestamp, String[] names) {
-		addWindowLine(profile, party, Window.Flags.NAMES.value, timestamp, (Object[])names);
-	}
-	
-	private void addNickLine(String profile, String party, long timestamp, String oldNick, String newNick) {
-		addWindowLine(profile, party, Window.Flags.NICK.value, timestamp, oldNick, newNick);
-	}
-	
-	private void addNoticeLine(String profile, String party, int flags, long timestamp, String nick, String text) {
-		addWindowLine(profile, party, Window.Flags.NOTICE.value | flags, timestamp, nick, text);
-	}
-	
-	private void addPartLine(String profile, String party, long timestamp, String nick) {
-		addWindowLine(profile, party, Window.Flags.PART.value, timestamp, nick);
-	}
-	
-	private void addPrivmsgLine(String profile, String party, int flags, long timestamp, String nick, String text) {
-		addWindowLine(profile, party, Window.Flags.PRIVMSG.value | flags, timestamp, nick, text);
-	}
-	
-	private void addTopicLine(String profile, String party, long timestamp, String nick, String text) {
-		addWindowLine(profile, party, Window.Flags.TOPIC.value, timestamp, nick, text);
-	}
-	
-	private void addQuitLine(String profile, String party, long timestamp, String nick, String text) {
-		addWindowLine(profile, party, Window.Flags.QUIT.value, timestamp, nick, text);
-	}
-	
-	private void addServerReplyLine(String profile, long timestamp, String code, String text) {
-		addWindowLine(profile, "", Window.Flags.SERVERREPLY.value, timestamp, code, text);
-	}
 	
 	
 	/*---- HTTP web API ----*/
@@ -815,7 +731,7 @@ public final class MamircProcessor {
 			
 			// States of current windows
 			List<List<Object>> outWindows = new ArrayList<>();
-			for (Map.Entry<String,Map<String,Window>> profileEntry : windows.entrySet()) {
+			for (Map.Entry<String,Map<String,Window>> profileEntry : windows.windows.entrySet()) {
 				for (Map.Entry<String,Window> partyEntry : profileEntry.getValue().entrySet()) {
 					List<Object> outWindow = new ArrayList<>();
 					outWindow.add(profileEntry.getKey());
@@ -1005,7 +921,7 @@ public final class MamircProcessor {
 	public void markRead(String profile, String party, int sequence) {
 		lock.lock();
 		try {
-			windows.get(profile).get(party).markedReadUntil = sequence;
+			windows.windows.get(profile).get(party).markedReadUntil = sequence;
 			addUpdate("MARKREAD", profile, party, sequence);
 		} finally {
 			lock.unlock();
@@ -1016,7 +932,7 @@ public final class MamircProcessor {
 	public void clearLines(String profile, String party, int sequence) {
 		lock.lock();
 		try {
-			windows.get(profile).get(party).clearUntil(sequence);
+			windows.getWindow(profile, party).clearUntil(sequence);
 			addUpdate("CLEARLINES", profile, party, sequence);
 		} finally {
 			lock.unlock();
@@ -1027,13 +943,8 @@ public final class MamircProcessor {
 	public void openWindow(String profile, String party) {
 		lock.lock();
 		try {
-			if (!windows.containsKey(profile))
-				windows.put(profile, new CaseInsensitiveTreeMap<Window>());
-			Map<String,Window> inner = windows.get(profile);
-			if (inner.containsKey(party))
-				return;
-			inner.put(party, new Window());
-			addUpdate("OPENWIN", profile, party);
+			if (windows.openWindow(profile, party))
+				addUpdate("OPENWIN", profile, party);
 		} finally {
 			lock.unlock();
 		}
@@ -1043,8 +954,7 @@ public final class MamircProcessor {
 	public void closeWindow(String profile, String party) {
 		lock.lock();
 		try {
-			Map<String,Window> inner = windows.get(profile);
-			if (inner != null && inner.remove(party) != null)
+			if (windows.closeWindow(profile, party))
 				addUpdate("CLOSEWIN", profile, party);
 		} finally {
 			lock.unlock();
@@ -1069,14 +979,6 @@ public final class MamircProcessor {
 		} finally {
 			lock.unlock();
 		}
-	}
-	
-	
-	private static long divideAndFloor(long x, long y) {
-		long z = x / y;
-		if (((x >= 0) ^ (y >= 0)) && z * y != x)
-			z--;
-		return z;
 	}
 	
 }
