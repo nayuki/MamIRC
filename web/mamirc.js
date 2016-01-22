@@ -1093,6 +1093,8 @@ const inputBoxModule = new function() {
 	// Types: enable is boolean, result is void.
 	this.setEnabled = function(enable) {
 		inputBoxElem.disabled = !enable;
+		if (!enable)
+			inputBoxElem.blur();
 	};
 	
 	// Gives focus to the input text box. Types: result is void.
