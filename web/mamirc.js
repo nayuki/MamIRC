@@ -2,7 +2,7 @@
  * MamIRC
  * Copyright (c) Project Nayuki
  * 
- * http://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://www.nayuki.io/page/mamirc-the-headless-irc-client
  * https://github.com/nayuki/MamIRC
  */
 

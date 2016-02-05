@@ -10,7 +10,7 @@
 # the classpath requirements, and sets a memory limit on the JVM.
 # 
 # Copyright (c) Project Nayuki
-# http://www.nayuki.io/page/mamirc-the-headless-irc-client
+# https://www.nayuki.io/page/mamirc-the-headless-irc-client
 # https://github.com/nayuki/MamIRC
 # 
 

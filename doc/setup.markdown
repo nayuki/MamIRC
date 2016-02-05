@@ -61,7 +61,7 @@ Steps for Windows setup
 
 0. Download the [MamIRC ZIP file](https://github.com/nayuki/MamIRC/archive/master.zip) from GitHub, and unzip it into a new directory for MamIRC.
 
-0. Download the [Nayuki JSON library JAR](http://www.nayuki.io/page/json-library-java) and put it in the MamIRC root directory.
+0. Download the [Nayuki JSON library JAR](https://www.nayuki.io/page/json-library-java) and put it in the MamIRC root directory.
 
 0. Download the [ALM Works Sqlite4java ZIP](https://bitbucket.org/almworks/sqlite4java), and extract the JAR and DLL files into the MamIRC root directory.
 
@@ -107,10 +107,10 @@ Remember that if you are running a server behind a NAT router, you are responsib
 Project links
 -------------
 
-* Home page: [http://www.nayuki.io/page/mamirc-the-headless-irc-client](http://www.nayuki.io/page/mamirc-the-headless-irc-client)
+* Home page: [https://www.nayuki.io/page/mamirc-the-headless-irc-client](https://www.nayuki.io/page/mamirc-the-headless-irc-client)
 
 * GitHub repository: [https://github.com/nayuki/MamIRC](https://github.com/nayuki/MamIRC)
 
 * Online documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
 
-Copyright © [Project Nayuki](http://www.nayuki.io/)
+Copyright © [Project Nayuki](https://www.nayuki.io/)

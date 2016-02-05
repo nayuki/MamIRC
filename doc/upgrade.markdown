@@ -169,10 +169,10 @@ Note: The keywords {*must*, *must not*, *required*, *shall*, *shall not*, *shoul
 Project links
 -------------
 
-* Home page: [http://www.nayuki.io/page/mamirc-the-headless-irc-client](http://www.nayuki.io/page/mamirc-the-headless-irc-client)
+* Home page: [https://www.nayuki.io/page/mamirc-the-headless-irc-client](https://www.nayuki.io/page/mamirc-the-headless-irc-client)
 
 * GitHub repository: [https://github.com/nayuki/MamIRC](https://github.com/nayuki/MamIRC)
 
 * Online documentation: [https://github.com/nayuki/MamIRC/tree/master/doc](https://github.com/nayuki/MamIRC/tree/master/doc)
 
-Copyright © [Project Nayuki](http://www.nayuki.io/)
+Copyright © [Project Nayuki](https://www.nayuki.io/)

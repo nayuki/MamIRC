@@ -11,7 +11,7 @@
 # Run this script with no arguments, in the working directory of your choice.
 # 
 # Copyright (c) Project Nayuki
-# http://www.nayuki.io/page/mamirc-the-headless-irc-client
+# https://www.nayuki.io/page/mamirc-the-headless-irc-client
 # https://github.com/nayuki/MamIRC
 # 
 
@@ -33,7 +33,7 @@ cd bin
 
 # Download a JAR file
 if [ ! -e "nayuki-json-lib.jar" ]; then
-	wget "http://www.nayuki.io/res/json-library-java/nayuki-json-lib.jar"
+	wget "https://www.nayuki.io/res/json-library-java/nayuki-json-lib.jar"
 fi
 
 # Download a ZIP file and extract
