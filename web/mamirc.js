@@ -1713,17 +1713,9 @@ const networkModule = new function() {
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
 			if (xhr.status == 200) {
-				var respData = undefined;
-				try {
-					respData = JSON.parse(xhr.response);
-				} catch (e) {}
-				if (respData !== undefined) {
-					if (onload != null)
-						onload(xhr, respData);
-					return;
-				}
-			}
-			if (onerror != null)
+				if (onload != null)
+					onload(xhr, xhr.response);
+			} else if (onerror != null)
 				onerror(xhr);
 		};
 		if (onerror != null)
@@ -1732,7 +1724,7 @@ const networkModule = new function() {
 			xhr.ontimeout = function() { ontimeout(xhr); };
 		xhr.timeout = timeout;
 		xhr.open("POST", url, true);
-		xhr.responseType = "text";
+		xhr.responseType = "json";
 		xhr.send(JSON.stringify(reqData));
 	}
 };
@@ -1782,11 +1774,10 @@ const profileConfigModule = new function() {
 			return;
 		var xhr = new XMLHttpRequest();
 		xhr.onload = function() {
-			var data = JSON.parse(xhr.response);
-			showDialog(data);
+			showDialog(xhr.response);
 		};
 		xhr.open("POST", "get-profiles.json", true);
-		xhr.responseType = "text";
+		xhr.responseType = "json";
 		xhr.send(JSON.stringify(""));
 	}
 	
