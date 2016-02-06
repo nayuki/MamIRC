@@ -1146,6 +1146,10 @@ const inputBoxModule = new function() {
 		};
 		
 		if (!inputStr.startsWith("/") || inputStr.startsWith("//")) {  // Ordinary message
+			if (party == "") {
+				alert("Cannot send message to server window");
+				return false;
+			}
 			if (inputStr.startsWith("//"))  // Ordinary message beginning with slash
 				inputStr = inputStr.substring(1);
 			networkModule.sendMessage(profile, party, inputStr, onerror);
@@ -1218,6 +1222,10 @@ const inputBoxModule = new function() {
 		var actions = [];
 		var profile = windowModule.activeWindow[0];
 		var party = windowModule.activeWindow[1];
+		if (party == "") {
+			alert("Cannot send message to server window");
+			return false;
+		}
 		lines.forEach(function(line) {
 			actions.push(["send-line", profile, "PRIVMSG " + party + " :" + line]);
 		});
@@ -1230,9 +1238,11 @@ const inputBoxModule = new function() {
 	function colorizeLine() {
 		var text = inputBoxElem.value;
 		var multiline = text.indexOf("\n") != -1;
-		utilsModule.setClasslistItem(inputBoxElem, "command", !multiline && text.startsWith("/") && !text.startsWith("//"));
+		var command = !multiline && text.startsWith("/") && !text.startsWith("//");
+		utilsModule.setClasslistItem(inputBoxElem, "command", command);
 		utilsModule.setClasslistItem(inputBoxElem, "overlong", isLineOverlong(text));
 		utilsModule.setClasslistItem(inputBoxElem, "multiline", multiline);
+		utilsModule.setClasslistItem(inputBoxElem, "error", windowModule.activeWindow != null && windowModule.activeWindow[1] == "" && text != "" && !command);
 	}
 	
 	// Tests whether the given input box text line is too long.

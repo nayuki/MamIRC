@@ -492,7 +492,7 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 	background-color: #F0F4FF;
 }
 
-#input-box.overlong {
+#input-box.overlong, #input-box.error {
 	background-color: #FFE0E0;
 }
 
