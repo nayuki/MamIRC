@@ -317,6 +317,10 @@ body.hide {  /* For log out */
 	display: none;
 }
 
+#messages-scroller:focus {
+	outline: none;
+}
+
 #messages-scroller h2 {
 	display: none;
 }

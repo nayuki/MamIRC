@@ -705,10 +705,12 @@ const windowModule = new function() {
 			if (tr.classList.contains("read") && !confirm("Do you want to move mark upward?"))
 				return;
 			networkModule.sendAction([["mark-read", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
+			elemId("messages-scroller").focus();
 		}]);
 		menuItems.push(["Clear to here", function() {
 			if (confirm("Do you want to clear text?"))
 				networkModule.sendAction([["clear-lines", self.activeWindow[0], self.activeWindow[1], sequence + 1]], null);
+			elemId("messages-scroller").focus();
 		}]);
 		td.oncontextmenu = menuModule.makeOpener(menuItems);
 		tr.appendChild(td);
