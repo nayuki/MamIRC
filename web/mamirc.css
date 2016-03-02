@@ -26,6 +26,10 @@ body {
 }
 
 #member-list-container, #window-list-container {
+	overflow-y: hidden;
+}
+
+#member-list-container:hover, #window-list-container:hover {
 	overflow-y: auto;
 }
 
