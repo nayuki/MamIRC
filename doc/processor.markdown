@@ -108,7 +108,7 @@ HTTP API
         ["MYNICK", "Acme IRC", "Nayuki|test2"]],
     nextUpdateId: 126
 }</pre>
-<p>The list of all possible updates is not explicitly documented or explained, but the information can be gathered from <a href="https://github.com/nayuki/MamIRC/blob/master/src/io/nayuki/mamirc/processor/MamircProcessor.java">MamircProcessor.java</a> based on calls to <code>addUpdate()</code>.</p>
+<p>The list of all possible updates is not explicitly documented or explained, but the information can be gathered from <a href="https://github.com/nayuki/MamIRC/blob/master/java/io/nayuki/mamirc/processor/MamircProcessor.java">MamircProcessor.java</a> based on calls to <code>addUpdate()</code>.</p>
 </dd>
 <dt>/do-actions.json (POST)</dt>
 <dd>
@@ -122,7 +122,7 @@ HTTP API
     csrfToken: "sq2ZwsrEHOE37flI",
     nextUpdateId: 126
 }</pre>
-<p>The list of all possible actions can be inferred from the code in <a href="https://github.com/nayuki/MamIRC/blob/master/src/io/nayuki/mamirc/processor/MessageHttpServer.java">MessageHttpServer.java</a>, in the handler for the path "/do-actions.json".</p>
+<p>The list of all possible actions can be inferred from the code in <a href="https://github.com/nayuki/MamIRC/blob/master/java/io/nayuki/mamirc/processor/MessageHttpServer.java">MessageHttpServer.java</a>, in the handler for the path "/do-actions.json".</p>
 </dd>
 </dl>
 

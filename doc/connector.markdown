@@ -109,7 +109,7 @@ For those of you curious about how to implement a Processor, here is what a typi
     <-- send 8 NICK John
     <-- send 8 USER John 0 * :John Smith
 
-The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](../src/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For curious developers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
+The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](../java/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For curious developers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
 
 
 Project links
