@@ -8,7 +8,7 @@
 
 package io.nayuki.mamirc.common;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 
@@ -20,13 +20,13 @@ public final class Utils {
 	
 	// Returns a new array of bytes from encoding the given string in UTF-8.
 	public static byte[] toUtf8(String s) {
-		return s.getBytes(UTF8_CHARSET);
+		return s.getBytes(StandardCharsets.UTF_8);
 	}
 	
 	
 	// Returns the string from decoding the given bytes in UTF-8.
 	public static String fromUtf8(byte[] b) {
-		return new String(b, UTF8_CHARSET);
+		return new String(b, StandardCharsets.UTF_8);
 	}
 	
 	
@@ -47,10 +47,6 @@ public final class Utils {
 		else
 			throw new IllegalArgumentException("Invalid TCP port number: " + port);
 	}
-	
-	
-	// Character set object for UTF-8.
-	private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 	
 	
 	// Not instantiable.
