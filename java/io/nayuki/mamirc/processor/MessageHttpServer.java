@@ -232,14 +232,17 @@ final class MessageHttpServer {
 	
 	
 	private void handleRootPage(HttpExchange he, Headers respHead) throws IOException {
+		String query = he.getRequestURI().getQuery();  // May be null
+		
 		if (he.getRequestMethod().equals("POST")) {
 			String type = he.getRequestHeaders().getFirst("Content-Type");
 			if (type == null || !type.equals("application/x-www-form-urlencoded"))
 				throw new IllegalArgumentException();
 			byte[] reqBytes = readBounded(he.getRequestBody());
 			Map<String,String> formdata = parseForm(Utils.fromUtf8(reqBytes));
+			boolean mobile = formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on");
 			respHead.add("Set-Cookie", "password=" + (formdata.containsKey("password") ? formdata.get("password").replaceAll("[^A-Za-z0-9]", "") : "") + "; Max-Age=2500000");
-			respHead.add("Set-Cookie", "optimize-mobile=" + (formdata.containsKey("optimize-mobile") && formdata.get("optimize-mobile").equals("on")) + "; Max-Age=2500000");
+			respHead.add("Set-Cookie", "optimize-mobile=" + mobile + "; Max-Age=2500000");
 			respHead.add("Location", "/");
 			he.sendResponseHeaders(303, -1);
 			
@@ -252,12 +255,22 @@ final class MessageHttpServer {
 				// Serve login page
 				String s = Utils.fromUtf8(readFile(new File("web", "login.html")));
 				s = s.replace("#status#", cookies.containsKey("password") && !equalsTimingSafe(cookies.get("password"), password) ? "Incorrect password" : "");
-				s = s.replace("#optimize-mobile#", cookies.containsKey("optimize-mobile") && "true".equals(cookies.get("optimize-mobile")) ? "checked=\"checked\" " : "");
+				boolean mobile = cookies.containsKey("optimize-mobile") && "true".equals(cookies.get("optimize-mobile")) || "mobile".equals(query);
+				s = s.replace("#optimize-mobile#", mobile ? "checked=\"checked\" " : "");
 				respHead.add("Cache-Control", "no-store");
 				writeResponse(Utils.toUtf8(s), "application/xhtml+xml", true, he);
 			} else {  // Serve main page
+				boolean mobile = "true".equals(cookies.get("optimize-mobile"));
+				if ("desktop".equals(query)) {
+					respHead.add("Set-Cookie", "optimize-mobile=false; Max-Age=2500000");
+					mobile = false;
+				}
+				if ("mobile".equals(query)) {
+					respHead.add("Set-Cookie", "optimize-mobile=true; Max-Age=2500000");
+					mobile = true;
+				}
 				respHead.add("Cache-Control", "no-store");
-				String page = "true".equals(cookies.get("optimize-mobile")) ? "mamirc-mobile.html" : "mamirc.html";
+				String page = mobile ? "mamirc-mobile.html" : "mamirc.html";
 				writeResponse(readFile(new File("web", page)), "application/xhtml+xml", true, he);
 			}
 		} else

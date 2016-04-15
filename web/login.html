@@ -71,7 +71,8 @@
 		
 		<script type="application/javascript">
 		// <![CDATA[
-		if (700 > document.documentElement.clientWidth || 700 > document.documentElement.clientHeight)
+		var desktop = /\/\?desktop$/.test(window.location.href);
+		if (!desktop && 700 > Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight))
 			document.getElementById("optimize-mobile").checked = true;
 		var imgElem = document.getElementById("background-icon");
 		var offset = -imgElem.offsetWidth * 0.47 + "px";
