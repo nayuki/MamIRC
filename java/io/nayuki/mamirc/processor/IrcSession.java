@@ -13,8 +13,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeSet;
+import java.util.concurrent.locks.Lock;
 import java.util.regex.Pattern;
+import io.nayuki.mamirc.common.OutputWriterThread;
 
 
 // Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
@@ -49,19 +53,18 @@ final class IrcSession {
 	// Not null, size at least 0. The string argument is case-insensitive but case-preserving.
 	private Map<String,ChannelState> currentChannels;
 	
-	// A Unix timestamp in milliseconds, for outbound throttling.
-	private long nextLineSendTime;
+	/* Outgoing message line throttling */
 	
-	// Must be positive, for outbound throttling.
-	private final int numBurstLines = 4;
+	// Must be positive.
+	private final int maxBurstLines = 4;
 	
-	// In milliseconds, for outbound throttling.
+	// In milliseconds.
 	private final int sendInterval = 2000;
 	
-	// In milliseconds, for outbound throttling.
-	private final int gracePeriod = (numBurstLines - 1) * sendInterval;
+	// Must be between 0 and maxBurstLines, inclusive.
+	private int numBurstLines;
 	
-	// Raw lines to send to the Connector, for outbound throttling.
+	// Raw lines to send to the Connector.
 	private Queue<String> queuedLines;
 	
 	
@@ -80,7 +83,7 @@ final class IrcSession {
 		currentNickname = null;
 		nickflagDetector = null;
 		currentChannels = new CaseInsensitiveTreeMap<>();
-		nextLineSendTime = System.currentTimeMillis() - gracePeriod;
+		numBurstLines = maxBurstLines;
 		queuedLines = new ArrayDeque<>();
 	}
 	
@@ -174,24 +177,34 @@ final class IrcSession {
 	}
 	
 	
-	// Enqueues the given raw line and returns the amount of time to delay
-	// sending this line (zero or positive). Also modifies/increments the
-	// internal state for subsequent calls to this method.
-	public int enqueueLineAndGetDelay(String rawLine) {
-		if (rawLine == null)
+	public void handleThrottledSendLine(String rawLine, final Timer timer, final Lock lock, final OutputWriterThread writer) {
+		if (rawLine == null || timer == null || lock == null || writer == null)
 			throw new NullPointerException();
-		queuedLines.add(rawLine);
-		long now = System.currentTimeMillis();
-		nextLineSendTime = Math.max(now - gracePeriod, nextLineSendTime);
-		int result = Math.max((int)(nextLineSendTime - now), 0);
-		nextLineSendTime += sendInterval;
-		return result;
-	}
-	
-	
-	// Removes and returns the next raw line to be sent.
-	public String dequeueLine() {
-		return queuedLines.remove();
+		
+		if (numBurstLines >= maxBurstLines) {
+			timer.schedule(new TimerTask() {
+				public void run() {
+					lock.lock();
+					try {
+						if (!queuedLines.isEmpty())
+							writer.postWrite(queuedLines.remove());
+						else {
+							numBurstLines++;
+							if (numBurstLines >= maxBurstLines)
+								this.cancel();
+						}
+					} finally {
+						lock.unlock();
+					}
+				}
+			}, sendInterval, sendInterval);
+		}
+		
+		if (numBurstLines > 0) {
+			numBurstLines--;
+			writer.postWrite(rawLine);
+		} else
+			queuedLines.add(rawLine);
 	}
 	
 	
