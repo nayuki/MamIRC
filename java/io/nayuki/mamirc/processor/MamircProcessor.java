@@ -372,8 +372,7 @@ public final class MamircProcessor {
 					if (realtime) {
 						if (profile.nickservPassword != null && !state.getSentNickservPassword())
 							sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
-						for (String chan : profile.channels)
-							sendIrcLine(conId, "JOIN", chan);
+						joinChannelsByProfile(conId);
 					}
 					addUpdate("MYNICK", profile.name, state.getCurrentNickname());
 					connectionAttemptState.remove(state.profile);
@@ -552,10 +551,7 @@ public final class MamircProcessor {
 					case REGISTERED: {
 						if (profile.nickservPassword != null && !state.getSentNickservPassword())
 							sendIrcLine(conId, "PRIVMSG", "NickServ", "IDENTIFY " + profile.nickservPassword);
-						for (String chan : profile.channels) {
-							if (!state.getCurrentChannels().containsKey(chan))
-								sendIrcLine(conId, "JOIN", chan);
-						}
+						joinChannelsByProfile(conId);
 						break;
 					}
 					
@@ -626,6 +622,19 @@ public final class MamircProcessor {
 			sb.append(params[i]);
 		}
 		writer.postWrite(sb.toString());
+	}
+	
+	
+	// Must be called from one of the locking methods.
+	private void joinChannelsByProfile(int conId) {
+		IrcSession state = ircSessions.get(conId);
+		IrcNetwork profile = state.profile;
+		System.out.println("joinChannelsByProfile");
+		for (String chanStr : profile.channels) {
+			String[] parts = chanStr.split(" ", 2);  // Optional second part is the channel key
+			if (!state.getCurrentChannels().containsKey(parts[0]))
+				sendIrcLine(conId, "JOIN", parts);
+		}
 	}
 	
 	
@@ -882,12 +891,8 @@ public final class MamircProcessor {
 				else {
 					activeProfileNames.add(name);
 					IrcSession state = ircSessions.get(conId);
-					if (state.getRegistrationState() == RegState.REGISTERED) {
-						for (String chan : profile.channels) {
-							if (!state.getCurrentChannels().containsKey(chan))
-								sendIrcLine(conId, "JOIN", chan);
-						}
-					}
+					if (state.getRegistrationState() == RegState.REGISTERED)
+						joinChannelsByProfile(conId);
 				}
 			}
 			
