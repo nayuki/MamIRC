@@ -25,6 +25,14 @@ if [ ! -e ".git" ]; then
 	rm -rf "MamIRC/"
 fi
 
+# Make user-editable copies of sample config files
+if [ ! -e "backend-config.json" ]; then
+	cp "sample-backend-config.json" "backend-config.json"
+fi
+if [ ! -e "user-config.json" ]; then
+	cp "sample-user-config.json" "user-config.json"
+fi
+
 # Go into bin/ subdirectory
 if [ ! -e "bin/" ]; then
 	mkdir bin
