@@ -9,7 +9,6 @@
 package io.nayuki.mamirc.connector;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import org.junit.Test;
 import io.nayuki.mamirc.common.Utils;
 
@@ -17,22 +16,26 @@ import io.nayuki.mamirc.common.Utils;
 public final class MamircConnectorTest {
 	
 	@Test public void testMakePongIfPing() {
-		assertNull(makePong(""));
-		assertNull(makePong("PONG"));
-		assertNull(makePong("PINGU"));
-		assertNull(makePong(" PING"));
-		assertNull(makePong(" :abc PING"));
-		assertNull(makePong("PING:def"));
-		assertNull(makePong("abc WHAT PING"));
-		assertNull(makePong("STOPPING"));
-		assertEquals("PONG", makePong("PING"));
-		assertEquals("PONG", makePong(":prefix PING"));
-		assertEquals("PONG ", makePong(":pre   PING "));
-		assertEquals("pong", makePong("ping"));
-		assertEquals("pONg", makePong("pINg"));
-		assertEquals("PONG abc def", makePong("PING abc def"));
-		assertEquals("PONG :hello world", makePong("PING :hello world"));
-		assertEquals("PONG  two   :three four", makePong(":one  PING  two   :three four"));
+		String[][] cases = {
+			{null, ""},
+			{null, "PONG"},
+			{null, "PINGU"},
+			{null, " PING"},
+			{null, " :abc PING"},
+			{null, "PING:def"},
+			{null, "abc WHAT PING"},
+			{null, "STOPPING"},
+			{"PONG", "PING"},
+			{"PONG", ":prefix PING"},
+			{"PONG ", ":pre   PING "},
+			{"pong", "ping"},
+			{"pONg", "pINg"},
+			{"PONG abc def", "PING abc def"},
+			{"PONG :hello world", "PING :hello world"},
+			{"PONG  two   :three four", ":one  PING  two   :three four"},
+		};
+		for (String[] cs : cases)
+			assertEquals(cs[0], makePong(cs[1]));
 	}
 	
 	
