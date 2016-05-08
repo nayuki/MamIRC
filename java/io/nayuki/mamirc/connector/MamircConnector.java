@@ -40,10 +40,12 @@ public final class MamircConnector {
 			System.exit(1);
 		}
 		
-		// Prevent sqlite4java module from polluting stderr with debug messages
+		// Set logging levels
+		Utils.logger.setLevel(Level.INFO);
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		
 		// Load config and start connector
+		Utils.logger.info("MamIRC Connector starting");
 		File configFile = new File(args[0]);
 		BackendConfiguration config = new BackendConfiguration(configFile);
 		new MamircConnector(config);
@@ -85,11 +87,11 @@ public final class MamircConnector {
 		// Initialize database logger and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();  // Execute on current thread, not new thread
-		System.err.println("Database opened");
+		Utils.logger.info("Database opened");
 		
 		// Listen for an incoming processor
 		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
-		System.err.println("Listening on port " + config.connectorServerPort);
+		Utils.logger.info("Listening on port " + config.connectorServerPort);
 		
 		// Finish the start-up
 		databaseLogger.start();
@@ -105,7 +107,7 @@ public final class MamircConnector {
 			}
 		};
 		connectionPinger.start();
-		System.err.println("Connector ready");
+		Utils.logger.info("Connector ready");
 	}
 	
 	
@@ -163,7 +165,7 @@ public final class MamircConnector {
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info == null)
-			System.err.println("Warning: Connection " + conId + " does not exist");
+			Utils.logger.info("Warning: Connection " + conId + " does not exist");
 		else {
 			postEvent(info, Event.Type.CONNECTION, new CleanLine("disconnect"));
 			info.reader.terminate();
@@ -212,7 +214,7 @@ public final class MamircConnector {
 			postEvent(info, Event.Type.SEND, line);
 			info.writer.postWrite(line);
 		} else
-			System.err.println("Warning: Connection " + conId + " does not exist");
+			Utils.logger.info("Warning: Connection " + conId + " does not exist");
 	}
 	
 	
@@ -223,7 +225,7 @@ public final class MamircConnector {
 		synchronized(this) {
 			if (reader != processorReader)
 				return;
-			System.err.println("Connector terminating");
+			Utils.logger.info("Connector terminating");
 			
 			toWait = new ServerReaderThread[serverConnections.size()];
 			int i = 0;

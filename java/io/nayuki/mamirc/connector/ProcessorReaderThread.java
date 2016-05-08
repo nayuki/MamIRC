@@ -137,7 +137,7 @@ final class ProcessorReaderThread extends Thread {
 				master.sendMessage(Integer.parseInt(parts[1]), new CleanLine(payload, false), this);
 				
 			} else {
-				System.err.println("Unknown line from processor: " + lineStr);
+				Utils.logger.warning("Unknown line from processor: " + lineStr);
 			}
 		} catch (IllegalArgumentException e) {}
 	}

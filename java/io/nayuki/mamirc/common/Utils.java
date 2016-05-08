@@ -9,6 +9,7 @@
 package io.nayuki.mamirc.common;
 
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 
@@ -47,6 +48,10 @@ public final class Utils {
 		else
 			throw new IllegalArgumentException("Invalid TCP port number: " + port);
 	}
+	
+	
+	// Logger for events and debugging.
+	public static final Logger logger = Logger.getLogger("io.nayuki.mamirc");
 	
 	
 	// Not instantiable.
