@@ -69,7 +69,7 @@ final class ProcessorReaderThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() {
+	protected void runInner() throws IOException {
 		OutputWriterThread writer = null;
 		try {
 			// Set up the authentication timeout
@@ -109,7 +109,7 @@ final class ProcessorReaderThread extends WorkerThread {
 					master.detachProcessor(this);
 				}
 			}
-		} catch (IOException e) {}
+		}
 		finally {  // Clean up
 			if (writer != null) {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer

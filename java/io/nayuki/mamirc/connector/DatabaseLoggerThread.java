@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
@@ -107,7 +108,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	}
 	
 	
-	protected void runInner() {
+	protected void runInner() throws InterruptedException {
 		if (database == null)
 			throw new IllegalStateException();
 		database = new SQLiteConnection(databaseFile);
@@ -124,19 +125,14 @@ final class DatabaseLoggerThread extends WorkerThread {
 			lock.lock();
 			try {
 				while (processBatchOfEvents());
-			} catch (SQLiteException e) {
-				e.printStackTrace();
 			} finally {
 				queue = null;
 				lock.unlock();
 			}
-			
-		// Clean up
-		} catch (SQLiteException e) {
-			e.printStackTrace();
+		}
+		catch (SQLiteException e) {
+			Utils.logger.log(Level.SEVERE, "Database error", e);
 			System.exit(1);
-		} catch (InterruptedException e) {  // Should not happen
-			e.printStackTrace();
 		}
 		finally {
 			database.dispose();  // Automatically disposes its associated statements

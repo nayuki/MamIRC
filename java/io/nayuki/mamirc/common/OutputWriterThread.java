@@ -43,7 +43,7 @@ public final class OutputWriterThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() {
+	protected void runInner() throws IOException, InterruptedException {
 		try {
 			byte[] buf = new byte[1024];  // Allocate buffer outside of loop for efficiency
 			while (true) {
@@ -60,8 +60,7 @@ public final class OutputWriterThread extends WorkerThread {
 				System.arraycopy(newline, 0, buf, b.length, newline.length);
 				output.write(buf, 0, totalLen);
 			}
-		} catch (IOException e) {}
-		catch (InterruptedException e) {}
+		}
 		finally {  // Clean up
 			try {
 				output.close();

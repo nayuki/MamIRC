@@ -1,5 +1,6 @@
 package io.nayuki.mamirc.common;
 
+import java.io.IOException;
 import java.util.logging.Level;
 
 
@@ -25,8 +26,12 @@ public abstract class WorkerThread extends Thread {
 		Utils.logger.fine(getClassName() + " started: id=" + getId());
 		try {
 			runInner();
-			
-		} catch (Throwable e) {
+		}
+		catch (IOException e) {  // A very normal occurrence
+			String s = String.format("I/O exception occurred: threadId=%d msg=%s", getId(), e.getMessage());
+			Utils.logger.log(Level.INFO, s, e);
+		}
+		catch (Throwable e) {  // Generally indicates a bug in the application logic
 			String s = String.format("%s encountered uncaught exception: id=%d, type=%s, msg=%s",
 				getClassName(), getId(), e.getClass().getName(), e.getMessage());
 			Utils.logger.log(Level.WARNING, s, e);

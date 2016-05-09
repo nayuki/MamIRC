@@ -69,7 +69,7 @@ final class ServerReaderThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() {
+	protected void runInner() throws IOException {
 		socket = new Socket();
 		OutputWriterThread writer = null;
 		try {
@@ -96,7 +96,7 @@ final class ServerReaderThread extends WorkerThread {
 				if (valid)  // Ignore lines containing NUL character, disallowed by IRC RFC 1459
 					master.receiveMessage(connectionId, new CleanLine(line, false));
 			}
-		} catch (IOException e) {}
+		}
 		finally {  // Clean up the connection
 			master.connectionClosed(connectionId);
 			terminate();

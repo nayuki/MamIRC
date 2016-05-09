@@ -49,16 +49,14 @@ final class ProcessorListenerThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() {
+	protected void runInner() throws IOException, InterruptedException {
 		try {
 			while (true) {
 				Socket sock = serverSocket.accept();
 				new ProcessorReaderThread(master, sock, password).start();
 				Thread.sleep(100);  // Safety delay
 			}
-		} catch (IOException e) {}
-		catch (InterruptedException e) {}
-		finally {  // Clean up
+		} finally {  // Clean up
 			terminate();
 		}
 	}
