@@ -11,6 +11,8 @@ package io.nayuki.mamirc.connector;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
@@ -70,8 +72,12 @@ final class ProcessorReaderThread extends Thread {
 		OutputWriterThread writer = null;
 		try {
 			// Set up the authentication timeout
-			Thread killer = new KillerThread();
-			killer.start();
+			TimerTask killer = new TimerTask() {
+				public void run() {
+					terminate();
+				}
+			};
+			timer.schedule(killer, AUTHENTICATION_TIMEOUT);
 			
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
@@ -86,7 +92,7 @@ final class ProcessorReaderThread extends Thread {
 			
 			// Read action line
 			String actionLine = Utils.fromUtf8(reader.readLine());
-			killer.interrupt();  // Killer is no longer needed, now that we have read the lines
+			killer.cancel();  // Killer is no longer needed, now that we have read the lines
 			if (actionLine.equals("list-connections")) {
 				master.listConnectionsToProcessor(writer);
 			} else if (actionLine.equals("attach")) {
@@ -165,15 +171,8 @@ final class ProcessorReaderThread extends Thread {
 	}
 	
 	
-	private static final int AUTHENTICATION_TIMEOUT = 3000;  // In milliseconds
+	private static Timer timer = new Timer(true);
 	
-	private final class KillerThread extends Thread {
-		public void run() {
-			try {
-				Thread.sleep(AUTHENTICATION_TIMEOUT);
-				terminate();  // Will not be called if sleep is interrupted
-			} catch (InterruptedException e) {}
-		}
-	}
+	private static final int AUTHENTICATION_TIMEOUT = 3000;  // In milliseconds
 	
 }
