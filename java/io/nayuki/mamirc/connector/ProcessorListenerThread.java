@@ -13,6 +13,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
@@ -21,7 +22,7 @@ import io.nayuki.mamirc.common.Utils;
  * This class implements rate-limiting to prevent denial-of-service attacks (but because the socket only listens
  * to localhost, the attacker would be another process running by this user, or another user on this machine).
  */
-final class ProcessorListenerThread extends Thread {
+final class ProcessorListenerThread extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -48,7 +49,7 @@ final class ProcessorListenerThread extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() {
 		try {
 			while (true) {
 				Socket sock = serverSocket.accept();

@@ -19,7 +19,7 @@ import java.util.concurrent.BlockingQueue;
  * This class exists because write operations might block with large and varying delay (especially in low-bandwidth or
  * high-loss environments), but the thread that requested the write operation wants to continue processing more data.
  */
-public final class OutputWriterThread extends Thread {
+public final class OutputWriterThread extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -32,6 +32,7 @@ public final class OutputWriterThread extends Thread {
 	
 	// Can customize the newline sequence as "\n", "\r\n", etc.
 	public OutputWriterThread(OutputStream out, byte[] newline) {
+		super("OutputWriterThread");
 		if (out == null || newline == null)
 			throw new NullPointerException();
 		output = out;
@@ -42,7 +43,7 @@ public final class OutputWriterThread extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() {
 		try {
 			byte[] buf = new byte[1024];  // Allocate buffer outside of loop for efficiency
 			while (true) {

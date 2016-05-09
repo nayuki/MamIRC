@@ -20,6 +20,7 @@ import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
@@ -28,7 +29,7 @@ import io.nayuki.mamirc.common.Utils;
  * - Implements delays to cluster writes together and avoid writing too frequently
  * - Can synchronously flush queued events so that other readers can see the data
  */
-final class DatabaseLoggerThread extends Thread {
+final class DatabaseLoggerThread extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -106,7 +107,7 @@ final class DatabaseLoggerThread extends Thread {
 	}
 	
 	
-	public void run() {
+	protected void runInner() {
 		if (database == null)
 			throw new IllegalStateException();
 		database = new SQLiteConnection(databaseFile);

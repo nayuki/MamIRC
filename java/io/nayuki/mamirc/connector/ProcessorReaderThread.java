@@ -17,6 +17,7 @@ import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
@@ -44,7 +45,7 @@ import io.nayuki.mamirc.common.Utils;
  * - Because fields are space-separated, only the last field might contain spaces.
  *   Even then, it needs to be explicitly allowed by the documentation above.
  */
-final class ProcessorReaderThread extends Thread {
+final class ProcessorReaderThread extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -68,7 +69,7 @@ final class ProcessorReaderThread extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() {
 		OutputWriterThread writer = null;
 		try {
 			// Set up the authentication timeout

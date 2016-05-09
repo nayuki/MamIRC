@@ -23,6 +23,7 @@ import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
@@ -32,7 +33,7 @@ import io.nayuki.mamirc.common.Utils;
  * - Creates and terminates a writer thread
  * - Handles SSL functionality
  */
-final class ServerReaderThread extends Thread {
+final class ServerReaderThread extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -68,7 +69,7 @@ final class ServerReaderThread extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() {
 		socket = new Socket();
 		OutputWriterThread writer = null;
 		try {
