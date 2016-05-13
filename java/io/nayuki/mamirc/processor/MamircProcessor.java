@@ -629,7 +629,6 @@ public final class MamircProcessor {
 	private void joinChannelsByProfile(int conId) {
 		IrcSession state = ircSessions.get(conId);
 		IrcNetwork profile = state.profile;
-		System.out.println("joinChannelsByProfile");
 		for (String chanStr : profile.channels) {
 			String[] parts = chanStr.split(" ", 2);  // Optional second part is the channel key
 			if (!state.getCurrentChannels().containsKey(parts[0]))
