@@ -135,7 +135,7 @@ final class ProcessorReaderThread extends WorkerThread {
 		
 		try {
 			if (cmd.equals("terminate") && parts.length == 1) {
-				master.terminateConnector(this);
+				master.terminateConnector("Explicit command received from processor connection");
 				
 			} else if (cmd.equals("connect") && parts.length == 5) {
 				if (!(parts[3].equals("true") || parts[3].equals("false")))

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.logging.Level;
 import io.nayuki.mamirc.common.Utils;
 import io.nayuki.mamirc.common.WorkerThread;
 
@@ -49,24 +50,18 @@ final class ProcessorListenerThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() throws IOException, InterruptedException {
+	protected void runInner() {
 		try {
 			while (true) {
 				Socket sock = serverSocket.accept();
 				new ProcessorReaderThread(master, sock, password).start();
 				Thread.sleep(100);  // Safety delay
 			}
-		} finally {  // Clean up
-			terminate();
+		} catch (Throwable e) {
+			// This is the only way to exit the loop. The flow control is equivalent to 'finally', but we can retrieve the exception.
+			Utils.logger.log(Level.WARNING, "ProcessorListenerThread unhandled exception", e);
+			master.terminateConnector("ProcessorListenerThread fault");
 		}
-	}
-	
-	
-	// Can be called from any thread, and is idempotent.
-	public void terminate() {
-		try {
-			serverSocket.close();
-		} catch (IOException e) {}
 	}
 	
 }

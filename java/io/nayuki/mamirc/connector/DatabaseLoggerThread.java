@@ -39,9 +39,9 @@ final class DatabaseLoggerThread extends WorkerThread {
 	private final Lock lock;
 	// The preferred convenient way to use the lock.
 	private final LockHelper locker;
-	// await() by this worker; signal() upon {queue non-empty OR flush request's rising edge OR terminate request's rising edge}.
+	// await() by this worker; signal() upon {queue non-empty OR flush request's rising edge}.
 	private final Condition condAll;
-	// await() by this worker; signal() upon {flush request's rising edge OR terminate request's rising edge}.
+	// await() by this worker; signal() upon flush request's rising edge.
 	private final Condition condUrgent;
 	// await() by caller of flushQueue(); signal() by this worker when all queue items at time of flushQueue() call
 	// have been written and committed to database. no new items can be added while flushQueue() blocks because
@@ -126,20 +126,18 @@ final class DatabaseLoggerThread extends WorkerThread {
 			insertEvent       = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
 			
 			// Process incoming event objects
-			try (LockHelper lk = locker.enter()) {
-				try {
-					while (processBatchOfEvents());
-				} finally {
-					queue = null;
-				}
-			}
+			lock.lock();
+			while (!queue.isEmpty() || !terminateRequested)
+				processBatchOfEvents();
+			// Lock is still held while cleaning up and terminating
 		}
 		catch (SQLiteException e) {
 			Utils.logger.log(Level.SEVERE, "Database error", e);
-			System.exit(1);
 		}
 		finally {
 			database.dispose();  // Automatically disposes its associated statements
+			Utils.logger.info("MamIRC Connector terminating");
+			System.exit(1);  // The one and only way to terminate a MamircConnector processor
 		}
 	}
 	
@@ -147,7 +145,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	private static final int WRITE_DELAY = 10000;  // In milliseconds
 	
 	// Must hold 'lock' before and after the method call.
-	private boolean processBatchOfEvents() throws SQLiteException, InterruptedException {
+	private void processBatchOfEvents() throws SQLiteException, InterruptedException {
 		// Wait for something to do
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
@@ -166,7 +164,6 @@ final class DatabaseLoggerThread extends WorkerThread {
 			Utils.logger.finest("Wrote all pending events to database");
 			flushRequested = false;
 			condFlushed.signal();
-			return !terminateRequested;
 			
 		} else {
 			// Wait to gather a burst of messages
@@ -193,8 +190,6 @@ final class DatabaseLoggerThread extends WorkerThread {
 			} finally {
 				lock.lock();
 			}
-			// At this point, the queue may be non-empty and the flags may have changed
-			return true;  // Re-evaluate the full situation even if termination is requested
 		}
 	}
 	
@@ -237,14 +232,12 @@ final class DatabaseLoggerThread extends WorkerThread {
 	}
 	
 	
-	// Asynchronously requests this worker thread to flush all data and terminate.
-	// Can be called from any thread, but should only be called from the connector object.
+	// Asynchronously requests this worker thread to flush all pending data and terminate the entire application.
+	// Should only be called by MamircConnector.terminateConnector() and nothing else.
 	public void terminate() {
 		try (LockHelper lh = locker.enter()) {
 			terminateRequested = true;
-			flushRequested = true;
-			condAll.signal();
-			condUrgent.signal();
+			flushQueue();
 		}
 	}
 	

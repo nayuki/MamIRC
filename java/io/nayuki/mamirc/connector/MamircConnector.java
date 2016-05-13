@@ -228,35 +228,9 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread.
-	public void terminateConnector(ProcessorReaderThread reader) {
-		Thread[] toWait;
-		connectionPinger.interrupt();
-		synchronized(this) {
-			if (reader != processorReader)
-				return;
-			Utils.logger.info("Connector terminating");
-			
-			toWait = new ServerReaderThread[serverConnections.size()];
-			int i = 0;
-			for (int conId : serverConnections.keySet()) {
-				toWait[i] = serverConnections.get(conId).reader;
-				disconnectServer(conId, processorReader);
-				i++;
-			}
-			
-			if (processorReader != null) {
-				processorReader.terminate();
-				processorReader = null;
-				processorWriter = null;
-			}
-			processorListener.terminate();
-		}
-		
-		try {
-			for (Thread th : toWait)
-				th.join();
-		} catch (InterruptedException e) {}
+	public void terminateConnector(String reason) {
+		Utils.logger.info("Application termination requested: " + reason);
+		// The DatabaseLoggerThread is solely responsible for terminating the entire application
 		databaseLogger.terminate();
 	}
 	
