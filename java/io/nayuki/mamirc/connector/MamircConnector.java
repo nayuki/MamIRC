@@ -15,6 +15,8 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
@@ -41,13 +43,18 @@ public final class MamircConnector {
 		}
 		
 		// Set logging levels
-		Utils.logger.setLevel(Level.INFO);
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
+		Utils.logger.setLevel(Level.INFO);
+		Handler ch = new ConsoleHandler();
+		ch.setLevel(Level.ALL);
+		Utils.logger.setUseParentHandlers(false);
+		Utils.logger.addHandler(ch);
 		
 		// Load config and start connector
 		Utils.logger.info("MamIRC Connector starting");
 		File configFile = new File(args[0]);
 		BackendConfiguration config = new BackendConfiguration(configFile);
+		Utils.logger.info("Configuration file parsed");
 		new MamircConnector(config);
 		// The main thread returns, while other threads live on
 	}
@@ -87,7 +94,7 @@ public final class MamircConnector {
 		// Initialize database logger and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();  // Execute on current thread, not new thread
-		Utils.logger.info("Database opened");
+		Utils.logger.info("Database file opened");
 		
 		// Listen for an incoming processor
 		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
@@ -132,6 +139,7 @@ public final class MamircConnector {
 			processorReader.terminate();  // Asynchronous termination
 		processorReader = reader;
 		processorWriter = writer;
+		Utils.logger.info("Processor attached");
 		listConnectionsToProcessor(writer);
 		processorWriter.postWrite("live-events");
 	}
@@ -199,6 +207,7 @@ public final class MamircConnector {
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		postEvent(info, Event.Type.RECEIVE, line);
+		Utils.logger.finest("Receive line from IRC server");
 		byte[] pong = makePongIfPing(line.getDataNoCopy());
 		if (pong != null)
 			sendMessage(conId, new CleanLine(pong, false), processorReader);
@@ -212,6 +221,7 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info != null && info.writer != null) {
 			postEvent(info, Event.Type.SEND, line);
+			Utils.logger.finest("Send line to IRC server");
 			info.writer.postWrite(line);
 		} else
 			Utils.logger.info("Warning: Connection " + conId + " does not exist");
@@ -279,6 +289,8 @@ public final class MamircConnector {
 		// From surveying ~5 different IRC servers, it appears that sending a blank line is always safely ignored.
 		// (However, some servers give an error response to a whitespace-only line consisting of one or more spaces.)
 		// This pseudo-ping is more lightweight than sending a real IRC PING command, and justifies the lack of logging.
+		if (Utils.logger.isLoggable(Level.FINEST))
+			Utils.logger.finest("Sending blank line to " + serverConnections.size() + " IRC server connections");
 		for (ConnectionInfo info : serverConnections.values()) {
 			if (info.writer != null)
 				info.writer.postWrite(BLANK_LINE);

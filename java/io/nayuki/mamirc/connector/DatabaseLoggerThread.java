@@ -147,6 +147,11 @@ final class DatabaseLoggerThread extends WorkerThread {
 		// Wait for something to do
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
+		if (Utils.logger.isLoggable(Level.FINEST)) {
+			Utils.logger.finest(String.format(
+				"Database thread awoke: queue.size()=%d, flushRequested=%b, terminateRequested=%b",
+				queue.size(), flushRequested, terminateRequested));
+		}
 		
 		if (flushRequested || terminateRequested) {
 			// Drain the queue straightforwardly
@@ -154,6 +159,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 			while (!queue.isEmpty())
 				insertEventIntoDb(queue.remove());
 			Utils.stepStatement(commitTransaction, false);
+			Utils.logger.finest("Wrote all pending events to database");
 			flushRequested = false;
 			condFlushed.signal();
 			return !terminateRequested;
@@ -179,6 +185,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 				for (Event ev : events)
 					insertEventIntoDb(ev);
 				Utils.stepStatement(commitTransaction, false);
+				Utils.logger.finest("Wrote events to database: count=" + events.length);
 			} finally {
 				lock.lock();
 			}

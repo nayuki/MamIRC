@@ -28,13 +28,13 @@ public abstract class WorkerThread extends Thread {
 			runInner();
 		}
 		catch (IOException e) {  // A very normal occurrence
-			String s = String.format("I/O exception occurred: threadId=%d msg=%s", getId(), e.getMessage());
-			Utils.logger.log(Level.INFO, s, e);
+			Utils.logger.log(Level.INFO, "Minor I/O exception occurred", e);
 		}
-		catch (Throwable e) {  // Generally indicates a bug in the application logic
-			String s = String.format("%s encountered uncaught exception: id=%d, type=%s, msg=%s",
-				getClassName(), getId(), e.getClass().getName(), e.getMessage());
-			Utils.logger.log(Level.WARNING, s, e);
+		catch (AssertionError|IllegalArgumentException|NullPointerException e) {
+			Utils.logger.log(Level.SEVERE, "Potential bug in application logic", e);
+		}
+		catch (Throwable e) {  // All unrecognized throwables, which may or may not be relevant
+			Utils.logger.log(Level.WARNING, "Uncaught exception occurred", e);
 		}
 		Utils.logger.fine(getClassName() + " ended: id=" + getId());
 	}

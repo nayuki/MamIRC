@@ -76,6 +76,7 @@ final class ProcessorReaderThread extends WorkerThread {
 			TimerTask killer = new TimerTask() {
 				public void run() {
 					terminate();
+					Utils.logger.warning("Processor connection request timeout");
 				}
 			};
 			timer.schedule(killer, AUTHENTICATION_TIMEOUT);
@@ -83,8 +84,11 @@ final class ProcessorReaderThread extends WorkerThread {
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
 			byte[] passwordLine = reader.readLine();  // First line, thus not null
-			if (!equalsTimingSafe(passwordLine, password))
-				return;  // Authentication failure
+			if (!equalsTimingSafe(passwordLine, password)) {
+				Utils.logger.warning("Processor connection incorrect password");
+				return;
+			}
+			Utils.logger.info("Processor connection successfully authenticated");
 			
 			// Launch writer thread
 			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
@@ -123,6 +127,7 @@ final class ProcessorReaderThread extends WorkerThread {
 	
 	
 	private void handleLine(byte[] line) {
+		Utils.logger.finest("Received command from Processor connection");
 		String lineStr = Utils.fromUtf8(line);
 		String[] parts = lineStr.split(" ", 5);  // At most 5 parts in the current format
 		String cmd = parts[0];
