@@ -15,6 +15,8 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -77,7 +79,7 @@ public final class MamircConnector {
 	// Singleton threads
 	private final DatabaseLoggerThread databaseLogger;
 	private final ProcessorListenerThread processorListener;
-	private final Thread connectionPinger;
+	final Timer timer;  // Shared timer usable by any MamircConnector component
 	
 	
 	
@@ -103,17 +105,12 @@ public final class MamircConnector {
 		// Launch the worker threads, if no fatal exceptions were thrown above
 		databaseLogger.start();
 		processorListener.start();
-		connectionPinger = new Thread("connectionPinger") {
+		timer = new Timer();
+		timer.schedule(new TimerTask() {
 			public void run() {
-				try {
-					while (true) {
-						pingConnections();
-						Thread.sleep(20000);
-					}
-				} catch (InterruptedException e) {}
+				pingConnections();
 			}
-		};
-		connectionPinger.start();
+		}, 20000, 20000);
 		Utils.logger.info("Connector ready");
 	}
 	

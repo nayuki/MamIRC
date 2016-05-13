@@ -11,7 +11,6 @@ package io.nayuki.mamirc.connector;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.Timer;
 import java.util.TimerTask;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.LineReader;
@@ -77,7 +76,7 @@ final class ProcessorReaderThread extends WorkerThread {
 				Utils.logger.warning("Processor connection request timeout");
 			}
 		};
-		timer.schedule(killer, AUTHENTICATION_TIMEOUT);
+		master.timer.schedule(killer, AUTHENTICATION_TIMEOUT);
 		
 		OutputWriterThread writer = null;
 		try {
@@ -177,8 +176,6 @@ final class ProcessorReaderThread extends WorkerThread {
 		return diff == 0;
 	}
 	
-	
-	private static Timer timer = new Timer(true);
 	
 	private static final int AUTHENTICATION_TIMEOUT = 3000;  // In milliseconds
 	
