@@ -70,17 +70,17 @@ final class ProcessorReaderThread extends WorkerThread {
 	/*---- Methods ----*/
 	
 	protected void runInner() throws IOException {
+		// Set up the authentication timeout
+		TimerTask killer = new TimerTask() {
+			public void run() {
+				terminate();
+				Utils.logger.warning("Processor connection request timeout");
+			}
+		};
+		timer.schedule(killer, AUTHENTICATION_TIMEOUT);
+		
 		OutputWriterThread writer = null;
 		try {
-			// Set up the authentication timeout
-			TimerTask killer = new TimerTask() {
-				public void run() {
-					terminate();
-					Utils.logger.warning("Processor connection request timeout");
-				}
-			};
-			timer.schedule(killer, AUTHENTICATION_TIMEOUT);
-			
 			// Read password line
 			LineReader reader = new LineReader(socket.getInputStream());
 			byte[] passwordLine = reader.readLine();  // First line, thus not null
@@ -97,7 +97,7 @@ final class ProcessorReaderThread extends WorkerThread {
 			
 			// Read action line
 			String actionLine = Utils.fromUtf8(reader.readLine());
-			killer.cancel();  // Killer is no longer needed, now that we have read the lines
+			killer.cancel();  // Killer is no longer needed, now that we know whether the processor stays or leaves
 			if (actionLine.equals("list-connections")) {
 				master.listConnectionsToProcessor(writer);
 			} else if (actionLine.equals("attach")) {
@@ -115,6 +115,7 @@ final class ProcessorReaderThread extends WorkerThread {
 			}
 		}
 		finally {  // Clean up
+			killer.cancel();
 			if (writer != null) {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
 				try {

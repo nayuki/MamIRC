@@ -111,9 +111,10 @@ final class ServerReaderThread extends WorkerThread {
 	// and OutputWriterThread to terminate cleanly very soon. Can be called from any thread, and is idempotent.
 	// However, this method must not be called if this worker has not called master.connectionOpened().
 	public void terminate() {
+		if (socket == null)
+			throw new IllegalStateException();
 		try {
-			if (socket != null)
-				socket.close();
+			socket.close();
 		} catch (IOException e) {}
 	}
 	

@@ -83,8 +83,8 @@ public final class MamircConnector {
 	
 	/*---- Constructor ----*/
 	
-	// This constructor launches a bunch of worker threads and returns immediately.
-	// If initialization failed, the new threads are terminated and an exception is thrown.
+	// This constructor performs as much work as possible on the
+	// caller's thread. Then it launches a bunch of worker threads.
 	public MamircConnector(BackendConfiguration config) throws IOException, SQLiteException {
 		// Initialize some fields
 		serverConnections = new HashMap<>();
@@ -93,14 +93,14 @@ public final class MamircConnector {
 		
 		// Initialize database logger and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
-		nextConnectionId = databaseLogger.initAndGetNextConnectionId();  // Execute on current thread, not new thread
+		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
 		Utils.logger.info("Database file opened");
 		
-		// Listen for an incoming processor
+		// Create socket to listen for an incoming processor
 		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
 		Utils.logger.info("Listening on port " + config.connectorServerPort);
 		
-		// Finish the start-up
+		// Launch the worker threads, if no fatal exceptions were thrown above
 		databaseLogger.start();
 		processorListener.start();
 		connectionPinger = new Thread("connectionPinger") {

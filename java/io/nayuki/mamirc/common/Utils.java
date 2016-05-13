@@ -34,10 +34,14 @@ public final class Utils {
 	// Steps the given SQLite statement and checks whether the step should produce a result or not.
 	// Additionally if no result is expected, the statement is immediately reset (for easier reuse).
 	public static void stepStatement(SQLiteStatement statement, boolean expectingResult) throws SQLiteException {
-		if (statement.step() != expectingResult)
-			throw new AssertionError();
-		if (!expectingResult)
+		boolean hasResult = statement.step();
+		if (expectingResult && !hasResult)
+			throw new AssertionError("Expected database row as result but got nothing");
+		else if (!expectingResult) {
+			if (hasResult)
+				throw new AssertionError("Expected nothing as result but got a database row");
 			statement.reset();
+		}
 	}
 	
 	
