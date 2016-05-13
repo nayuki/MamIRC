@@ -22,22 +22,23 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
-import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.BackendConfiguration;
+import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.common.Utils;
 
 
 /* 
- * The MamIRC connector main program class. The main thread creates a new MamircConnector object, launches a handful
- * of worker threads, and returns. Thereafter, the MamircConnector object holds the global state of the application,
- * always accessed with a mutex ('synchronized') from any one of the worker threads.
+ * The MamIRC Connector main program class. It launches a bunch of worker threads,
+ * and the one MamircConnector object holds the application state in its fields.
  */
 public final class MamircConnector {
 	
 	/*---- Stub main program ----*/
 	
+	// Performs some configuration, creates the MamircConnector object
+	// which launches worker threads, and then the main thread returns.
 	public static void main(String[] args) throws IOException, SQLiteException {
 		if (args.length != 1) {
 			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector BackendConfig.json");
@@ -58,25 +59,21 @@ public final class MamircConnector {
 		BackendConfiguration config = new BackendConfiguration(configFile);
 		Utils.logger.info("Configuration file parsed");
 		new MamircConnector(config);
-		// The main thread returns, while other threads live on
 	}
 	
 	
 	
 	/*---- Fields ----*/
 	
-	// All of these fields are shared global state. Any read/write access
-	// must be done while synchronized on this MamircConnector object!
-	
-	// Connections to remote IRC servers
+	// Connections to remote IRC servers, which need the mutex when accessed
+	private final Map<Integer,ConnectionInfo> serverConnections;  // Contents are mutable
 	private int nextConnectionId;
-	private final Map<Integer,ConnectionInfo> serverConnections;
 	
-	// Ephemeral threads
+	// Ephemeral threads, which need the mutex when accessed
 	private ProcessorReaderThread processorReader;
 	private OutputWriterThread processorWriter;
 	
-	// Singleton threads
+	// Singleton threads, which are always safe to access without synchronization
 	private final DatabaseLoggerThread databaseLogger;
 	private final ProcessorListenerThread processorListener;
 	final Timer timer;  // Shared timer usable by any MamircConnector component
@@ -88,12 +85,7 @@ public final class MamircConnector {
 	// This constructor performs as much work as possible on the
 	// caller's thread. Then it launches a bunch of worker threads.
 	public MamircConnector(BackendConfiguration config) throws IOException, SQLiteException {
-		// Initialize some fields
-		serverConnections = new HashMap<>();
-		processorReader = null;
-		processorWriter = null;
-		
-		// Initialize database logger and get next connection ID
+		// Initialize database writer and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
 		Utils.logger.info("Database file opened");
@@ -102,7 +94,12 @@ public final class MamircConnector {
 		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
 		Utils.logger.info("Listening on port " + config.connectorServerPort);
 		
-		// Launch the worker threads, if no fatal exceptions were thrown above
+		// Initialize other mutable fields, if no fatal exceptions were thrown above
+		serverConnections = new HashMap<>();
+		processorReader = null;
+		processorWriter = null;
+		
+		// Launch the worker threads
 		databaseLogger.start();
 		processorListener.start();
 		timer = new Timer();
@@ -110,7 +107,7 @@ public final class MamircConnector {
 			public void run() {
 				pingConnections();
 			}
-		}, 20000, 20000);
+		}, PING_INTERVAL, PING_INTERVAL);
 		Utils.logger.info("Connector ready");
 	}
 	
@@ -225,10 +222,11 @@ public final class MamircConnector {
 	}
 	
 	
-	public void terminateConnector(String reason) {
+	public synchronized void terminateConnector(String reason) {
 		Utils.logger.info("Application termination requested: " + reason);
 		// The DatabaseLoggerThread is solely responsible for terminating the entire application
 		databaseLogger.terminate();
+		throw new AssertionError("Unreachable");
 	}
 	
 	
@@ -269,6 +267,8 @@ public final class MamircConnector {
 	}
 	
 	private static final CleanLine BLANK_LINE = new CleanLine("");
+	
+	private static final int PING_INTERVAL = 20000;
 	
 	
 	// If the given line is a PING command, then this returns a new byte array containing an appropriate PONG response.
