@@ -20,6 +20,7 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.LockHelper;
 import io.nayuki.mamirc.common.Utils;
 import io.nayuki.mamirc.common.WorkerThread;
 
@@ -36,6 +37,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 	
 	// The mutex that protects all shared data accesses.
 	private final Lock lock;
+	// The preferred convenient way to use the lock.
+	private final LockHelper locker;
 	// await() by this worker; signal() upon {queue non-empty OR flush request's rising edge OR terminate request's rising edge}.
 	private final Condition condAll;
 	// await() by this worker; signal() upon {flush request's rising edge OR terminate request's rising edge}.
@@ -69,6 +72,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 		databaseFile = file;
 		
 		lock = new ReentrantLock();
+		locker = new LockHelper(lock);
 		condAll     = lock.newCondition();
 		condUrgent  = lock.newCondition();
 		condFlushed = lock.newCondition();
@@ -122,12 +126,12 @@ final class DatabaseLoggerThread extends WorkerThread {
 			insertEvent       = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
 			
 			// Process incoming event objects
-			lock.lock();
-			try {
-				while (processBatchOfEvents());
-			} finally {
-				queue = null;
-				lock.unlock();
+			try (LockHelper lk = locker.enter()) {
+				try {
+					while (processBatchOfEvents());
+				} finally {
+					queue = null;
+				}
 			}
 		}
 		catch (SQLiteException e) {
@@ -209,12 +213,9 @@ final class DatabaseLoggerThread extends WorkerThread {
 	public void postEvent(Event event) {
 		if (event == null)
 			throw new NullPointerException();
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			queue.add(event);
 			condAll.signal();
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -222,8 +223,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	// Synchronously requests the worker thread to write and commit all queued events to
 	// the database, blocking until finished. Should only be called from the connector object.
 	public void flushQueue() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (flushRequested)
 				throw new IllegalStateException();
 			flushRequested = true;
@@ -233,8 +233,6 @@ final class DatabaseLoggerThread extends WorkerThread {
 			while (flushRequested);
 			if (!queue.isEmpty())
 				throw new IllegalStateException();
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -242,14 +240,11 @@ final class DatabaseLoggerThread extends WorkerThread {
 	// Asynchronously requests this worker thread to flush all data and terminate.
 	// Can be called from any thread, but should only be called from the connector object.
 	public void terminate() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			terminateRequested = true;
 			flushRequested = true;
 			condAll.signal();
 			condUrgent.signal();
-		} finally {
-			lock.unlock();
 		}
 	}
 	

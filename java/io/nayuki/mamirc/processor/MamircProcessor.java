@@ -30,6 +30,7 @@ import java.util.logging.Logger;
 import io.nayuki.mamirc.common.CleanLine;
 import io.nayuki.mamirc.common.BackendConfiguration;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.LockHelper;
 import io.nayuki.mamirc.common.OutputWriterThread;
 import io.nayuki.mamirc.processor.IrcSession.RegState;
 import io.nayuki.mamirc.processor.UserConfiguration.IrcNetwork;
@@ -78,6 +79,7 @@ public final class MamircProcessor {
 	
 	// Concurrency
 	private final Lock lock;
+	private final LockHelper locker;
 	private final Condition condNewUpdates;
 	private final Condition condTerminate;
 	
@@ -99,6 +101,7 @@ public final class MamircProcessor {
 		connectionAttemptState = new HashMap<>();
 		isTerminating = false;
 		lock = new ReentrantLock();
+		locker = new LockHelper(lock);
 		condNewUpdates = lock.newCondition();
 		condTerminate = lock.newCondition();
 		
@@ -123,15 +126,12 @@ public final class MamircProcessor {
 		// Refresh all channel names on all connections once a day
 		timer.schedule(new TimerTask() {
 			public void run() {
-				lock.lock();
-				try {
+				try (LockHelper lh = locker.enter()) {
 					for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
 						int conId = entry.getKey();
 						for (String chan : entry.getValue().getCurrentChannels().keySet())
 							sendIrcLine(conId, "NAMES", chan);
 					}
-				} finally {
-					lock.unlock();
 				}
 			}
 		}, 86400000, 86400000);
@@ -144,8 +144,7 @@ public final class MamircProcessor {
 	public void processEvent(Event ev, boolean realtime) {
 		if (ev == null)
 			throw new NullPointerException();
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			switch (ev.type) {
 				case CONNECTION:
 					processConnection(ev, realtime);
@@ -161,8 +160,6 @@ public final class MamircProcessor {
 			}
 		} catch (IrcSyntaxException e) {
 			e.printStackTrace();
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -513,8 +510,7 @@ public final class MamircProcessor {
 	
 	// Must only be called from ConnectorReaderThread, and only called once.
 	public void finishCatchup() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			Set<IrcNetwork> activeProfiles = new HashSet<>();
 			for (int conId : ircSessions.keySet()) {
 				IrcSession state = ircSessions.get(conId);
@@ -565,8 +561,6 @@ public final class MamircProcessor {
 				if (net.connect && !activeProfiles.contains(net))
 					tryConnect(net);
 			}
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -582,8 +576,7 @@ public final class MamircProcessor {
 		
 		timer.schedule(new TimerTask() {
 			public void run() {
-				lock.lock();
-				try {
+				try (LockHelper lh = locker.enter()) {
 					if (isTerminating)
 						return;
 					for (IrcSession state : ircSessions.values()) {
@@ -604,8 +597,6 @@ public final class MamircProcessor {
 						if (attemptState[1] == 1000)
 							attemptState[1] *= 2;
 					}
-				} finally {
-					lock.unlock();
 				}
 			}
 		}, delay);
@@ -647,12 +638,9 @@ public final class MamircProcessor {
 			sendIrcLine(conId, "QUIT", "MamIRC, the headless IRC client");
 			timer.schedule(new TimerTask() {
 				public void run() {
-					lock.lock();
-					try {
+					try (LockHelper lh = locker.enter()) {
 						if (ircSessions.containsKey(conId))
 							sendDisconnect(conId, false);
-					} finally {
-						lock.unlock();
 					}
 				}
 			}, 1000);
@@ -662,20 +650,16 @@ public final class MamircProcessor {
 	
 	// Must only be called from ConnectorReaderThread, and only called once.
 	public void attachConnectorWriter(OutputWriterThread writer) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (this.writer != null)
 				throw new IllegalStateException();
 			this.writer = writer;
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void terminate() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (reader != null)
 				reader.terminate();
 			if (server != null)
@@ -687,8 +671,6 @@ public final class MamircProcessor {
 			condNewUpdates.signalAll();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -731,8 +713,7 @@ public final class MamircProcessor {
 	// The methods below should only be called from MessageHttpServer.
 	
 	public Map<String,Object> getState(int maxMsgPerWin) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			Map<String,Object> result = new HashMap<>();
 			
 			// States of current connections
@@ -797,8 +778,6 @@ public final class MamircProcessor {
 			result.put("initialWindow", initialWindow);
 			result.put("userConfiguration", userConfiguration.toJsonObject());
 			return result;
-		} finally {
-			lock.unlock();
 		}
 	}
 	
@@ -809,8 +788,7 @@ public final class MamircProcessor {
 	public Map<String,Object> getUpdates(int startId, int maxWait) {
 		if (maxWait < 0)
 			throw new IllegalArgumentException();
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (startId < 0 || startId > nextUpdateId)
 				return null;
 			
@@ -835,15 +813,12 @@ public final class MamircProcessor {
 				return result;
 			} else  // No overlap
 				return null;  // Tell the client to resynchronize
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public Map<String,Object> getProfiles() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			Map<String,Object> result = new HashMap<>();
 			for (Entry<String,IrcNetwork> entry : userConfiguration.ircNetworks.entrySet()) {
 				IrcNetwork inProfile = entry.getValue();
@@ -866,15 +841,12 @@ public final class MamircProcessor {
 				result.put(entry.getKey(), outProfile);
 			}
 			return result;
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void setProfiles(Map<String,IrcNetwork> newProfiles) throws IOException {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			userConfiguration.ircNetworks = newProfiles;
 			userConfiguration.writeToFile(userConfigurationFile);
 			
@@ -902,15 +874,12 @@ public final class MamircProcessor {
 				if (profile.connect && !activeProfileNames.contains(name))
 					tryConnect(profile);
 			}
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public boolean sendLine(String profile, String line) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			IrcSession session = null;
 			int conId = -1;
 			for (Map.Entry<Integer,IrcSession> entry : ircSessions.entrySet()) {
@@ -924,72 +893,52 @@ public final class MamircProcessor {
 				return false;
 			session.handleThrottledSendLine("send " + conId + " " + line, timer, lock, writer);
 			return true;
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void markRead(String profile, String party, int sequence) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			windows.windows.get(profile).get(party).markedReadUntil = sequence;
 			addUpdate("MARKREAD", profile, party, sequence);
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void clearLines(String profile, String party, int sequence) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			windows.getWindow(profile, party).clearUntil(sequence);
 			addUpdate("CLEARLINES", profile, party, sequence);
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void openWindow(String profile, String party) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (windows.openWindow(profile, party))
 				addUpdate("OPENWIN", profile, party);
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void closeWindow(String profile, String party) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			if (windows.closeWindow(profile, party))
 				addUpdate("CLOSEWIN", profile, party);
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public void setInitialWindow(String profile, String party) {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			initialWindow = Arrays.asList(profile, party);
-		} finally {
-			lock.unlock();
 		}
 	}
 	
 	
 	public int getNextUpdateId() {
-		lock.lock();
-		try {
+		try (LockHelper lh = locker.enter()) {
 			return nextUpdateId;
-		} finally {
-			lock.unlock();
 		}
 	}
 	
