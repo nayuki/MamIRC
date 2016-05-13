@@ -233,10 +233,10 @@ public final class MamircConnector {
 	// Logs the event to the database, and relays another copy to the currently attached processor.
 	// Must only be called from one of the synchronized methods above.
 	private void postEvent(ConnectionInfo info, Event.Type type, CleanLine line) {
-		Event ev = new Event(info.connectionId, info.nextSequence(), type, line);
+		Event ev = new Event(info.connectionId, info.nextSequence++, type, line);
 		if (processorWriter != null) {
 			try {
-				ByteArrayOutputStream bout = new ByteArrayOutputStream();
+				ByteArrayOutputStream bout = new ByteArrayOutputStream(line.getDataNoCopy().length + 40);
 				bout.write(Utils.toUtf8(String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal())));
 				bout.write(line.getDataNoCopy());
 				processorWriter.postWrite(new CleanLine(bout.toByteArray(), false));
@@ -314,13 +314,6 @@ public final class MamircConnector {
 			nextSequence = 0;
 			reader = null;
 			writer = null;
-		}
-		
-		
-		public int nextSequence() {
-			int result = nextSequence;
-			nextSequence++;
-			return result;
 		}
 		
 	}
