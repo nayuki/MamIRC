@@ -47,7 +47,7 @@ public final class Utils {
 	
 	// Returns the argument if it is in the range [0, 65535], otherwise throws an exception.
 	public static int checkPortNumber(int port) {
-		if (port >= 0 && port <= 0xFFFF)
+		if ((port & 0xFFFF) == port)
 			return port;
 		else
 			throw new IllegalArgumentException("Invalid TCP port number: " + port);

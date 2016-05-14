@@ -151,6 +151,6 @@ public final class LineReader {
 	
 	
 	// Same content as just byte[0], but usefully indicates that the next call will return null.
-	public static final byte[] BLANK_EOF = new byte[0];
+	public static final byte[] BLANK_EOF = {};
 	
 }

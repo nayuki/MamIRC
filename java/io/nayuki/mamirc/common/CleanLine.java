@@ -35,10 +35,8 @@ public final class CleanLine {
 	// This version is provided to avoid an allocation and copy if the byte array is known to be private.
 	public CleanLine(byte[] arr, boolean copy) {
 		if (arr == null)
-			throw new IllegalArgumentException();
-		if (copy)
-			arr = arr.clone();
-		data = arr;
+			throw new NullPointerException();
+		data = copy ? arr.clone() : arr;
 		for (byte b : data) {
 			if (b == '\0' || b == '\r' || b == '\n')
 				throw new IllegalArgumentException("Invalid characters in line");

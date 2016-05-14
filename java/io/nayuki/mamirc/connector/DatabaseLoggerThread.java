@@ -205,11 +205,11 @@ final class DatabaseLoggerThread extends WorkerThread {
 	
 	
 	// Should only be called from a thread currently executing in the MamircConnector object's context.
-	public void postEvent(Event event) {
-		if (event == null)
+	public void postEvent(Event ev) {
+		if (ev == null)
 			throw new NullPointerException();
 		try (LockHelper lh = locker.enter()) {
-			queue.add(event);
+			queue.add(ev);
 			condAll.signal();
 		}
 	}
