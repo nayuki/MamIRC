@@ -71,7 +71,7 @@ final class ServerReaderThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() throws IOException {
+	protected void runInner() throws IOException, InterruptedException {
 		socket = new Socket();
 		OutputWriterThread writer = null;
 		try {
@@ -103,8 +103,10 @@ final class ServerReaderThread extends WorkerThread {
 			master.connectionClosed(connectionId);
 			terminate();
 			socket = null;
-			if (writer != null)
+			if (writer != null) {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
+				writer.join();
+			}
 		}
 	}
 	

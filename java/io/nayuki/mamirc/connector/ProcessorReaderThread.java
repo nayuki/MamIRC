@@ -70,7 +70,7 @@ final class ProcessorReaderThread extends WorkerThread {
 	
 	/*---- Methods ----*/
 	
-	protected void runInner() throws IOException {
+	protected void runInner() throws IOException, InterruptedException {
 		// Set up the authentication timeout
 		TimerTask killer = new TimerTask() {
 			public void run() {
@@ -113,15 +113,15 @@ final class ProcessorReaderThread extends WorkerThread {
 				} finally {
 					master.detachProcessor(this);
 				}
+			} else {
+				Utils.logger.info("Unrecognized Processor action: " + actionLine);
 			}
 		}
 		finally {  // Clean up the connection
 			killer.cancel();
 			if (writer != null) {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
-				try {
-					writer.join();
-				} catch (InterruptedException e) {}
+				writer.join();
 			}
 			terminate();
 		}
@@ -153,7 +153,10 @@ final class ProcessorReaderThread extends WorkerThread {
 			} else {
 				Utils.logger.warning("Unknown line from processor: " + lineStr);
 			}
-		} catch (IllegalArgumentException e) {}
+		}
+		catch (IllegalArgumentException e) {
+			Utils.logger.warning("Invalid line format from Processor: " + lineStr);
+		}
 	}
 	
 	
