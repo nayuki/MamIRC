@@ -9,6 +9,8 @@
 package io.nayuki.mamirc.connector;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import java.util.Arrays;
 import org.junit.Test;
 import io.nayuki.mamirc.common.Utils;
 
@@ -45,6 +47,22 @@ public final class MamircConnectorTest {
 			return null;
 		else
 			return Utils.fromUtf8(b);
+	}
+	
+	
+	@Test public void testEqualsTimingSafe() {
+		byte[][][] cases = {
+			{{}, {}},
+			{{0}, {0}},
+			{{0}, {1}},
+			{{0}, {0, 1}},
+			{{0, 2}, {0}},
+			{{3, 0}, {0, 3}},
+			{{-1}, {127}},
+			{{0, 0}, {0, 0, 0}},
+		};
+		for (byte[][] cs : cases)
+			assertTrue(ProcessorReaderThread.equalsTimingSafe(cs[0], cs[1]) == Arrays.equals(cs[0], cs[1]));
 	}
 	
 }

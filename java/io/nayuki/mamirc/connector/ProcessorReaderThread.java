@@ -170,7 +170,7 @@ final class ProcessorReaderThread extends WorkerThread {
 	
 	// Performs a constant-time equality check, if both arrays are the same length.
 	// This prevents the use of timing attacks to guess passwords.
-	private static boolean equalsTimingSafe(byte[] a, byte[] b) {
+	static boolean equalsTimingSafe(byte[] a, byte[] b) {
 		if (a.length != b.length)
 			return false;
 		int diff = 0;
