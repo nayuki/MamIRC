@@ -21,12 +21,16 @@ public final class Utils {
 	
 	// Returns a new array of bytes from encoding the given string in UTF-8.
 	public static byte[] toUtf8(String s) {
+		if (s == null)
+			throw new NullPointerException();
 		return s.getBytes(StandardCharsets.UTF_8);
 	}
 	
 	
 	// Returns the string from decoding the given bytes in UTF-8.
 	public static String fromUtf8(byte[] b) {
+		if (b == null)
+			throw new NullPointerException();
 		return new String(b, StandardCharsets.UTF_8);
 	}
 	
@@ -34,6 +38,8 @@ public final class Utils {
 	// Steps the given SQLite statement and checks whether the step should produce a result or not.
 	// Additionally if no result is expected, the statement is immediately reset (for easier reuse).
 	public static void stepStatement(SQLiteStatement statement, boolean expectingResult) throws SQLiteException {
+		if (statement == null)
+			throw new NullPointerException();
 		boolean hasResult = statement.step();
 		if (expectingResult && !hasResult)
 			throw new AssertionError("Expected database row as result but got nothing");

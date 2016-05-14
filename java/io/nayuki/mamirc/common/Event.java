@@ -37,6 +37,8 @@ public final class Event {
 	
 	// Constructs an event that stores the given pieces of data.
 	public Event(int conId, int seq, long time, Type type, CleanLine line) {
+		if (conId < 0 || seq < 0)
+			throw new IllegalArgumentException();
 		if (type == null || line == null)
 			throw new NullPointerException();
 		connectionId = conId;

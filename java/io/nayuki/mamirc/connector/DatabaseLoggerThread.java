@@ -13,7 +13,6 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import com.almworks.sqlite4java.SQLiteConnection;
@@ -36,7 +35,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	/*---- Fields ----*/
 	
 	// The mutex that protects all shared data accesses.
-	private final Lock lock;
+	private final ReentrantLock lock;
 	// The preferred convenient way to use the lock.
 	private final LockHelper locker;
 	// await() by this worker; signal() upon {queue non-empty OR flush request's rising edge}.
@@ -147,6 +146,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 	// Must hold 'lock' before and after the method call.
 	private void processBatchOfEvents() throws SQLiteException, InterruptedException {
 		// Wait for something to do
+		if (!lock.isHeldByCurrentThread())
+			throw new AssertionError();
 		while (queue.isEmpty() && !flushRequested && !terminateRequested)
 			condAll.await();
 		if (Utils.logger.isLoggable(Level.FINEST)) {

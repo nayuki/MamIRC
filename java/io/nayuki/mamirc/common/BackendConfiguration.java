@@ -42,6 +42,8 @@ public final class BackendConfiguration {
 	// Constructs an object by reading the file at the given path.
 	public BackendConfiguration(File file) throws IOException {
 		// Parse JSON data and check signature
+		if (file == null)
+			throw new NullPointerException();
 		Object data = Json.parseFromFile(file);
 		if (!Json.getString(data, "data-type").equals("mamirc-backend-config"))
 			throw new IllegalArgumentException("Invalid configuration file type");
