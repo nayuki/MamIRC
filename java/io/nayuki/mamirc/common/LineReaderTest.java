@@ -49,7 +49,8 @@ public final class LineReaderTest {
 	}
 	
 	@Test public void testAssorted() {
-		test("the\rquick\nbrown\r\nfox\n\njumps\r\n\nover\r\rthelazydog", "the", "quick", "brown", "fox", "", "jumps", "", "over", "", "thelazydog");
+		test("the\rquick\nbrown\r\nfox\n\njumps\r\n\nover\r\rthelazydog",
+			"the", "quick", "brown", "fox", "", "jumps", "", "over", "", "thelazydog");
 	}
 	
 	@Test public void testLfCr0() {
@@ -62,7 +63,8 @@ public final class LineReaderTest {
 	
 	@Test public void testLongLines() {
 		try {
-			LineReader reader = new LineReader(new ByteArrayInputStream(Utils.toUtf8("a\r12345\r\nxyzabc\n \n7890123\nABCDEF")), 5);
+			LineReader reader = new LineReader(new ByteArrayInputStream(
+				Utils.toUtf8("a\r12345\r\nxyzabc\n \n7890123\nABCDEF")), 5);
 			Assert.assertArrayEquals(Utils.toUtf8("a"), reader.readLine());
 			Assert.assertArrayEquals(Utils.toUtf8("12345"), reader.readLine());
 			Assert.assertArrayEquals(Utils.toUtf8(" "), reader.readLine());

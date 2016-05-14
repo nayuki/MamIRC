@@ -95,8 +95,9 @@ final class DatabaseLoggerThread extends WorkerThread {
 		try {
 			database.open(true);
 			database.exec("PRAGMA journal_mode = PERSIST");
-			database.exec("CREATE TABLE IF NOT EXISTS " +
-				"events(connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, type INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY(connectionId, sequence))");
+			database.exec("CREATE TABLE IF NOT EXISTS events("
+				+ "connectionId INTEGER, sequence INTEGER, timestamp INTEGER NOT NULL, "
+				+ "type INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY(connectionId, sequence))");
 			
 			// Get current highest connection ID
 			SQLiteStatement getMaxConId = database.prepare("SELECT max(connectionId) FROM events");
