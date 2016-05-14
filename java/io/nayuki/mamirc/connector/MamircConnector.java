@@ -115,9 +115,9 @@ public final class MamircConnector {
 	
 	/*---- Methods for accessing/updating global state ----*/
 	
-	// Should only be called from ProcessorReaderThread.
+	// Should only be called from ProcessorReaderThread or MamircConnector.attachProcessor().
 	public synchronized void listConnectionsToProcessor(OutputWriterThread writer) {
-		// Dump current connection IDs and sequences to processor
+		// Dump current connection IDs and sequences to the Processor
 		databaseLogger.flushQueue();
 		writer.postWrite("active-connections");
 		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())

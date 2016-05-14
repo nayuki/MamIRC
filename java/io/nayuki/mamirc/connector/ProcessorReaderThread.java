@@ -115,7 +115,7 @@ final class ProcessorReaderThread extends WorkerThread {
 				}
 			}
 		}
-		finally {  // Clean up
+		finally {  // Clean up the connection
 			killer.cancel();
 			if (writer != null) {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer

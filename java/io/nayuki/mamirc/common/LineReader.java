@@ -153,7 +153,10 @@ public final class LineReader {
 	
 	
 	
-	// Same content as just byte[0], but usefully indicates that the next call will return null.
+	/*---- Constants ----*/
+	
+	// Same content as any other instance of byte[0], but this value
+	// additionally indicates that the next call will return null. Immutable.
 	public static final byte[] BLANK_EOF = {};
 	
 }
