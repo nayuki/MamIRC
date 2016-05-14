@@ -10,10 +10,11 @@ package io.nayuki.mamirc.common;
 
 
 /* 
- * A simple immutable data structure that represents an interaction
- * that occurred between the MamIRC connector and an IRC server.
- * Events are conveyed from the connector to the processor through a local connection or through the
- * archival database or both (it is the receiver's responsibility to perform deduplication).
+ * A simple data structure that represents an interaction that occurred between the MamIRC Connector
+ * and an IRC server. Events are conveyed from the Connector to the Processor through a local connection
+ * or through the archival database or both (it is the receiver's responsibility to perform deduplication).
+ * Event objects are conceptually immutable, but this property cannot be enforced
+ * because CleanLine is implemented in a way to allow unsafe zero-copy operations.
  */
 public final class Event {
 	
@@ -28,7 +29,7 @@ public final class Event {
 	
 	/*---- Constructors ----*/
 	
-	// Constructs an event with the given data and uses the current time as the timestamp.
+	// Constructs an event with the given data, and uses the current time as the timestamp.
 	public Event(int conId, int seq, Type type, CleanLine line) {
 		this(conId, seq, System.currentTimeMillis(), type, line);
 	}
@@ -55,10 +56,13 @@ public final class Event {
 	}
 	
 	
+	
 	/*---- Enclosing type ----*/
 	
 	public enum Type {
-		/*0*/CONNECTION, /*1*/RECEIVE, /*2*/SEND;
+		CONNECTION,  // 0
+		RECEIVE,     // 1
+		SEND;        // 2
 		
 		private static Type[] values = values();
 		

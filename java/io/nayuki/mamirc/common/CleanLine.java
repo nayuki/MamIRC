@@ -12,8 +12,8 @@ package io.nayuki.mamirc.common;
 /* 
  * Represents an array of zero or more bytes, none of which are '\0' (NUL), '\r' (CR), or '\n' (LF).
  * This is intended to represent a raw line of text before a character encoding interpretation is
- * applied to it (such as UTF-8, ISO-8859-1, Shift JIS, etc.). (Objects are intended to be immutable,
- * but the property cannot be enforced due to the no-copy operations provided for performance.)
+ * applied to it (such as UTF-8, ISO-8859-1, Shift JIS, etc.). (Objects are intended to be immutable, but
+ * the property cannot be enforced due to the no-copy constructor and accessor provided for performance.)
  */
 public final class CleanLine {
 	

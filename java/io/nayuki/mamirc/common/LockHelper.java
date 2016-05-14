@@ -17,7 +17,7 @@ import java.util.concurrent.locks.Lock;
  * Improved code with LockHelper:
  *     Lock lock = (...);
  *     LockHelper locker = new LockHelper(lock);
- *     try (LockHelper lh = locker.enter() {
+ *     try (LockHelper lh = locker.enter()) {
  *         ...
  *     }
  */
