@@ -28,6 +28,7 @@ public final class OutputWriterThread extends WorkerThread {
 	private BlockingQueue<CleanLine> queue;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// Can customize the newline sequence as "\n", "\r\n", etc.
@@ -39,6 +40,7 @@ public final class OutputWriterThread extends WorkerThread {
 		this.newline = newline.clone();
 		queue = new ArrayBlockingQueue<>(1000);
 	}
+	
 	
 	
 	/*---- Methods ----*/
@@ -95,6 +97,7 @@ public final class OutputWriterThread extends WorkerThread {
 			queue.put(TERMINATOR);
 		} catch (InterruptedException e) {}
 	}
+	
 	
 	
 	/*---- Helper definitions ----*/

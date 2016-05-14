@@ -32,6 +32,7 @@ public final class LineReader {
 	private final int maxLineLength;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// Constructs a line reader over the given input stream with the default maximum line length of 1000 bytes.
@@ -57,6 +58,7 @@ public final class LineReader {
 		lineLength = 0;
 		maxLineLength = maxLen;
 	}
+	
 	
 	
 	/*---- Methods ----*/
@@ -148,6 +150,7 @@ public final class LineReader {
 		lineLength = 0;
 		return result;
 	}
+	
 	
 	
 	// Same content as just byte[0], but usefully indicates that the next call will return null.

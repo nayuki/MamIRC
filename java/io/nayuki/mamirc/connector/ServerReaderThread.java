@@ -48,6 +48,7 @@ final class ServerReaderThread extends WorkerThread {
 	private volatile Socket socket;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// Note: This constructor only sets fields, and does not perform I/O.
@@ -65,6 +66,7 @@ final class ServerReaderThread extends WorkerThread {
 		this.useSsl = useSsl;
 		socket = null;
 	}
+	
 	
 	
 	/*---- Methods ----*/
@@ -117,6 +119,7 @@ final class ServerReaderThread extends WorkerThread {
 			socket.close();
 		} catch (IOException e) {}
 	}
+	
 	
 	
 	/*---- Helper definitions ----*/

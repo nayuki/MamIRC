@@ -53,6 +53,7 @@ final class ProcessorReaderThread extends WorkerThread {
 	private final byte[] password;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// This constructor must only be called from ProcessorListenerThread.
@@ -64,6 +65,7 @@ final class ProcessorReaderThread extends WorkerThread {
 		socket = sock;
 		this.password = password;
 	}
+	
 	
 	
 	/*---- Methods ----*/
@@ -161,6 +163,7 @@ final class ProcessorReaderThread extends WorkerThread {
 			socket.close();
 		} catch (IOException e) {}
 	}
+	
 	
 	
 	/*---- Helper definitions ----*/

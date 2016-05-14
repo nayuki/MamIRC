@@ -32,6 +32,7 @@ final class ProcessorListenerThread extends WorkerThread {
 	private final byte[] password;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// The server socket is created on the caller's thread, to make the caller deal with an I/O exception immediately.
@@ -46,6 +47,7 @@ final class ProcessorListenerThread extends WorkerThread {
 		serverSocket = new ServerSocket();
 		serverSocket.bind(new InetSocketAddress("localhost", port), 4);  // Limit the number of waiting connections
 	}
+	
 	
 	
 	/*---- Methods ----*/

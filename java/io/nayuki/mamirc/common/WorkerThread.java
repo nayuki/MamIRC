@@ -18,6 +18,7 @@ public abstract class WorkerThread extends Thread {
 	}
 	
 	
+	
 	/*---- Methods ----*/
 	
 	// Generates log events when this thread starts and ends, calls the

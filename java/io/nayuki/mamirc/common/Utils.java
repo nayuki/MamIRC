@@ -64,6 +64,7 @@ public final class Utils {
 	public static final Logger logger = Logger.getLogger("io.nayuki.mamirc");
 	
 	
+	
 	// Not instantiable.
 	private Utils() {}
 	

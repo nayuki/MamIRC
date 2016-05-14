@@ -27,6 +27,7 @@ public final class Event {
 	public final CleanLine line;    // Not null. Not fully immutable.
 	
 	
+	
 	/*---- Constructors ----*/
 	
 	// Constructs an event with the given data, and uses the current time as the timestamp.
@@ -47,6 +48,7 @@ public final class Event {
 		this.type = type;
 		this.line = line;
 	}
+	
 	
 	
 	/*---- Methods ----*/

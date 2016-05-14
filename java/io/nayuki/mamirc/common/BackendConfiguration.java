@@ -37,6 +37,7 @@ public final class BackendConfiguration {
 	public final String webUiPassword;
 	
 	
+	
 	/*---- Constructor ----*/
 	
 	// Constructs an object by reading the file at the given path.
@@ -55,6 +56,7 @@ public final class BackendConfiguration {
 		webServerPort = Utils.checkPortNumber(Json.getInt(data, "web-server-port"));
 		webUiPassword = Json.getString(data, "web-ui-password");
 	}
+	
 	
 	
 	/*---- Getter methods ----*/

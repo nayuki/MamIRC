@@ -22,6 +22,7 @@ public final class CleanLine {
 	private final byte[] data;
 	
 	
+	
 	/*---- Constructors ----*/
 	
 	// Constructs a clean line object based on a defensive copy of the given byte array.
@@ -48,6 +49,7 @@ public final class CleanLine {
 	public CleanLine(String str) {
 		this(Utils.toUtf8(str), false);
 	}
+	
 	
 	
 	/*---- Methods ----*/
