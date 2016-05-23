@@ -107,7 +107,7 @@ public final class MamircConnector {
 			public void run() {
 				pingConnections();
 			}
-		}, PING_INTERVAL, PING_INTERVAL);
+		}, 0, PING_INTERVAL);
 		Utils.logger.info("Connector ready");
 	}
 	

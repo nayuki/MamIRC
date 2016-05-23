@@ -76,7 +76,7 @@ final class ServerReaderThread extends WorkerThread {
 		OutputWriterThread writer = null;
 		try {
 			// Create socket connection
-			socket.connect(new InetSocketAddress(hostname, port), 30000);
+			socket.connect(new InetSocketAddress(hostname, port), CONNECTION_TIMEOUT);
 			if (useSsl)
 				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, hostname, port, true);
 			
@@ -123,6 +123,9 @@ final class ServerReaderThread extends WorkerThread {
 			socket.close();
 		} catch (IOException e) {}
 	}
+	
+	
+	private static final int CONNECTION_TIMEOUT = 30000;  // In milliseconds
 	
 	
 	
