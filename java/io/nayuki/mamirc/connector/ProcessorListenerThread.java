@@ -18,10 +18,10 @@ import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
- * Manages a local server socket to listen for incoming processor connections,
- * and launches a new ProcessorReaderThread on each connection received.
- * This class implements rate-limiting to prevent denial-of-service attacks (but because the socket only listens
- * to localhost, the attacker would be another process running by this user, or another user on this machine).
+ * Manages a local server socket to listen for incoming Processor connections, and launches a new
+ * ProcessorReaderThread on each connection received. If the socket breaks, the whole Connector process is terminated.
+ * This class implements rate-limiting to prevent denial-of-service attacks (but because the socket only
+ * listens to localhost, the attacker would be another process running by some user on this machine).
  */
 final class ProcessorListenerThread extends WorkerThread {
 	
@@ -60,7 +60,8 @@ final class ProcessorListenerThread extends WorkerThread {
 				Thread.sleep(100);  // Safety delay
 			}
 		} catch (Throwable e) {
-			// This is the only way to exit the loop. The flow control is equivalent to 'finally', but we can retrieve the exception.
+			// The only way to exit the loop is to throw an exception, and this section will always catch the exception.
+			// Hence the flow control is equivalent to 'finally', but lets us also retrieve the exception for information.
 			Utils.logger.log(Level.WARNING, "ProcessorListenerThread unhandled exception", e);
 			master.terminateConnector("ProcessorListenerThread fault");
 		}

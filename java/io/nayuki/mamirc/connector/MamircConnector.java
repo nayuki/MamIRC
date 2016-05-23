@@ -145,6 +145,7 @@ public final class MamircConnector {
 			processorReader = null;
 			processorWriter = null;
 		}
+		// Else ignore
 	}
 	
 	
@@ -161,7 +162,7 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread or terminateConnector().
+	// Should only be called from ProcessorReaderThread.
 	public synchronized void disconnectServer(int conId, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
@@ -222,6 +223,7 @@ public final class MamircConnector {
 	}
 	
 	
+	// Should only be called from ProcessorReaderThread or ProcessorListenerThread.
 	public synchronized void terminateConnector(String reason) {
 		Utils.logger.info("Application termination requested: " + reason);
 		// The DatabaseLoggerThread is solely responsible for terminating the entire application
@@ -253,7 +255,7 @@ public final class MamircConnector {
 	// This write is necessary because without it, the read() might keep silently blocking for minutes or hours
 	// on a bad connection, depending on how the underlying platform handles socket keepalives.
 	// Note that these pings are not logged to the database or relayed to the processor.
-	// This method should only be called from the connectionPinger thread.
+	// This method should only be called from the timer thread.
 	private synchronized void pingConnections() {
 		// From surveying ~5 different IRC servers, it appears that sending a blank line is always safely ignored.
 		// (However, some servers give an error response to a whitespace-only line consisting of one or more spaces.)
@@ -268,10 +270,10 @@ public final class MamircConnector {
 	
 	private static final CleanLine BLANK_LINE = new CleanLine("");
 	
-	private static final int PING_INTERVAL = 20000;
+	private static final int PING_INTERVAL = 20000;  // In milliseconds
 	
 	
-	// If the given line is a PING command, then this returns a new byte array containing an appropriate PONG response.
+	// If the given line is an IRC PING command, then this returns a new byte array containing an appropriate PONG response.
 	// Otherwise this function returns null. This handles all inputs correctly, and safely ignores lines with illegal IRC syntax.
 	static byte[] makePongIfPing(byte[] line) {
 		// Skip prefix, if any
@@ -297,7 +299,7 @@ public final class MamircConnector {
 	
 	
 	
-	/*---- Helper class ----*/
+	/*---- Helper structure ----*/
 	
 	private static final class ConnectionInfo {
 		

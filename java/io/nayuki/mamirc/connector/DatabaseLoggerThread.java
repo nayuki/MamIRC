@@ -40,14 +40,14 @@ final class DatabaseLoggerThread extends WorkerThread {
 	private final LockHelper locker;
 	// await() by this worker; signal() upon {queue non-empty OR flush request's rising edge}.
 	private final Condition condAll;
-	// await() by this worker; signal() upon flush request's rising edge.
+	// await() by this worker thread; signal() upon flush request's rising edge.
 	private final Condition condUrgent;
-	// await() by caller of flushQueue(); signal() by this worker when all queue items at time of flushQueue() call
-	// have been written and committed to database. no new items can be added while flushQueue() blocks because
-	// the MamircConnector's global state is blocked.
+	// await() by caller of flushQueue(); signal() by this worker when all queue items at time
+	// of flushQueue() call have been written and committed to database. No new items can be
+	// added while flushQueue() blocks because the MamircConnector's global state is blocked.
 	private final Condition condFlushed;
 	
-	// Monitor state (shared data accessed by various threads)
+	// Shared mutable state protected by the monitor
 	private Queue<Event> queue;
 	private boolean flushRequested;
 	private boolean terminateRequested;
@@ -86,6 +86,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	
 	// Initializes a database file if nonexistent, or reads from an existing one;
 	// then this method returns the first suitable connection ID for the connector to use.
+	// This method should be called one time before Thread.start() is called.
 	public int initAndGetNextConnectionId() throws SQLiteException {
 		if (database != null)
 			throw new IllegalStateException();
@@ -109,16 +110,18 @@ final class DatabaseLoggerThread extends WorkerThread {
 		} finally {
 			database.dispose();  // Automatically disposes its associated statements
 		}
+		// Although we don't use the 'database' object anymore, we keep a reference
+		// to it so that we can check the correct sequencing of method calls.
 	}
 	
 	
 	protected void runInner() throws InterruptedException {
 		if (database == null)
 			throw new IllegalStateException();
-		database = new SQLiteConnection(databaseFile);
 		
+		// Initialize database state and statements
+		database = new SQLiteConnection(databaseFile);
 		try {
-			// Initialize database statements
 			database.open(false);
 			database.setBusyTimeout(60000);
 			beginTransaction  = database.prepare("BEGIN TRANSACTION");
@@ -137,7 +140,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 		finally {
 			database.dispose();  // Automatically disposes its associated statements
 			Utils.logger.info("MamIRC Connector terminating");
-			System.exit(1);  // The one and only way to terminate a MamircConnector processor
+			System.exit(1);  // The one and only way to terminate a MamircConnector process
 		}
 	}
 	
@@ -196,6 +199,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	}
 	
 	
+	// Requires the database and statement to be initialized already.
 	private void insertEventIntoDb(Event ev) throws SQLiteException {
 		insertEvent.bind(1, ev.connectionId);
 		insertEvent.bind(2, ev.sequence);
@@ -206,7 +210,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 	}
 	
 	
-	// Should only be called from a thread currently executing in the MamircConnector object's context.
+	// Adds an event to the queue. This method is thread-safe. It should only be called
+	// from a thread currently executing in the MamircConnector object's context.
 	public void postEvent(Event ev) {
 		if (ev == null)
 			throw new NullPointerException();
@@ -217,8 +222,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 	}
 	
 	
-	// Synchronously requests the worker thread to write and commit all queued events to
-	// the database, blocking until finished. Should only be called from the connector object.
+	// Requests this worker thread to write and commit all queued events to the database, and blocks
+	// the caller thread until the flush finishes. Should only be called from MamircConnector.
 	public void flushQueue() {
 		try (LockHelper lh = locker.enter()) {
 			if (flushRequested)

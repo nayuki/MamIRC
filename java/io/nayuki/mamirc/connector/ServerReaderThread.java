@@ -75,18 +75,18 @@ final class ServerReaderThread extends WorkerThread {
 		socket = new Socket();
 		OutputWriterThread writer = null;
 		try {
-			// Create socket
+			// Create socket connection
 			socket.connect(new InetSocketAddress(hostname, port), 30000);
 			if (useSsl)
 				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, hostname, port, true);
 			
 			// Successfully connected; make a writer worker thread
-			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});
+			writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\r','\n'});  // IRC protocol mandates the use of CR+LF
 			writer.setName("OutputWriterThread : " + this.getName());
 			writer.start();
 			master.connectionOpened(connectionId, socket.getInetAddress(), this, writer);
 			
-			// Read and relay lines
+			// Repeatedly read and relay lines until connection ends
 			LineReader reader = new LineReader(socket.getInputStream());
 			while (true) {
 				byte[] line = reader.readLine();

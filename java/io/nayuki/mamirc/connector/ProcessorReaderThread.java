@@ -20,7 +20,7 @@ import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
- * Handles lines of commands from a processor connection and calls appropriate methods on MamircConnector.
+ * Handles lines of commands from a Processor connection and calls appropriate methods on MamircConnector.
  * Additional functionality:
  * - Reads and checks the password before doing anything
  * - Explicitly terminates the connection if the correct password is not received within a few seconds
@@ -36,7 +36,7 @@ import io.nayuki.mamirc.common.WorkerThread;
  *   where connectionId is a non-negative integer,
  *   and payload is a byte sequence (not necessarily UTF-8).
  * - "terminate"
- *   which requests the connector to shut down cleanly.
+ *   which requests the Connector to shut down cleanly.
  * Notes:
  * - The line formats above are parsed as strictly as possible.
  *   For example: case-sensitive, no double spaces between fields, no ignoring trailing spaces.
@@ -154,7 +154,7 @@ final class ProcessorReaderThread extends WorkerThread {
 				Utils.logger.warning("Unknown line from processor: " + lineStr);
 			}
 		}
-		catch (IllegalArgumentException e) {
+		catch (IllegalArgumentException e) {  // Includes NumberFormatException
 			Utils.logger.warning("Invalid line format from Processor: " + lineStr);
 		}
 	}
