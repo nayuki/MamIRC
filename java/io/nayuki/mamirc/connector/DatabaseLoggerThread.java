@@ -201,6 +201,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 	
 	// Requires the database and statement to be initialized already.
 	private void insertEventIntoDb(Event ev) throws SQLiteException {
+		if (ev == null)
+			throw new NullPointerException();
 		insertEvent.bind(1, ev.connectionId);
 		insertEvent.bind(2, ev.sequence);
 		insertEvent.bind(3, ev.timestamp);

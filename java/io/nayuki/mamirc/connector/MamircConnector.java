@@ -117,6 +117,8 @@ public final class MamircConnector {
 	
 	// Should only be called from ProcessorReaderThread or MamircConnector.attachProcessor().
 	synchronized void listConnectionsToProcessor(OutputWriterThread writer) {
+		if (writer == null)
+			throw new NullPointerException();
 		// Dump current connection IDs and sequences to the Processor
 		databaseLogger.flushQueue();
 		writer.postWrite("active-connections");
@@ -128,6 +130,8 @@ public final class MamircConnector {
 	
 	// Should only be called from ProcessorReaderThread.
 	synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
+		if (reader == null || writer == null)
+			throw new NullPointerException();
 		// Kick out existing processor, and set fields
 		if (processorReader != null)
 			processorReader.terminate();  // Asynchronous termination
@@ -178,6 +182,10 @@ public final class MamircConnector {
 	
 	// Should only be called from ServerReaderThread.
 	synchronized void connectionOpened(int conId, InetAddress addr, ServerReaderThread reader, OutputWriterThread writer) {
+		if (addr == null || reader == null || writer == null)
+			throw new NullPointerException();
+		if (conId < 0 || conId >= nextConnectionId)
+			throw new AssertionError();
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
@@ -198,6 +206,8 @@ public final class MamircConnector {
 	
 	// Should only be called from ServerReaderThread.
 	synchronized void receiveMessage(int conId, CleanLine line) {
+		if (line == null)
+			throw new NullPointerException();
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
@@ -211,6 +221,8 @@ public final class MamircConnector {
 	
 	// Should only be called from ProcessorReaderThread or receiveMessage().
 	synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
+		if (line == null || reader == null)
+			throw new NullPointerException();
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
