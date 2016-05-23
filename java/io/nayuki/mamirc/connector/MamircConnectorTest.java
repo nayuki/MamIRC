@@ -27,6 +27,7 @@ public final class MamircConnectorTest {
 			{null, "PING:def"},
 			{null, "abc WHAT PING"},
 			{null, "STOPPING"},
+			{null, ":nick!user@host PRIVMSG #chan :PING"},
 			{"PONG", "PING"},
 			{"PONG", ":prefix PING"},
 			{"PONG ", ":pre   PING "},
@@ -35,6 +36,8 @@ public final class MamircConnectorTest {
 			{"PONG abc def", "PING abc def"},
 			{"PONG :hello world", "PING :hello world"},
 			{"PONG  two   :three four", ":one  PING  two   :three four"},
+			{"PONG PONG PING", "PING PONG PING"},
+			{"pong PIng", ":PING ping PIng"},
 		};
 		for (String[] cs : cases)
 			assertEquals(cs[0], makePong(cs[1]));
