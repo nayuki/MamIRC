@@ -89,7 +89,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	// This method should be called one time before Thread.start() is called.
 	public int initAndGetNextConnectionId() throws SQLiteException {
 		if (database != null)
-			throw new IllegalStateException();
+			throw new IllegalStateException("Cannot call initAndGetNextConnectionId() again");
 		
 		// Initialize table
 		database = new SQLiteConnection(databaseFile);
@@ -117,7 +117,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	
 	protected void runInner() throws InterruptedException {
 		if (database == null)
-			throw new IllegalStateException();
+			throw new IllegalStateException("Need to call initAndGetNextConnectionId() first");
 		
 		// Initialize database state and statements
 		database = new SQLiteConnection(databaseFile);
@@ -236,7 +236,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 			do condFlushed.awaitUninterruptibly();
 			while (flushRequested);
 			if (!queue.isEmpty())
-				throw new IllegalStateException();
+				throw new AssertionError();
 		}
 	}
 	

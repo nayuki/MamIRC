@@ -187,7 +187,7 @@ public final class MamircConnector {
 		if (conId < 0 || conId >= nextConnectionId)
 			throw new AssertionError();
 		if (!serverConnections.containsKey(conId))
-			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
+			throw new IllegalStateException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
 		postEvent(info, Event.Type.CONNECTION, new CleanLine("opened " + addr.getHostAddress()));
 		info.reader = reader;
@@ -199,7 +199,7 @@ public final class MamircConnector {
 	synchronized void connectionClosed(int conId) {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
-			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
+			throw new IllegalStateException("Connection ID does not exist: " + conId);
 		postEvent(info, Event.Type.CONNECTION, new CleanLine("closed"));
 	}
 	
@@ -210,7 +210,7 @@ public final class MamircConnector {
 			throw new NullPointerException();
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info == null)
-			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
+			throw new IllegalStateException("Connection ID does not exist: " + conId);
 		postEvent(info, Event.Type.RECEIVE, line);
 		Utils.logger.finest("Receive line from IRC server");
 		byte[] pong = makePongIfPing(line.getDataNoCopy());
