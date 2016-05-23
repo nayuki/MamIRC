@@ -116,7 +116,7 @@ public final class MamircConnector {
 	/*---- Methods for accessing/updating global state ----*/
 	
 	// Should only be called from ProcessorReaderThread or MamircConnector.attachProcessor().
-	public synchronized void listConnectionsToProcessor(OutputWriterThread writer) {
+	synchronized void listConnectionsToProcessor(OutputWriterThread writer) {
 		// Dump current connection IDs and sequences to the Processor
 		databaseLogger.flushQueue();
 		writer.postWrite("active-connections");
@@ -127,7 +127,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread.
-	public synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
+	synchronized void attachProcessor(ProcessorReaderThread reader, OutputWriterThread writer) {
 		// Kick out existing processor, and set fields
 		if (processorReader != null)
 			processorReader.terminate();  // Asynchronous termination
@@ -140,7 +140,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread. Caller is responsible for its own termination.
-	public synchronized void detachProcessor(ProcessorReaderThread reader) {
+	synchronized void detachProcessor(ProcessorReaderThread reader) {
 		if (reader == processorReader) {
 			processorReader = null;
 			processorWriter = null;
@@ -150,7 +150,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread. Hostname and metadata must not contain '\0', '\r', or '\n'.
-	public synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
+	synchronized void connectServer(String hostname, int port, boolean useSsl, String metadata, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = new ConnectionInfo(nextConnectionId);
@@ -163,7 +163,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread.
-	public synchronized void disconnectServer(int conId, ProcessorReaderThread reader) {
+	synchronized void disconnectServer(int conId, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
@@ -177,7 +177,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ServerReaderThread.
-	public synchronized void connectionOpened(int conId, InetAddress addr, ServerReaderThread reader, OutputWriterThread writer) {
+	synchronized void connectionOpened(int conId, InetAddress addr, ServerReaderThread reader, OutputWriterThread writer) {
 		if (!serverConnections.containsKey(conId))
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
 		ConnectionInfo info = serverConnections.get(conId);
@@ -188,7 +188,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ServerReaderThread.
-	public synchronized void connectionClosed(int conId) {
+	synchronized void connectionClosed(int conId) {
 		ConnectionInfo info = serverConnections.remove(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
@@ -197,7 +197,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ServerReaderThread.
-	public synchronized void receiveMessage(int conId, CleanLine line) {
+	synchronized void receiveMessage(int conId, CleanLine line) {
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info == null)
 			throw new IllegalArgumentException("Connection ID does not exist: " + conId);
@@ -210,7 +210,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread or receiveMessage().
-	public synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
+	synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
@@ -224,7 +224,7 @@ public final class MamircConnector {
 	
 	
 	// Should only be called from ProcessorReaderThread or ProcessorListenerThread.
-	public synchronized void terminateConnector(String reason) {
+	synchronized void terminateConnector(String reason) {
 		Utils.logger.info("Application termination requested: " + reason);
 		// The DatabaseLoggerThread is solely responsible for terminating the entire application
 		databaseLogger.terminate();
