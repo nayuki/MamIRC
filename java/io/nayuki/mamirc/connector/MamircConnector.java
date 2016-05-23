@@ -172,7 +172,7 @@ public final class MamircConnector {
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info == null)
-			Utils.logger.info("Warning: Connection " + conId + " does not exist");
+			Utils.logger.info("Connection " + conId + " does not exist");
 		else {
 			postEvent(info, Event.Type.CONNECTION, new CleanLine("disconnect"));
 			info.reader.terminate();
@@ -226,12 +226,15 @@ public final class MamircConnector {
 		if (reader != processorReader)
 			return;
 		ConnectionInfo info = serverConnections.get(conId);
-		if (info != null && info.writer != null) {
-			postEvent(info, Event.Type.SEND, line);
-			Utils.logger.finest("Send line to IRC server");
-			info.writer.postWrite(line);
+		if (info != null) {
+			if (info.writer != null) {
+				postEvent(info, Event.Type.SEND, line);
+				Utils.logger.finest("Send line to IRC server");
+				info.writer.postWrite(line);
+			} else
+				Utils.logger.info("Connection " + conId + " not fully established yet");
 		} else
-			Utils.logger.info("Warning: Connection " + conId + " does not exist");
+			Utils.logger.info("Connection " + conId + " does not exist");
 	}
 	
 	

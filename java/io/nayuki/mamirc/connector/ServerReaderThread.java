@@ -97,6 +97,8 @@ final class ServerReaderThread extends WorkerThread {
 					valid &= b != '\0';
 				if (valid)  // Ignore lines containing NUL character, disallowed by IRC RFC 1459
 					master.receiveMessage(connectionId, new CleanLine(line, false));
+				else
+					Utils.logger.info("Received invalid line from IRC server, containing NUL byte");
 			}
 		}
 		finally {  // Clean up the connection
