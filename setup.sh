@@ -30,7 +30,7 @@ if [ ! -e "backend-config.json" ]; then
 	cp "sample-backend-config.json" "backend-config.json"
 fi
 if [ ! -e "user-config.json" ]; then
-	cp "sample-user-config.json" "user-config.json"
+	cp "blank-user-config.json" "user-config.json"
 fi
 
 # Go into bin/ subdirectory
