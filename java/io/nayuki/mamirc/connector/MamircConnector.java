@@ -11,6 +11,8 @@ package io.nayuki.mamirc.connector;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,8 +20,10 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.ConsoleHandler;
+import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteException;
 import io.nayuki.mamirc.common.BackendConfiguration;
@@ -50,6 +54,18 @@ public final class MamircConnector {
 		Utils.logger.setLevel(Level.INFO);
 		Handler ch = new ConsoleHandler();
 		ch.setLevel(Level.ALL);
+		ch.setFormatter(new Formatter() {
+			public String format(LogRecord rec) {
+				String s = String.format("%tY-%<tm-%<td-%<ta %<tH:%<tM:%<tS %<tZ / %s / %s.%s() / %s%n",
+						rec.getMillis(), rec.getLevel(), rec.getSourceClassName(), rec.getSourceMethodName(), rec.getMessage());
+				if (rec.getThrown() != null) {
+					StringWriter sw = new StringWriter();
+					rec.getThrown().printStackTrace(new PrintWriter(sw));
+					s += sw.toString();
+				}
+				return s;
+			}
+		});
 		Utils.logger.setUseParentHandlers(false);
 		Utils.logger.addHandler(ch);
 		Utils.startConsoleLogLevelChanger();
