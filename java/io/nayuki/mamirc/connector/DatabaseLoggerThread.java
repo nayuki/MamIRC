@@ -139,7 +139,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 		}
 		finally {
 			database.dispose();  // Automatically disposes its associated statements
-			Utils.logger.info("MamIRC Connector terminating");
+			Utils.logger.info("MamIRC Connector application terminating");
 			System.exit(1);  // The one and only way to terminate a MamircConnector process
 		}
 	}

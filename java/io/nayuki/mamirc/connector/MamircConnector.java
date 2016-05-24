@@ -71,10 +71,10 @@ public final class MamircConnector {
 		Utils.startConsoleLogLevelChanger();
 		
 		// Load config and start connector
-		Utils.logger.info("MamIRC Connector starting");
+		Utils.logger.info("MamIRC Connector application starting");
 		File configFile = new File(args[0]);
 		BackendConfiguration config = new BackendConfiguration(configFile);
-		Utils.logger.info("Configuration file parsed");
+		Utils.logger.info("Configuration file parsed: " + configFile.getCanonicalPath());
 		new MamircConnector(config);
 	}
 	
@@ -105,7 +105,7 @@ public final class MamircConnector {
 		// Initialize database writer and get next connection ID
 		databaseLogger = new DatabaseLoggerThread(config.connectorDatabaseFile);
 		nextConnectionId = databaseLogger.initAndGetNextConnectionId();
-		Utils.logger.info("Database file opened");
+		Utils.logger.info("Database file opened: " + config.connectorDatabaseFile.getCanonicalPath());
 		
 		// Create socket to listen for an incoming processor
 		processorListener = new ProcessorListenerThread(this, config.connectorServerPort, config.getConnectorPassword());
@@ -229,7 +229,6 @@ public final class MamircConnector {
 		if (info == null)
 			throw new IllegalStateException("Connection ID does not exist: " + conId);
 		postEvent(info, Event.Type.RECEIVE, line);
-		Utils.logger.finest("Receive line from IRC server");
 		byte[] pong = makePongIfPing(line.getDataNoCopy());
 		if (pong != null)
 			sendMessage(conId, new CleanLine(pong, false), processorReader);
@@ -246,7 +245,6 @@ public final class MamircConnector {
 		if (info != null) {
 			if (info.writer != null) {
 				postEvent(info, Event.Type.SEND, line);
-				Utils.logger.finest("Send line to IRC server");
 				info.writer.postWrite(line);
 			} else
 				Utils.logger.info("Connection " + conId + " not fully established yet");
@@ -279,6 +277,10 @@ public final class MamircConnector {
 			}
 		}
 		databaseLogger.postEvent(ev);
+		if (type == Event.Type.CONNECTION && Utils.logger.isLoggable(Level.FINER))
+			Utils.logger.finer(ev.toString());
+		else if (Utils.logger.isLoggable(Level.FINEST))
+			Utils.logger.finest(ev.toString());
 	}
 	
 	

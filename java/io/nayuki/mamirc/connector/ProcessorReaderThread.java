@@ -136,7 +136,7 @@ final class ProcessorReaderThread extends WorkerThread {
 		
 		try {
 			if (cmd.equals("terminate") && parts.length == 1) {
-				master.terminateConnector("Explicit command received from processor connection");
+				master.terminateConnector("Explicit command received from Processor connection");
 				
 			} else if (cmd.equals("connect") && parts.length == 5) {
 				if (!(parts[3].equals("true") || parts[3].equals("false")))
@@ -151,7 +151,7 @@ final class ProcessorReaderThread extends WorkerThread {
 				master.sendMessage(Integer.parseInt(parts[1]), new CleanLine(payload, false), this);
 				
 			} else {
-				Utils.logger.warning("Unknown line from processor: " + lineStr);
+				Utils.logger.warning("Unknown line from Processor: " + lineStr);
 			}
 		}
 		catch (IllegalArgumentException e) {  // Includes NumberFormatException
