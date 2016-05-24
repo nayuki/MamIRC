@@ -52,6 +52,7 @@ public final class MamircConnector {
 		ch.setLevel(Level.ALL);
 		Utils.logger.setUseParentHandlers(false);
 		Utils.logger.addHandler(ch);
+		Utils.startConsoleLogLevelChanger();
 		
 		// Load config and start connector
 		Utils.logger.info("MamIRC Connector starting");
