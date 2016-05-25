@@ -362,6 +362,13 @@ body.hide {  /* For log out */
 	color: #A0A0A0;
 }
 
+/* Hide timestamp on tiny screens (like iPhone 4/5) */
+@media only screen and (max-width: 500px) { 
+	#message-list td:nth-child(1) {
+  		display:none; 
+	}
+}
+
 #message-list td:nth-child(3) {  /* User text */
 	width: 98%;
 	text-align: left;
