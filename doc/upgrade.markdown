@@ -52,6 +52,10 @@ Below is a list of dates where a change was made that requires special attention
 
 The dates are listed in reverse-chronological order, and pertain to the 24-hour time period in the UTC time zone. (For example, the heading 2015-12-31 means "these comments pertain to commits that happened on 2015-12-31 between 00:00 and 23:59 UTC".) This log is not fully complete for dates before year 2016 because the software was not popular enough to require serious user support instructions at the time.
 
+2016-05-27:
+
+* May recompile and restart Connector to fix a recent connection handling bug. (Feature: Cannot send PONG when Processor is detached, due to a change on 2016-05-23.)
+
 2016-04-15:
 
 * May recompile and restart Processor to improve UI and behavior. (Features: Forced desktop/mobile UI URLs, correct line throttling when clock jumps back.)

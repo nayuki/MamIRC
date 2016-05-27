@@ -235,9 +235,9 @@ public final class MamircConnector {
 	}
 	
 	
-	// Should only be called from ProcessorReaderThread or receiveMessage().
+	// Should only be called from ProcessorReaderThread or receiveMessage(). 'reader' can be null.
 	synchronized void sendMessage(int conId, CleanLine line, ProcessorReaderThread reader) {
-		if (line == null || reader == null)
+		if (line == null)
 			throw new NullPointerException();
 		if (reader != processorReader)
 			return;
