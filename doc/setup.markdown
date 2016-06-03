@@ -1,26 +1,26 @@
 MamIRC setup instructions
 =========================
 
-This document describes how to set up and run your own copy of MamIRC. A brief overview of the steps:
+Brief overview of the steps to set up and run your own copy of MamIRC:
 
-0. Download MamIRC source code.
-0. Download JSON and SQLite libraries (dependencies).
-0. Extract JAR and native binaries from SQLite package.
+0. Download the bundle containing MamIRC source code and web resources.
+0. Download the JSON and SQLite libraries (dependencies).
+0. From SQLite package, extract the JAR and native binaries.
 0. Compile all Java code, taking care to specify classpaths correctly.
-0. Edit backend-config.json in a text editor, and view user-config.json.
+0. Edit backend-config.json in a text editor.
 0. Launch MamIRC Connector and MamIRC Processor Java programs in the background.
 0. Set up SSL proxy in front of the MamIRC web server.
 0. Open web browser to your MamIRC instance's URL.
 
 Note that the Linux script handles some of these steps automatically, so you might not need to perform every step by hand.
 
-Platform support for backend software:
+Supported platforms for backend software:
 
 * Operating system: GNU/Linux, Microsoft Windows.
 * CPU architectures: x86, x86-64.
 * Not tested: Mac OS X, BSD, Solaris, ARM.
 
-Web browser support for frontend web app:
+Supported web browsers for frontend user interface:
 
 * Working correctly: Mozilla Firefox (desktop), Google Chrome (desktop and Android).
 * Not tested: Apple Safari (desktop and iOS), Microsoft Internet Explorer, Opera, Firefox (mobile).
@@ -33,21 +33,21 @@ Steps for Linux setup
 
 0. Create a new empty directory for MamIRC.
 
-0. Download the easy shell script: `wget https://raw.githubusercontent.com/nayuki/MamIRC/master/setup.sh`
+0. Download the easy setup shell script: `wget https://raw.githubusercontent.com/nayuki/MamIRC/master/setup.sh`
 
 0. Run the script and watch for error messages. The script will download the code and libraries, manipulate subdirectories, and compile the Java code. Command: `sh setup.sh`
 
-0. Open "sample-backend-config.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "sample-" in the name.
+0. Open "backend-config.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change the Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet).
 
 0. Now launch the MamIRC Connector program, with the configuration file name as an argument, like this: `sh run-connector.sh backend-config.json`
 
-0. If the launch was successful, the `java` process will run forever, and it can be seen in the process list produced by `ps x`. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using `ps x`). To debug an unsuccessful launch, you'd need to type out the `java` command found in run-connector.sh, minus the initial `nohup` and trailing `&`.
+0. If the launch was successful, the `java` process will run forever, and it can be seen in the process list produced by `ps x`. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using `ps x`). To debug an unsuccessful launch, you'd need to type out the `java` command found in run-connector.sh, excluding the initial `nohup` and trailing `&`.
 
-0. Open "blank-user-config.json" in a text editor. You can this file as-is without editing, and it's recommended to rename the file to remove the "blank-" prefix. Although you can manually type out your IRC network profiles into this configuration file (example at "sample-user-config.json"), it's much easier to use the web UI instead.
+0. View "sample-user-config.json" in a text editor to see what can be configured, but you can use the auto-generated "user-config.json" as-is without editing. (Although you can manually type out your IRC network profiles into this configuration file, it's much easier to use the web UI instead.)
 
 0. Now launch the MamIRC Processor program, with both configuration file names as arguments in order, like this: `sh run-processor.sh backend-config.json user-config.json`
 
-0. Again if the launch was successful, this second `java` process will run forever. If unsuccessful, you'd need to type out the `java` command in run-processor.sh, minus the initial `nohup` and trailing `&`, to help debug what went wrong with the software run.
+0. Again if the launch was successful, this second `java` process will run forever. If unsuccessful, you'd need to type out the `java` command in run-processor.sh, excluding the initial `nohup` and trailing `&`, to help debug what went wrong with the software run.
 
 0. Note that at this point, the MamIRC Processor only listens for HTTP connections from the local machine; you cannot access your MamIRC web UI from the Internet or even LAN. To change this behavior, read the section below titled "Configuring the web server".
 
@@ -69,13 +69,13 @@ Steps for Windows setup
 
 0. If choosing to compile from the command line (ensuring that your PATH can reach `javac`), run this command: `javac -cp nayuki-json-lib.jar;sqlite4java.jar -sourcepath java/ java/io/nayuki/mamirc/connector/MamircConnector.java java/io/nayuki/mamirc/processor/MamircProcessor.java`
 
-0. Open "sample-backend-config.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "sample-" in the name.
+0. Open "sample-backend-config.json" in a text editor and check all 5 settings. The default settings are mostly fine, but you must change the web UI password to one of your choice; this password protects unauthorized users from accessing your MamIRC instance. Ensure that the port numbers do not conflict with any other servers you run. It is optional to change the Connector password, because the Connector only accepts connections coming from programs running on the local machine (never from the Internet). Finally, it's recommended to rename the file to remove the "sample-" in the name.
 
 0. Now launch the MamIRC Connector program, with the configuration file name as an argument, like this: `javaw -cp java/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/connector/MamircConnector backend-config.json`
 
 0. If the launch was successful, the javaw.exe process will run forever, and can be seen in the list in Windows Task Manager. Otherwise the process dies immediately due to a configuration file syntax error, file I/O exception, socket port in use, Java class loading failure, SQLite native library loading failure, etc. (check using Task Manager). To debug an unsuccessful launch, it is helpful to replace `javaw` with `java`, so that error messages can be seen on the console.
 
-0. Open "blank-user-config.json" in a text editor. You can this file as-is without editing, and it's recommended to rename the file to remove the "blank-" prefix. Although you can manually type out your IRC network profiles into this configuration file (example at "sample-user-config.json"), it's much easier to use the web UI instead.
+0. View "sample-user-config.json" in a text editor to see what can be configured, but you can use "blank-user-config.json" as-is without editing, and it's recommended to rename the file to remove the "blank-" prefix. (Although you can manually type out your IRC network profiles into this configuration file, it's much easier to use the web UI instead.)
 
 0. Now launch the MamIRC Processor program, with both configuration file names as arguments in order, like this: `javaw -cp java/;nayuki-json-lib.jar;sqlite4java.jar io/nayuki/mamirc/processor/MamircProcessor backend-config.json user-config.json`
 
