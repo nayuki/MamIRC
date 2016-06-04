@@ -44,33 +44,45 @@ public final class MamircConnector {
 	// Performs some configuration, creates the MamircConnector object
 	// which launches worker threads, and then the main thread returns.
 	public static void main(String[] args) throws IOException, SQLiteException {
+		// Check the argument count
 		if (args.length != 1) {
 			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector BackendConfig.json");
 			System.exit(1);
 		}
 		
-		// Set logging levels
-		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
-		Utils.logger.setLevel(Level.INFO);
-		Handler ch = new ConsoleHandler();
-		ch.setLevel(Level.ALL);
-		ch.setFormatter(new Formatter() {
-			public String format(LogRecord rec) {
-				String s = String.format("%tY-%<tm-%<td-%<ta %<tH:%<tM:%<tS %<tZ / %s / %s.%s() / %s%n",
-						rec.getMillis(), rec.getLevel(), rec.getSourceClassName(), rec.getSourceMethodName(), rec.getMessage());
-				if (rec.getThrown() != null) {
-					StringWriter sw = new StringWriter();
-					rec.getThrown().printStackTrace(new PrintWriter(sw));
-					s += sw.toString();
+		// Set logging levels and behaviors
+		{
+			// Suppress all debug messages from sqlite4java module because we are not developing it
+			Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
+			
+			// Set the default logging level for this MamIRC Connector application (can be changed)
+			Utils.logger.setLevel(Level.INFO);
+			
+			// Create new console output handler to overcome the default console handler only showing messages
+			// down to Level.INFO (but not Level.FINE), and to define a more readable custom log line format
+			Handler ch = new ConsoleHandler();
+			ch.setLevel(Level.ALL);
+			ch.setFormatter(new Formatter() {
+				public String format(LogRecord rec) {
+					String s = String.format("%tY-%<tm-%<td-%<ta %<tH:%<tM:%<tS %<tZ / %s / %s.%s() / %s%n",
+							rec.getMillis(), rec.getLevel(), rec.getSourceClassName(), rec.getSourceMethodName(), rec.getMessage());
+					if (rec.getThrown() != null) {
+						StringWriter sw = new StringWriter();
+						rec.getThrown().printStackTrace(new PrintWriter(sw));
+						s += sw.toString();
+					}
+					return s;
 				}
-				return s;
-			}
-		});
-		Utils.logger.setUseParentHandlers(false);
-		Utils.logger.addHandler(ch);
-		Utils.startConsoleLogLevelChanger();
+			});
+			Utils.logger.setUseParentHandlers(false);
+			Utils.logger.addHandler(ch);
+			
+			// Start a worker thread to read stdin, which lets the user change
+			// the logging display level while the application is running
+			Utils.startConsoleLogLevelChanger();
+		}
 		
-		// Load config and start connector
+		// Load config and start Connector
 		Utils.logger.info("MamIRC Connector application starting");
 		File configFile = new File(args[0]);
 		BackendConfiguration config = new BackendConfiguration(configFile);
