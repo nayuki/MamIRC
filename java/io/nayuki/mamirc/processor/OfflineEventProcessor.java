@@ -52,9 +52,9 @@ final class OfflineEventProcessor {
 	private void processConnection(Event ev) {
 		if (ev.type != Event.Type.CONNECTION)
 			throw new IllegalArgumentException();
-		int conId = ev.connectionId;
+		final int conId = ev.connectionId;
 		IrcSession session = sessions.get(conId);  // Possibly null
-		String line = ev.line.getString();
+		final String line = ev.line.getString();
 		
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
@@ -83,11 +83,10 @@ final class OfflineEventProcessor {
 	private void processReceive(Event ev) {
 		if (ev.type != Event.Type.RECEIVE)
 			throw new IllegalArgumentException();
-		int conId = ev.connectionId;
-		IrcSession session = sessions.get(conId);
+		final IrcSession session = sessions.get(ev.connectionId);
 		if (session == null)
 			throw new AssertionError();
-		IrcLine line = new IrcLine(ev.line.getString());
+		final IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
 			case "001":  // RPL_WELCOME and various welcome messages
@@ -218,11 +217,10 @@ final class OfflineEventProcessor {
 	private void processSend(Event ev) {
 		if (ev.type != Event.Type.SEND)
 			throw new IllegalArgumentException();
-		int conId = ev.connectionId;
-		IrcSession session = sessions.get(conId);
+		final IrcSession session = sessions.get(ev.connectionId);
 		if (session == null)
 			throw new AssertionError();
-		IrcLine line = new IrcLine(ev.line.getString());
+		final IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
 			case "NICK": {
