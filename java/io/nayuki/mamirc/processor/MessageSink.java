@@ -8,16 +8,103 @@
 
 package io.nayuki.mamirc.processor;
 
+import java.io.File;
+import com.almworks.sqlite4java.SQLiteConnection;
+import com.almworks.sqlite4java.SQLiteException;
+import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class MessageSink {
 	
-	public void addMessage(IrcSession profile, String party, Event timestamp, String type, String... args) {
+	private SQLiteConnection database;
+	
+	private SQLiteStatement getWindowId;
+	private SQLiteStatement getMaxSequence;
+	private SQLiteStatement insertWindow;
+	private SQLiteStatement insertMessage;
+	
+	private int nextWindowId;
+	
+	
+	
+	public MessageSink(File dbFile) throws SQLiteException {
+		database = new SQLiteConnection(dbFile);
+		database.open(true);
+		database.exec("CREATE TABLE IF NOT EXISTS windows("
+			+ "id INTEGER, profile TEXT NOT NULL, party TEXT NOT NULL, "
+			+ "PRIMARY KEY(id))");
+		database.exec("CREATE TABLE IF NOT EXISTS messages("
+			+ "windowId INTEGER, sequence INTEGER, connectionId INTEGER NOT NULL, timestamp INTEGER NOT NULL, data TEXT NOT NULL, "
+			+ "PRIMARY KEY(windowId, sequence), FOREIGN KEY(windowId) REFERENCES windows(id))");
+		
+		SQLiteStatement getMaxWinId = database.prepare("SELECT max(id) FROM windows");
+		Utils.stepStatement(getMaxWinId, true);
+		if (getMaxWinId.columnNull(0))
+			nextWindowId = 0;
+		else
+			nextWindowId = getMaxWinId.columnInt(0) + 1;
+		getMaxWinId.dispose();
+		
+		getWindowId    = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
+		getMaxSequence = database.prepare("SELECT max(sequence) FROM messages WHERE windowId=?");
+		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?)");
+		insertMessage  = database.prepare("INSERT INTO messages VALUES(?,?,?,?,?)");
+	}
+	
+	
+	
+	public void addMessage(IrcSession profile, String party, int conId, Event timestamp, String type, String... args) {
 		if (profile == null || party == null || timestamp == null || type == null || args == null)
 			throw new NullPointerException();
-		String profName = profile.profileName;
-		long tstamp = timestamp.timestamp;
+		try {
+			int winId = getOrAddWindowId(profile.profileName, party);
+			int seq = getNextSequence(winId);
+			insertMessage.bind(1, winId);
+			insertMessage.bind(2, seq);
+			insertMessage.bind(3, conId);
+			insertMessage.bind(4, timestamp.timestamp);
+			StringBuilder sb = new StringBuilder(type);
+			for (String arg : args)
+				sb.append("\n").append(arg);
+			insertMessage.bind(5, sb.toString());
+			Utils.stepStatement(insertMessage, false);
+		} catch (SQLiteException e) {}
+	}
+	
+	
+	private int getOrAddWindowId(String profile, String party) throws SQLiteException {
+		if (profile == null || party == null)
+			throw new NullPointerException();
+		getWindowId.bind(1, profile);
+		getWindowId.bind(2, party);
+		int result;
+		if (getWindowId.step())
+			result = getWindowId.columnInt(0);
+		else {
+			result = nextWindowId;
+			insertWindow.bind(1, result);
+			insertWindow.bind(2, profile);
+			insertWindow.bind(3, party);
+			Utils.stepStatement(insertWindow, false);
+			nextWindowId++;
+		}
+		getWindowId.reset();
+		return result;
+	}
+	
+	
+	private int getNextSequence(int winId) throws SQLiteException {
+		getMaxSequence.bind(1, winId);
+		Utils.stepStatement(getMaxSequence, true);
+		int result;
+		if (getMaxSequence.columnNull(0))
+			result = 0;
+		else
+			result = getMaxSequence.columnInt(0) + 1;
+		getMaxSequence.reset();
+		return result;
 	}
 	
 }

@@ -61,17 +61,17 @@ final class OfflineEventProcessor {
 			String profileName = parts[4];
 			session = new IrcSession(profileName);
 			sessions.put(conId, session);
-			msgSink.addMessage(session, "", ev, "CONNECT", parts[1], parts[2], parts[3]);
+			msgSink.addMessage(session, "", conId, ev, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
 			session.setRegistrationState(IrcSession.RegState.OPENED);
-			msgSink.addMessage(session, "", ev, "OPENED", line.split(" ", 2)[1]);
+			msgSink.addMessage(session, "", conId, ev, "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
-			msgSink.addMessage(session, "", ev, "DISCONNECT");
+			msgSink.addMessage(session, "", conId, ev, "DISCONNECT");
 			
 		} else if (line.equals("closed")) {
-			msgSink.addMessage(session, "", ev, "CLOSED");
+			msgSink.addMessage(session, "", conId, ev, "CLOSED");
 			if (session != null)
 				sessions.remove(conId);
 			
@@ -83,7 +83,8 @@ final class OfflineEventProcessor {
 	private void processReceive(Event ev) {
 		if (ev.type != Event.Type.RECEIVE)
 			throw new IllegalArgumentException();
-		final IrcSession session = sessions.get(ev.connectionId);
+		final int conId = ev.connectionId;
+		final IrcSession session = sessions.get(conId);
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = new IrcLine(ev.line.getString());
@@ -116,7 +117,7 @@ final class OfflineEventProcessor {
 				String toname = line.getParameter(0);
 				if (fromname.equals(session.getCurrentNickname())) {
 					session.setNickname(toname);
-					msgSink.addMessage(session, "", ev, "NICK", fromname, toname);
+					msgSink.addMessage(session, "", conId, ev, "NICK", fromname, toname);
 				}
 				break;
 			}
@@ -128,7 +129,7 @@ final class OfflineEventProcessor {
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, ev, "PRIVMSG", from, text);
+				msgSink.addMessage(session, party, conId, ev, "PRIVMSG", from, text);
 				break;
 			}
 			
@@ -139,21 +140,21 @@ final class OfflineEventProcessor {
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, ev, "NOTICE", from, text);
+				msgSink.addMessage(session, party, conId, ev, "NOTICE", from, text);
 				break;
 			}
 			
 			case "JOIN": {
 				String who = line.prefixName;
 				String chan = line.getParameter(0);
-				msgSink.addMessage(session, chan, ev, "JOIN", who);
+				msgSink.addMessage(session, chan, conId, ev, "JOIN", who);
 				break;
 			}
 			
 			case "PART": {
 				String who = line.prefixName;
 				String chan = line.getParameter(0);
-				msgSink.addMessage(session, chan, ev, "PART", who);
+				msgSink.addMessage(session, chan, conId, ev, "PART", who);
 				break;
 			}
 			
@@ -162,7 +163,7 @@ final class OfflineEventProcessor {
 				String chan = line.getParameter(0);
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
-				msgSink.addMessage(session, chan, ev, "KICK", from, target, reason);
+				msgSink.addMessage(session, chan, conId, ev, "KICK", from, target, reason);
 				break;
 			}
 			
@@ -178,7 +179,7 @@ final class OfflineEventProcessor {
 						sb.append(" ");
 					sb.append(line.getParameter(i));
 				}
-				msgSink.addMessage(session, party, ev, "MODE", from, sb.toString());
+				msgSink.addMessage(session, party, conId, ev, "MODE", from, sb.toString());
 				break;
 			}
 			
@@ -206,7 +207,7 @@ final class OfflineEventProcessor {
 							sb.append(" ");
 						sb.append(line.getParameter(i));
 					}
-					msgSink.addMessage(session, "", ev, "SERVRPL", sb.toString());
+					msgSink.addMessage(session, "", conId, ev, "SERVRPL", sb.toString());
 					break;
 				}
 			}
@@ -217,7 +218,8 @@ final class OfflineEventProcessor {
 	private void processSend(Event ev) {
 		if (ev.type != Event.Type.SEND)
 			throw new IllegalArgumentException();
-		final IrcSession session = sessions.get(ev.connectionId);
+		final int conId = ev.connectionId;
+		final IrcSession session = sessions.get(conId);
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = new IrcLine(ev.line.getString());
@@ -242,7 +244,7 @@ final class OfflineEventProcessor {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, ev, "PRIVMSG+OUTGOING", from, text);
+				msgSink.addMessage(session, party, conId, ev, "PRIVMSG+OUTGOING", from, text);
 				break;
 			}
 			
@@ -250,7 +252,7 @@ final class OfflineEventProcessor {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, ev, "NOTICE+OUTGOING", from, text);
+				msgSink.addMessage(session, party, conId, ev, "NOTICE+OUTGOING", from, text);
 				break;
 			}
 			
