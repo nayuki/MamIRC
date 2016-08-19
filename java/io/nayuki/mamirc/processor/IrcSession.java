@@ -18,7 +18,7 @@ final class IrcSession {
 	/*---- Fields ----*/
 	
 	// Not null, immutable.
-	public final NetworkProfile profile;
+	public final String profileName;
 	
 	
 	/* Fields used during registration */
@@ -39,10 +39,10 @@ final class IrcSession {
 	
 	/*---- Constructor ----*/
 	
-	public IrcSession(NetworkProfile profile) {
-		if (profile == null)
+	public IrcSession(String profName) {
+		if (profName == null)
 			throw new NullPointerException();
-		this.profile = profile;
+		profileName = profName;
 		
 		// Set initial values
 		registrationState = RegState.CONNECTING;

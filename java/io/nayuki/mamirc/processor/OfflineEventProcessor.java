@@ -15,16 +15,13 @@ import io.nayuki.mamirc.common.Event;
 
 final class OfflineEventProcessor {
 	
-	private Map<String,NetworkProfile> profiles;
-	
 	private Map<Integer,IrcSession> sessions;
 	
 	private MessageSink msgSink;
 	
 	
 	
-	public OfflineEventProcessor(Map<String,NetworkProfile> profiles, MessageSink msgSink) {
-		this.profiles = profiles;
+	public OfflineEventProcessor(MessageSink msgSink) {
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
 	}
@@ -57,28 +54,24 @@ final class OfflineEventProcessor {
 			throw new IllegalArgumentException();
 		int conId = ev.connectionId;
 		IrcSession state = sessions.get(conId);  // Possibly null
-		NetworkProfile profile = state != null ? state.profile : null;  // Possibly null
 		String line = ev.line.getString();
 		
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
-			if (!profiles.containsKey(profileName))
-				throw new IllegalStateException("No profile: " + profileName);
-			profile = profiles.get(profileName);
-			state = new IrcSession(profile);
+			state = new IrcSession(profileName);
 			sessions.put(conId, state);
-			msgSink.addMessage(profile, "", ev, "CONNECT", parts[1], parts[2], parts[3]);
+			msgSink.addMessage(state, "", ev, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
 			state.setRegistrationState(IrcSession.RegState.OPENED);
-			msgSink.addMessage(profile, "", ev, "OPENED", line.split(" ", 2)[1]);
+			msgSink.addMessage(state, "", ev, "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
-			msgSink.addMessage(profile, "", ev, "DISCONNECT");
+			msgSink.addMessage(state, "", ev, "DISCONNECT");
 			
 		} else if (line.equals("closed")) {
-			msgSink.addMessage(profile, "", ev, "CLOSED");
+			msgSink.addMessage(state, "", ev, "CLOSED");
 			if (state != null)
 				sessions.remove(conId);
 			
@@ -94,7 +87,6 @@ final class OfflineEventProcessor {
 		IrcSession state = sessions.get(conId);
 		if (state == null)
 			throw new AssertionError();
-		NetworkProfile profile = state.profile;
 		IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
@@ -125,7 +117,7 @@ final class OfflineEventProcessor {
 				String toname = line.getParameter(0);
 				if (fromname.equals(state.getCurrentNickname())) {
 					state.setNickname(toname);
-					msgSink.addMessage(profile, "", ev, "NICK", fromname, toname);
+					msgSink.addMessage(state, "", ev, "NICK", fromname, toname);
 				}
 				break;
 			}
@@ -137,7 +129,7 @@ final class OfflineEventProcessor {
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
 				String text = line.getParameter(1);
-				msgSink.addMessage(profile, party, ev, "PRIVMSG", from, text);
+				msgSink.addMessage(state, party, ev, "PRIVMSG", from, text);
 				break;
 			}
 			
@@ -148,21 +140,21 @@ final class OfflineEventProcessor {
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
 				String text = line.getParameter(1);
-				msgSink.addMessage(profile, party, ev, "NOTICE", from, text);
+				msgSink.addMessage(state, party, ev, "NOTICE", from, text);
 				break;
 			}
 			
 			case "JOIN": {
 				String who = line.prefixName;
 				String chan = line.getParameter(0);
-				msgSink.addMessage(profile, chan, ev, "JOIN", who);
+				msgSink.addMessage(state, chan, ev, "JOIN", who);
 				break;
 			}
 			
 			case "PART": {
 				String who = line.prefixName;
 				String chan = line.getParameter(0);
-				msgSink.addMessage(profile, chan, ev, "PART", who);
+				msgSink.addMessage(state, chan, ev, "PART", who);
 				break;
 			}
 			
@@ -171,7 +163,7 @@ final class OfflineEventProcessor {
 				String chan = line.getParameter(0);
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
-				msgSink.addMessage(profile, chan, ev, "KICK", from, target, reason);
+				msgSink.addMessage(state, chan, ev, "KICK", from, target, reason);
 				break;
 			}
 			
@@ -187,7 +179,7 @@ final class OfflineEventProcessor {
 						sb.append(" ");
 					sb.append(line.getParameter(i));
 				}
-				msgSink.addMessage(profile, party, ev, "MODE", from, sb.toString());
+				msgSink.addMessage(state, party, ev, "MODE", from, sb.toString());
 				break;
 			}
 			
@@ -215,7 +207,7 @@ final class OfflineEventProcessor {
 							sb.append(" ");
 						sb.append(line.getParameter(i));
 					}
-					msgSink.addMessage(profile, "", ev, "SERVRPL", sb.toString());
+					msgSink.addMessage(state, "", ev, "SERVRPL", sb.toString());
 					break;
 				}
 			}
@@ -230,7 +222,6 @@ final class OfflineEventProcessor {
 		IrcSession state = sessions.get(conId);
 		if (state == null)
 			throw new AssertionError();
-		NetworkProfile profile = state.profile;
 		IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
@@ -253,7 +244,7 @@ final class OfflineEventProcessor {
 				String from = state.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text = line.getParameter(1);
-				msgSink.addMessage(profile, party, ev, "PRIVMSG+OUTGOING", from, text);
+				msgSink.addMessage(state, party, ev, "PRIVMSG+OUTGOING", from, text);
 				break;
 			}
 			
@@ -261,7 +252,7 @@ final class OfflineEventProcessor {
 				String from = state.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text = line.getParameter(1);
-				msgSink.addMessage(profile, party, ev, "NOTICE+OUTGOING", from, text);
+				msgSink.addMessage(state, party, ev, "NOTICE+OUTGOING", from, text);
 				break;
 			}
 			

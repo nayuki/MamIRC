@@ -13,10 +13,10 @@ import io.nayuki.mamirc.common.Event;
 
 final class MessageSink {
 	
-	public void addMessage(NetworkProfile profile, String party, Event timestamp, String type, String... args) {
+	public void addMessage(IrcSession profile, String party, Event timestamp, String type, String... args) {
 		if (profile == null || party == null || timestamp == null || type == null || args == null)
 			throw new NullPointerException();
-		String profName = profile.name;
+		String profName = profile.profileName;
 		long tstamp = timestamp.timestamp;
 	}
 	
