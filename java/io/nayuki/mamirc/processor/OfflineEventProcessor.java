@@ -95,8 +95,8 @@ final class OfflineEventProcessor {
 		if (state == null)
 			throw new AssertionError();
 		NetworkProfile profile = state.profile;
-		IrcLine msg = new IrcLine(ev.line.getString());
-		switch (msg.command.toUpperCase()) {
+		IrcLine line = new IrcLine(ev.line.getString());
+		switch (line.command.toUpperCase()) {
 			
 			case "001":  // RPL_WELCOME and various welcome messages
 			case "002":
@@ -105,7 +105,7 @@ final class OfflineEventProcessor {
 			case "005": {
 				if (state.getRegistrationState() != IrcSession.RegState.REGISTERED) {
 					// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
-					String feedbackNick = msg.getParameter(0);
+					String feedbackNick = line.getParameter(0);
 					if (state.getCurrentNickname().startsWith(feedbackNick))
 						state.setNickname(feedbackNick);
 					state.setRegistrationState(IrcSession.RegState.REGISTERED);
@@ -121,8 +121,8 @@ final class OfflineEventProcessor {
 			}
 			
 			case "NICK": {
-				String fromname = msg.prefixName;
-				String toname = msg.getParameter(0);
+				String fromname = line.prefixName;
+				String toname = line.getParameter(0);
 				if (fromname.equals(state.getCurrentNickname())) {
 					state.setNickname(toname);
 					msgSink.addMessage(profile, "", ev, "NICK", fromname, toname);
@@ -131,61 +131,61 @@ final class OfflineEventProcessor {
 			}
 			
 			case "PRIVMSG": {
-				String from = msg.prefixName;
-				String target = msg.getParameter(0);
+				String from = line.prefixName;
+				String target = line.getParameter(0);
 				String party = target;
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
-				String text = msg.getParameter(1);
+				String text = line.getParameter(1);
 				msgSink.addMessage(profile, party, ev, "PRIVMSG", from, text);
 				break;
 			}
 			
 			case "NOTICE": {
-				String from = msg.prefixName;
-				String target = msg.getParameter(0);
+				String from = line.prefixName;
+				String target = line.getParameter(0);
 				String party = target;
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = from;  // Target is not a channel, and is therefore a private message to me
-				String text = msg.getParameter(1);
+				String text = line.getParameter(1);
 				msgSink.addMessage(profile, party, ev, "NOTICE", from, text);
 				break;
 			}
 			
 			case "JOIN": {
-				String who = msg.prefixName;
-				String chan = msg.getParameter(0);
+				String who = line.prefixName;
+				String chan = line.getParameter(0);
 				msgSink.addMessage(profile, chan, ev, "JOIN", who);
 				break;
 			}
 			
 			case "PART": {
-				String who = msg.prefixName;
-				String chan = msg.getParameter(0);
+				String who = line.prefixName;
+				String chan = line.getParameter(0);
 				msgSink.addMessage(profile, chan, ev, "PART", who);
 				break;
 			}
 			
 			case "KICK": {
-				String from = msg.prefixName;
-				String chan = msg.getParameter(0);
-				String target = msg.getParameter(1);
-				String reason = msg.getParameter(2);
+				String from = line.prefixName;
+				String chan = line.getParameter(0);
+				String target = line.getParameter(1);
+				String reason = line.getParameter(2);
 				msgSink.addMessage(profile, chan, ev, "KICK", from, target, reason);
 				break;
 			}
 			
 			case "MODE": {
-				String from = msg.prefixName;
-				String target = msg.getParameter(0);
+				String from = line.prefixName;
+				String target = line.getParameter(0);
 				String party = target;
 				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
 					party = "";  // Target is not a channel, and thus this is a user mode message
 				StringBuilder sb = new StringBuilder();
-				for (int i = 1; i < msg.parameters.size(); i++) {
+				for (int i = 1; i < line.parameters.size(); i++) {
 					if (sb.length() > 0)
 						sb.append(" ");
-					sb.append(msg.getParameter(i));
+					sb.append(line.getParameter(i));
 				}
 				msgSink.addMessage(profile, party, ev, "MODE", from, sb.toString());
 				break;
@@ -196,8 +196,8 @@ final class OfflineEventProcessor {
 		}
 		
 		// Show some types of server numeric replies
-		if (msg.command.matches("\\d{3}")) {
-			switch (Integer.parseInt(msg.command)) {
+		if (line.command.matches("\\d{3}")) {
+			switch (Integer.parseInt(line.command)) {
 				case 331:
 				case 332:
 				case 333:
@@ -210,10 +210,10 @@ final class OfflineEventProcessor {
 				default: {
 					// Note: Parameter 0 should be my current nickname, which isn't very useful information
 					StringBuilder sb = new StringBuilder();
-					for (int i = 1; i < msg.parameters.size(); i++) {
+					for (int i = 1; i < line.parameters.size(); i++) {
 						if (sb.length() > 0)
 							sb.append(" ");
-						sb.append(msg.getParameter(i));
+						sb.append(line.getParameter(i));
 					}
 					msgSink.addMessage(profile, "", ev, "SERVRPL", sb.toString());
 					break;
