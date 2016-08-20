@@ -21,8 +21,26 @@ final class CaselessString {
 	/*---- Constructors ----*/
 	
 	public CaselessString(String s) {
-		lowerCase = s.toLowerCase();
 		properCase = s;
+		
+		// Convert to "lower case", according to RFC 2812 section 2.2
+		char[] temp = s.toCharArray();
+		for (int i = 0; i < temp.length; i++) {
+			char c = temp[i];
+			if ('A' <= c && c <= 'Z')
+				c += 'a' - 'A';
+			else if (c == '[')
+				c = '{';
+			else if (c == ']')
+				c = '}';
+			else if (c == '\\')
+				c = '|';
+			else if (c == '~')
+				c = '^';
+			// Else don't modify
+			temp[i] = c;
+		}
+		lowerCase = new String(temp);
 	}
 	
 	
