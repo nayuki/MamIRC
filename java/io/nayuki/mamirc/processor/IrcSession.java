@@ -38,7 +38,7 @@ final class IrcSession {
 	// Can be null when attempting to register, not null when REGISTERED.
 	private String currentNickname;
 	
-	private final Map<String,ChannelState> currentChannels;
+	private final Map<CaselessString,ChannelState> currentChannels;
 	
 	
 	
@@ -80,7 +80,7 @@ final class IrcSession {
 	}
 	
 	
-	public Map<String,ChannelState> getChannels() {
+	public Map<CaselessString,ChannelState> getChannels() {
 		return currentChannels;
 	}
 	
@@ -122,7 +122,7 @@ final class IrcSession {
 	}
 	
 	
-	public void joinChannel(String channel) {
+	public void joinChannel(CaselessString channel) {
 		if (currentChannels.containsKey(channel))
 			return;
 		currentChannels.put(channel, new ChannelState());
@@ -130,19 +130,19 @@ final class IrcSession {
 	}
 	
 	
-	public void joinChannel(String channel, String nickname) {
+	public void joinChannel(CaselessString channel, String nickname) {
 		if (!currentChannels.containsKey(channel))
 			return;
 		currentChannels.get(channel).members.add(nickname);
 	}
 	
 	
-	public void partChannel(String channel) {
+	public void partChannel(CaselessString channel) {
 		currentChannels.remove(channel);
 	}
 	
 	
-	public void partChannel(String channel, String nickname) {
+	public void partChannel(CaselessString channel, String nickname) {
 		if (!currentChannels.containsKey(channel))
 			return;
 		currentChannels.get(channel).members.remove(nickname);
