@@ -126,8 +126,8 @@ final class OfflineEventProcessor {
 				String from = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
-				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
-					party = from;  // Target is not a channel, and is therefore a private message to me
+				if (!isChannelName(target))
+					party = from;
 				String text = line.getParameter(1);
 				msgSink.addMessage(session, party, conId, ev, "PRIVMSG", from, text);
 				break;
@@ -137,8 +137,8 @@ final class OfflineEventProcessor {
 				String from = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
-				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
-					party = from;  // Target is not a channel, and is therefore a private message to me
+				if (!isChannelName(target))
+					party = from;
 				String text = line.getParameter(1);
 				msgSink.addMessage(session, party, conId, ev, "NOTICE", from, text);
 				break;
@@ -171,8 +171,8 @@ final class OfflineEventProcessor {
 				String from = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
-				if (target.length() == 0 || (target.charAt(0) != '#' && target.charAt(0) != '&'))
-					party = "";  // Target is not a channel, and thus this is a user mode message
+				if (!isChannelName(target))
+					party = "";  // Assume it is a mode message for my user
 				StringBuilder sb = new StringBuilder();
 				for (int i = 1; i < line.parameters.size(); i++) {
 					if (sb.length() > 0)
@@ -259,6 +259,13 @@ final class OfflineEventProcessor {
 			default:  // No action needed for other commands
 				break;
 		}
+	}
+	
+	
+	private static boolean isChannelName(String target) {
+		if (target == null)
+			throw new NullPointerException();
+		return target.length() > 0 && (target.charAt(0) == '#' || target.charAt(0) == '&');
 	}
 	
 }
