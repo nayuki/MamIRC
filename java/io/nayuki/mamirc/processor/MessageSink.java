@@ -51,6 +51,7 @@ final class MessageSink {
 		getMaxSequence = database.prepare("SELECT max(sequence) FROM messages WHERE windowId=?");
 		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?)");
 		insertMessage  = database.prepare("INSERT INTO messages VALUES(?,?,?,?,?)");
+		database.exec("BEGIN TRANSACTION");
 	}
 	
 	
@@ -71,6 +72,12 @@ final class MessageSink {
 			insertMessage.bind(5, sb.toString());
 			Utils.stepStatement(insertMessage, false);
 		} catch (SQLiteException e) {}
+	}
+	
+	
+	public void dispose() throws SQLiteException {
+		database.exec("COMMIT TRANSACTION");
+		database.dispose();
 	}
 	
 	
