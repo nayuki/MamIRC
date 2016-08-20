@@ -161,9 +161,12 @@ final class IrcSession {
 		
 		public final Set<String> members;  // Not null, size at least 0
 		
+		public boolean isProcessingNamesReply;
+		
 		
 		public ChannelState() {
 			members = new TreeSet<>();
+			isProcessingNamesReply = false;
 		}
 		
 	}

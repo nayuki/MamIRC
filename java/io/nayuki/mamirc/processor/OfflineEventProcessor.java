@@ -202,6 +202,35 @@ final class OfflineEventProcessor {
 				break;
 			}
 			
+			case "353": {  // RPL_NAMREPLY
+				IrcSession.ChannelState channel = session.getChannels().get(line.getParameter(2));
+				if (channel == null)
+					break;
+				if (!channel.isProcessingNamesReply) {
+					channel.isProcessingNamesReply = true;
+					channel.members.clear();
+				}
+				for (String name : line.getParameter(3).split(" ")) {
+					char head = name.length() > 0 ? name.charAt(0) : '\0';
+					if (head == '@' || head == '+' || head == '!' || head == '%' || head == '&' || head == '~')
+						name = name.substring(1);
+					channel.members.add(name);
+				}
+				break;
+			}
+			
+			case "366": {  // RPL_ENDOFNAMES
+				for (Map.Entry<String,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
+					IrcSession.ChannelState channel = entry.getValue();
+					if (channel.isProcessingNamesReply) {
+						channel.isProcessingNamesReply = false;
+						String[] names = channel.members.toArray(new String[0]);
+						msgSink.addMessage(session, entry.getKey(), conId, ev, "NAMES", names);
+					}
+				}
+				break;
+			}
+			
 			case "MODE": {
 				String from   = line.prefixName;
 				String target = line.getParameter(0);
