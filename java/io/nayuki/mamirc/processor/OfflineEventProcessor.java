@@ -155,12 +155,18 @@ final class OfflineEventProcessor {
 			
 			case "JOIN": {
 				String who  = line.prefixName;
+				String user = line.prefixUsername;
+				String host = line.prefixHostname;
+				if (user == null)
+					user = "";
+				if (host == null)
+					host = "";
 				CaselessString chan = new CaselessString(line.getParameter(0));
 				if (who.equals(session.getCurrentNickname()))
 					session.joinChannel(chan);
 				else
 					session.joinChannel(chan, who);
-				msgSink.addMessage(session, chan.properCase, conId, ev, "JOIN", who);
+				msgSink.addMessage(session, chan.properCase, conId, ev, "JOIN", who, user, host);
 				break;
 			}
 			
