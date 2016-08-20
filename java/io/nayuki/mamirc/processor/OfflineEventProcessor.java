@@ -114,7 +114,7 @@ final class OfflineEventProcessor {
 			
 			case "NICK": {
 				String fromname = line.prefixName;
-				String toname = line.getParameter(0);
+				String toname   = line.getParameter(0);
 				if (fromname.equals(session.getCurrentNickname())) {
 					session.setNickname(toname);
 					msgSink.addMessage(session, "", conId, ev, "NICK", fromname, toname);
@@ -123,7 +123,7 @@ final class OfflineEventProcessor {
 			}
 			
 			case "PRIVMSG": {
-				String from = line.prefixName;
+				String from   = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
@@ -134,7 +134,7 @@ final class OfflineEventProcessor {
 			}
 			
 			case "NOTICE": {
-				String from = line.prefixName;
+				String from   = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
@@ -145,22 +145,22 @@ final class OfflineEventProcessor {
 			}
 			
 			case "JOIN": {
-				String who = line.prefixName;
+				String who  = line.prefixName;
 				String chan = line.getParameter(0);
 				msgSink.addMessage(session, chan, conId, ev, "JOIN", who);
 				break;
 			}
 			
 			case "PART": {
-				String who = line.prefixName;
+				String who  = line.prefixName;
 				String chan = line.getParameter(0);
 				msgSink.addMessage(session, chan, conId, ev, "PART", who);
 				break;
 			}
 			
 			case "KICK": {
-				String from = line.prefixName;
-				String chan = line.getParameter(0);
+				String from   = line.prefixName;
+				String chan   = line.getParameter(0);
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
 				msgSink.addMessage(session, chan, conId, ev, "KICK", from, target, reason);
@@ -168,7 +168,7 @@ final class OfflineEventProcessor {
 			}
 			
 			case "MODE": {
-				String from = line.prefixName;
+				String from   = line.prefixName;
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
@@ -243,7 +243,7 @@ final class OfflineEventProcessor {
 			case "PRIVMSG": {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
-				String text = line.getParameter(1);
+				String text  = line.getParameter(1);
 				msgSink.addMessage(session, party, conId, ev, "PRIVMSG+OUTGOING", from, text);
 				break;
 			}
@@ -251,7 +251,7 @@ final class OfflineEventProcessor {
 			case "NOTICE": {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
-				String text = line.getParameter(1);
+				String text  = line.getParameter(1);
 				msgSink.addMessage(session, party, conId, ev, "NOTICE+OUTGOING", from, text);
 				break;
 			}
