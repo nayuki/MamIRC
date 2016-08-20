@@ -33,7 +33,7 @@ final class MessageSink {
 		database = new SQLiteConnection(dbFile);
 		database.open(true);
 		database.exec("CREATE TABLE IF NOT EXISTS windows("
-			+ "id INTEGER, profile TEXT NOT NULL, party TEXT NOT NULL, "
+			+ "id INTEGER, profile TEXT NOT NULL, partyProperCase TEXT NOT NULL, partyLowerCase TEXT NOT NULL, "
 			+ "PRIMARY KEY(id))");
 		database.exec("CREATE TABLE IF NOT EXISTS messages("
 			+ "windowId INTEGER, sequence INTEGER, connectionId INTEGER NOT NULL, timestamp INTEGER NOT NULL, data TEXT NOT NULL, "
@@ -47,9 +47,9 @@ final class MessageSink {
 			nextWindowId = getMaxWinId.columnInt(0) + 1;
 		getMaxWinId.dispose();
 		
-		getWindowId    = database.prepare("SELECT id FROM windows WHERE profile=? AND party=?");
+		getWindowId    = database.prepare("SELECT id FROM windows WHERE profile=? AND partyLowerCase=?");
 		getMaxSequence = database.prepare("SELECT max(sequence) FROM messages WHERE windowId=?");
-		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?)");
+		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?,?)");
 		insertMessage  = database.prepare("INSERT INTO messages VALUES(?,?,?,?,?)");
 		database.exec("BEGIN TRANSACTION");
 	}
@@ -84,8 +84,9 @@ final class MessageSink {
 	private int getOrAddWindowId(String profile, String party) throws SQLiteException {
 		if (profile == null || party == null)
 			throw new NullPointerException();
+		String partyLower = new CaselessString(party).lowerCase;
 		getWindowId.bind(1, profile);
-		getWindowId.bind(2, party);
+		getWindowId.bind(2, partyLower);
 		int result;
 		if (getWindowId.step())
 			result = getWindowId.columnInt(0);
@@ -94,6 +95,7 @@ final class MessageSink {
 			insertWindow.bind(1, result);
 			insertWindow.bind(2, profile);
 			insertWindow.bind(3, party);
+			insertWindow.bind(4, partyLower);
 			Utils.stepStatement(insertWindow, false);
 			nextWindowId++;
 		}
