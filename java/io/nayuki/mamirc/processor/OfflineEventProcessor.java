@@ -15,7 +15,7 @@ import io.nayuki.mamirc.common.Event;
 
 final class OfflineEventProcessor {
 	
-	private Map<Integer,IrcSession> sessions;
+	public Map<Integer,IrcSession> sessions;
 	
 	private MessageSink msgSink;
 	
@@ -119,6 +119,15 @@ final class OfflineEventProcessor {
 					session.setNickname(toname);
 					msgSink.addMessage(session, "", conId, ev, "NICK", fromname, toname);
 				}
+				for (Map.Entry<String,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
+					IrcSession.ChannelState state = entry.getValue();
+					if (state.members.contains(fromname)) {
+						String chan = entry.getKey();
+						session.partChannel(chan, fromname);
+						session.joinChannel(chan, toname);
+						msgSink.addMessage(session, chan, conId, ev, "NICK", fromname, toname);
+					}
+				}
 				break;
 			}
 			
@@ -147,6 +156,10 @@ final class OfflineEventProcessor {
 			case "JOIN": {
 				String who  = line.prefixName;
 				String chan = line.getParameter(0);
+				if (who.equals(session.getCurrentNickname()))
+					session.joinChannel(chan);
+				else
+					session.joinChannel(chan, who);
 				msgSink.addMessage(session, chan, conId, ev, "JOIN", who);
 				break;
 			}
@@ -154,6 +167,10 @@ final class OfflineEventProcessor {
 			case "PART": {
 				String who  = line.prefixName;
 				String chan = line.getParameter(0);
+				if (who.equals(session.getCurrentNickname()))
+					session.partChannel(chan);
+				else
+					session.partChannel(chan, who);
 				msgSink.addMessage(session, chan, conId, ev, "PART", who);
 				break;
 			}
@@ -163,7 +180,25 @@ final class OfflineEventProcessor {
 				String chan   = line.getParameter(0);
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
+				if (target.equals(session.getCurrentNickname()))
+					session.partChannel(chan);
+				else
+					session.partChannel(chan, target);
 				msgSink.addMessage(session, chan, conId, ev, "KICK", from, target, reason);
+				break;
+			}
+			
+			case "QUIT": {
+				String who    = line.prefixName;
+				String reason = line.getParameter(0);
+				for (Map.Entry<String,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
+					IrcSession.ChannelState state = entry.getValue();
+					if (state.members.contains(who)) {
+						String chan = entry.getKey();
+						session.partChannel(chan, who);
+						msgSink.addMessage(session, chan, conId, ev, "QUIT", who, reason);
+					}
+				}
 				break;
 			}
 			

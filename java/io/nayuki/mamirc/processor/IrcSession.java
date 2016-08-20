@@ -8,8 +8,11 @@
 
 package io.nayuki.mamirc.processor;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 
 // Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
@@ -35,6 +38,8 @@ final class IrcSession {
 	// Can be null when attempting to register, not null when REGISTERED.
 	private String currentNickname;
 	
+	private final Map<String,ChannelState> currentChannels;
+	
 	
 	
 	/*---- Constructor ----*/
@@ -48,6 +53,7 @@ final class IrcSession {
 		registrationState = RegState.CONNECTING;
 		rejectedNicknames = new HashSet<>();
 		currentNickname = null;
+		currentChannels = new HashMap<>();
 	}
 	
 	
@@ -71,6 +77,11 @@ final class IrcSession {
 	// If registration is REGISTERED, result is not null. Otherwise it can be null.
 	public String getCurrentNickname() {
 		return currentNickname;
+	}
+	
+	
+	public Map<String,ChannelState> getChannels() {
+		return currentChannels;
 	}
 	
 	
@@ -111,9 +122,50 @@ final class IrcSession {
 	}
 	
 	
+	public void joinChannel(String channel) {
+		if (currentChannels.containsKey(channel))
+			return;
+		currentChannels.put(channel, new ChannelState());
+		joinChannel(channel, currentNickname);
+	}
+	
+	
+	public void joinChannel(String channel, String nickname) {
+		if (!currentChannels.containsKey(channel))
+			return;
+		currentChannels.get(channel).members.add(nickname);
+	}
+	
+	
+	public void partChannel(String channel) {
+		currentChannels.remove(channel);
+	}
+	
+	
+	public void partChannel(String channel, String nickname) {
+		if (!currentChannels.containsKey(channel))
+			return;
+		currentChannels.get(channel).members.remove(nickname);
+	}
+	
+	
+	
+	/*---- Nested classes ----*/
 	
 	public enum RegState {
 		CONNECTING, OPENED, NICK_SENT, USER_SENT, REGISTERED;
+	}
+	
+	
+	public static final class ChannelState {
+		
+		public final Set<String> members;  // Not null, size at least 0
+		
+		
+		public ChannelState() {
+			members = new TreeSet<>();
+		}
+		
 	}
 	
 }
