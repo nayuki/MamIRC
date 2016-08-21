@@ -12,7 +12,6 @@ import java.io.File;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
-import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.Utils;
 
 
@@ -56,16 +55,16 @@ final class MessageSink {
 	
 	
 	
-	public void addMessage(BasicSessionState profile, String party, int conId, Event timestamp, String type, String... args) {
-		if (profile == null || party == null || timestamp == null || type == null || args == null)
+	public void addMessage(String profile, String party, int conId, long timestamp, String type, String... args) {
+		if (profile == null || party == null || type == null || args == null)
 			throw new NullPointerException();
 		try {
-			int winId = getOrAddWindowId(profile.profileName, party);
+			int winId = getOrAddWindowId(profile, party);
 			int seq = getNextSequence(winId);
 			insertMessage.bind(1, winId);
 			insertMessage.bind(2, seq);
 			insertMessage.bind(3, conId);
-			insertMessage.bind(4, timestamp.timestamp);
+			insertMessage.bind(4, timestamp);
 			StringBuilder sb = new StringBuilder(type);
 			for (String arg : args)
 				sb.append("\n").append(arg);

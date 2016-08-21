@@ -29,17 +29,18 @@ final class OnlineEventProcessor extends BasicEventProcessor {
 	
 	
 	public void processEvent(Event ev, boolean realtime) {
-		super.processEvent(ev);
 		try {
-			switch (ev.type) {
+			ThickEvent tev = new ThickEvent(ev, sessions.get(ev.connectionId), msgSink);
+			super.processEvent(tev);
+			switch (tev.type) {
 				case CONNECTION:
-					processConnection(ev, realtime);
+					processConnection(tev, realtime);
 					break;
 				case RECEIVE:
-					processReceive(ev, realtime);
+					processReceive(tev, realtime);
 					break;
 				case SEND:
-					processSend(ev, realtime);
+					processSend(tev, realtime);
 					break;
 				default:
 					throw new AssertionError();
@@ -48,18 +49,17 @@ final class OnlineEventProcessor extends BasicEventProcessor {
 	}
 	
 	
-	private void processConnection(Event ev, boolean realtime) {
-		if (ev.line.getString().startsWith("opened ")) {
-			OnlineSessionState session = (OnlineSessionState)sessions.get(ev.connectionId);
+	private void processConnection(ThickEvent ev, boolean realtime) {
+		if (ev.rawLine.startsWith("opened ")) {
+			OnlineSessionState session = (OnlineSessionState)ev.session;
 			session.setRegistrationState(OnlineSessionState.RegState.OPENED);
 		}
 	}
 	
 	
-	private void processReceive(Event ev, boolean realtime) {
-		final OnlineSessionState session = (OnlineSessionState)sessions.get(ev.connectionId);
-		final IrcLine line = new IrcLine(ev.line.getString());
-		switch (line.command.toUpperCase()) {
+	private void processReceive(ThickEvent ev, boolean realtime) {
+		final OnlineSessionState session = (OnlineSessionState)ev.session;
+		switch (ev.command) {
 			
 			case "001":  // RPL_WELCOME and various welcome messages
 			case "002":
@@ -84,10 +84,10 @@ final class OnlineEventProcessor extends BasicEventProcessor {
 	}
 	
 	
-	private void processSend(Event ev, boolean realtime) {
-		final OnlineSessionState session = (OnlineSessionState)sessions.get(ev.connectionId);
-		final IrcLine line = new IrcLine(ev.line.getString());
-		switch (line.command.toUpperCase()) {
+	private void processSend(ThickEvent ev, boolean realtime) {
+		final OnlineSessionState session = (OnlineSessionState)ev.session;
+		final IrcLine line = ev.ircLine;
+		switch (ev.command) {
 			
 			case "NICK": {
 				if (session.getRegistrationState() == OnlineSessionState.RegState.OPENED)

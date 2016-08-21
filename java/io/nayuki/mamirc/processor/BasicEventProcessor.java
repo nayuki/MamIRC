@@ -19,7 +19,7 @@ class BasicEventProcessor {
 	
 	public Map<Integer,BasicSessionState> sessions;
 	
-	private MessageSink msgSink;
+	protected MessageSink msgSink;
 	
 	
 	
@@ -38,61 +38,62 @@ class BasicEventProcessor {
 		if (ev == null)
 			throw new NullPointerException();
 		try {
-			switch (ev.type) {
-				case CONNECTION:
-					processConnection(ev);
-					break;
-				case RECEIVE:
-					processReceive(ev);
-					break;
-				case SEND:
-					processSend(ev);
-					break;
-				default:
-					throw new AssertionError();
-			}
+			processEvent(new ThickEvent(ev, sessions.get(ev.connectionId), msgSink));
 		} catch (IrcSyntaxException e) {}
 	}
 	
 	
-	private void processConnection(Event ev) {
+	protected void processEvent(ThickEvent ev) {
+		switch (ev.type) {
+			case CONNECTION:
+				processConnection(ev);
+				break;
+			case RECEIVE:
+				processReceive(ev);
+				break;
+			case SEND:
+				processSend(ev);
+				break;
+			default:
+				throw new AssertionError();
+		}
+	}
+	
+	
+	private void processConnection(ThickEvent ev) {
 		if (ev.type != Event.Type.CONNECTION)
 			throw new IllegalArgumentException();
-		final int conId = ev.connectionId;
-		BasicSessionState session = sessions.get(conId);  // Possibly null
-		final String line = ev.line.getString();
+		final String line = ev.rawLine;
 		
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
-			session = createNewSessionState(profileName);
-			sessions.put(conId, session);
-			msgSink.addMessage(session, "", conId, ev, "CONNECT", parts[1], parts[2], parts[3]);
+			sessions.put(ev.connectionId, createNewSessionState(profileName));
+			ev.addMessage("", "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
-			msgSink.addMessage(session, "", conId, ev, "OPENED", line.split(" ", 2)[1]);
+			ev.addMessage("", "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
-			msgSink.addMessage(session, "", conId, ev, "DISCONNECT");
+			ev.addMessage("", "DISCONNECT");
 			
 		} else if (line.equals("closed")) {
-			msgSink.addMessage(session, "", conId, ev, "CLOSED");
-			if (session != null)
-				sessions.remove(conId);
+			ev.addMessage("", "CLOSED");
+			if (ev.session != null)
+				sessions.remove(ev.connectionId);
 			
 		} else
 			throw new AssertionError();
 	}
 	
 	
-	private void processReceive(Event ev) {
+	private void processReceive(ThickEvent ev) {
 		if (ev.type != Event.Type.RECEIVE)
 			throw new IllegalArgumentException();
-		final int conId = ev.connectionId;
-		final BasicSessionState session = sessions.get(conId);
+		final BasicSessionState session = ev.session;
 		if (session == null)
 			throw new AssertionError();
-		final IrcLine line = new IrcLine(ev.line.getString());
+		final IrcLine line = ev.ircLine;
 		switch (line.command.toUpperCase()) {
 			
 			case "001":  // RPL_WELCOME and various welcome messages
@@ -112,7 +113,7 @@ class BasicEventProcessor {
 				String toname   = line.getParameter(0);
 				if (fromname.equals(session.getCurrentNickname())) {
 					session.setNickname(toname);
-					msgSink.addMessage(session, "", conId, ev, "NICK", fromname, toname);
+					ev.addMessage("", "NICK", fromname, toname);
 				}
 				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
 					BasicSessionState.ChannelState state = entry.getValue();
@@ -120,7 +121,7 @@ class BasicEventProcessor {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, fromname);
 						session.joinChannel(chan, toname);
-						msgSink.addMessage(session, chan.properCase, conId, ev, "NICK", fromname, toname);
+						ev.addMessage(chan.properCase, "NICK", fromname, toname);
 					}
 				}
 				break;
@@ -133,7 +134,7 @@ class BasicEventProcessor {
 				if (!isChannelName(target))
 					party = from;
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, conId, ev, "PRIVMSG", from, text);
+				ev.addMessage(party, "PRIVMSG", from, text);
 				break;
 			}
 			
@@ -144,7 +145,7 @@ class BasicEventProcessor {
 				if (!isChannelName(target))
 					party = from;
 				String text = line.getParameter(1);
-				msgSink.addMessage(session, party, conId, ev, "NOTICE", from, text);
+				ev.addMessage(party, "NOTICE", from, text);
 				break;
 			}
 			
@@ -161,7 +162,7 @@ class BasicEventProcessor {
 					session.joinChannel(chan);
 				else
 					session.joinChannel(chan, who);
-				msgSink.addMessage(session, chan.properCase, conId, ev, "JOIN", who, user, host);
+				ev.addMessage(chan.properCase, "JOIN", who, user, host);
 				break;
 			}
 			
@@ -172,7 +173,7 @@ class BasicEventProcessor {
 					session.partChannel(chan);
 				else
 					session.partChannel(chan, who);
-				msgSink.addMessage(session, chan.properCase, conId, ev, "PART", who);
+				ev.addMessage(chan.properCase, "PART", who);
 				break;
 			}
 			
@@ -185,7 +186,7 @@ class BasicEventProcessor {
 					session.partChannel(chan);
 				else
 					session.partChannel(chan, target);
-				msgSink.addMessage(session, chan.properCase, conId, ev, "KICK", from, target, reason);
+				ev.addMessage(chan.properCase, "KICK", from, target, reason);
 				break;
 			}
 			
@@ -197,7 +198,7 @@ class BasicEventProcessor {
 					if (state.members.contains(who)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, who);
-						msgSink.addMessage(session, chan.properCase, conId, ev, "QUIT", who, reason);
+						ev.addMessage(chan.properCase, "QUIT", who, reason);
 					}
 				}
 				break;
@@ -226,7 +227,7 @@ class BasicEventProcessor {
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
 						String[] names = channel.members.toArray(new String[0]);
-						msgSink.addMessage(session, entry.getKey().properCase, conId, ev, "NAMES", names);
+						ev.addMessage(entry.getKey().properCase, "NAMES", names);
 					}
 				}
 				break;
@@ -238,7 +239,7 @@ class BasicEventProcessor {
 				if (channel == null)
 					break;
 				channel.topicText = "";
-				msgSink.addMessage(session, chan, conId, ev, "NOTOPIC");
+				ev.addMessage(chan, "NOTOPIC");
 				break;
 			}
 			
@@ -249,7 +250,7 @@ class BasicEventProcessor {
 				if (channel == null)
 					break;
 				channel.topicText = text;
-				msgSink.addMessage(session, chan, conId, ev, "HASTOPIC", text);
+				ev.addMessage(chan, "HASTOPIC", text);
 				break;
 			}
 			
@@ -262,7 +263,7 @@ class BasicEventProcessor {
 					break;
 				channel.topicSetBy = who;
 				channel.topicSetAt = Long.parseLong(time) * 1000;
-				msgSink.addMessage(session, chan, conId, ev, "TOPICSET", who, time);
+				ev.addMessage(chan, "TOPICSET", who, time);
 				break;
 			}
 			
@@ -276,7 +277,7 @@ class BasicEventProcessor {
 				channel.topicText = text;
 				channel.topicSetBy = who;
 				channel.topicSetAt = ev.timestamp;
-				msgSink.addMessage(session, chan, conId, ev, "TOPIC", who, text);
+				ev.addMessage(chan, "TOPIC", who, text);
 				break;
 			}
 			
@@ -292,7 +293,7 @@ class BasicEventProcessor {
 						sb.append(" ");
 					sb.append(line.getParameter(i));
 				}
-				msgSink.addMessage(session, party, conId, ev, "MODE", from, sb.toString());
+				ev.addMessage(party, "MODE", from, sb.toString());
 				break;
 			}
 			
@@ -320,7 +321,7 @@ class BasicEventProcessor {
 							sb.append(" ");
 						sb.append(line.getParameter(i));
 					}
-					msgSink.addMessage(session, "", conId, ev, "SERVRPL", sb.toString());
+					ev.addMessage("", "SERVRPL", sb.toString());
 					break;
 				}
 			}
@@ -328,21 +329,20 @@ class BasicEventProcessor {
 	}
 	
 	
-	private void processSend(Event ev) {
+	private void processSend(ThickEvent ev) {
 		if (ev.type != Event.Type.SEND)
 			throw new IllegalArgumentException();
-		final int conId = ev.connectionId;
-		final BasicSessionState session = sessions.get(conId);
+		final BasicSessionState session = ev.session;
 		if (session == null)
 			throw new AssertionError();
-		final IrcLine line = new IrcLine(ev.line.getString());
-		switch (line.command.toUpperCase()) {
+		final IrcLine line = ev.ircLine;
+		switch (ev.command) {
 			
 			case "PRIVMSG": {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text  = line.getParameter(1);
-				msgSink.addMessage(session, party, conId, ev, "PRIVMSG+OUTGOING", from, text);
+				ev.addMessage(party, "PRIVMSG+OUTGOING", from, text);
 				break;
 			}
 			
@@ -350,7 +350,7 @@ class BasicEventProcessor {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
 				String text  = line.getParameter(1);
-				msgSink.addMessage(session, party, conId, ev, "NOTICE+OUTGOING", from, text);
+				ev.addMessage(party, "NOTICE+OUTGOING", from, text);
 				break;
 			}
 			
