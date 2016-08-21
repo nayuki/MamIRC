@@ -15,11 +15,15 @@ import io.nayuki.mamirc.common.Event;
 
 final class OfflineEventProcessor {
 	
+	/*---- Fields ----*/
+	
 	public Map<Integer,IrcSession> sessions;
 	
 	private MessageSink msgSink;
 	
 	
+	
+	/*---- Constructors ----*/
 	
 	public OfflineEventProcessor(MessageSink msgSink) {
 		sessions = new HashMap<>();
@@ -27,6 +31,8 @@ final class OfflineEventProcessor {
 	}
 	
 	
+	
+	/*---- Methods ----*/
 	
 	public void processEvent(Event ev) {
 		if (ev == null)

@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 
+// Mutable structure.
 class NetworkProfile {
 	
 	// Name of this IRC network profile. Not null.

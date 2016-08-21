@@ -161,7 +161,7 @@ final class IrcSession {
 		
 		public final Set<String> members;  // Not null, size at least 0
 		
-		public boolean isProcessingNamesReply;
+		public boolean isProcessingNamesReply;  // Usually false, unless received RPL_NAMREPLY but not RPL_ENDOFNAMES yet
 		
 		public String topicText;   // Null if not known, "" if RPL_NOTOPIC, otherwise a non-empty string
 		public String topicSetBy;  // Null if not known or topicText is null
