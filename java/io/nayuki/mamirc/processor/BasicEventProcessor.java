@@ -13,7 +13,7 @@ import java.util.Map;
 import io.nayuki.mamirc.common.Event;
 
 
-final class BasicEventProcessor {
+class BasicEventProcessor {
 	
 	/*---- Fields ----*/
 	
@@ -65,12 +65,11 @@ final class BasicEventProcessor {
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
-			session = new BasicSessionState(profileName);
+			session = createNewSessionState(profileName);
 			sessions.put(conId, session);
 			msgSink.addMessage(session, "", conId, ev, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
-			session.setRegistrationState(BasicSessionState.RegState.OPENED);
 			msgSink.addMessage(session, "", conId, ev, "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
@@ -101,20 +100,10 @@ final class BasicEventProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED) {
-					// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
-					String feedbackNick = line.getParameter(0);
-					if (session.getCurrentNickname().startsWith(feedbackNick))
-						session.setNickname(feedbackNick);
-					session.setRegistrationState(BasicSessionState.RegState.REGISTERED);
-				}
-				break;
-			}
-			
-			case "432":  // ERR_ERRONEUSNICKNAME
-			case "433": {  // ERR_NICKNAMEINUSE
-				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED)
-					session.moveNicknameToRejected();
+				// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
+				String feedbackNick = line.getParameter(0);
+				if (session.getCurrentNickname().startsWith(feedbackNick))
+					session.setNickname(feedbackNick);
 				break;
 			}
 			
@@ -349,21 +338,6 @@ final class BasicEventProcessor {
 		final IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
-			case "NICK": {
-				if (session.getRegistrationState() == BasicSessionState.RegState.OPENED)
-					session.setRegistrationState(BasicSessionState.RegState.NICK_SENT);
-				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED)
-					session.setNickname(line.getParameter(0));
-				// Otherwise when registered, rely on receiving NICK from the server
-				break;
-			}
-			
-			case "USER": {
-				if (session.getRegistrationState() == BasicSessionState.RegState.NICK_SENT)
-					session.setRegistrationState(BasicSessionState.RegState.USER_SENT);
-				break;
-			}
-			
 			case "PRIVMSG": {
 				String from = session.getCurrentNickname();
 				String party = line.getParameter(0);
@@ -383,6 +357,11 @@ final class BasicEventProcessor {
 			default:  // No action needed for other commands
 				break;
 		}
+	}
+	
+	
+	protected BasicSessionState createNewSessionState(String profName) {
+		return new BasicSessionState(profName);
 	}
 	
 	
