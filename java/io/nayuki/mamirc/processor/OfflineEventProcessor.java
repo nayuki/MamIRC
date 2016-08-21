@@ -237,6 +237,54 @@ final class OfflineEventProcessor {
 				break;
 			}
 			
+			case "331": {  // RPL_NOTOPIC
+				String chan = line.getParameter(1);
+				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				if (channel == null)
+					break;
+				channel.topicText = "";
+				msgSink.addMessage(session, chan, conId, ev, "NOTOPIC");
+				break;
+			}
+			
+			case "332": {  // RPL_TOPIC
+				String chan = line.getParameter(1);
+				String text = line.getParameter(2);
+				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				if (channel == null)
+					break;
+				channel.topicText = text;
+				msgSink.addMessage(session, chan, conId, ev, "HASTOPIC", text);
+				break;
+			}
+			
+			case "333": {  // RPL_TOPICWHOTIME (not specified in any RFC)
+				String chan = line.getParameter(1);
+				String who  = line.getParameter(2);
+				String time = line.getParameter(3);  // Unix time in seconds
+				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				if (channel == null)
+					break;
+				channel.topicSetBy = who;
+				channel.topicSetAt = Long.parseLong(time) * 1000;
+				msgSink.addMessage(session, chan, conId, ev, "TOPICSET", who, time);
+				break;
+			}
+			
+			case "TOPIC": {
+				String who  = line.prefixName;
+				String chan = line.getParameter(0);
+				String text = line.getParameter(1);
+				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				if (channel == null)
+					break;
+				channel.topicText = text;
+				channel.topicSetBy = who;
+				channel.topicSetAt = ev.timestamp;
+				msgSink.addMessage(session, chan, conId, ev, "TOPIC", who, text);
+				break;
+			}
+			
 			case "MODE": {
 				String from   = line.prefixName;
 				String target = line.getParameter(0);

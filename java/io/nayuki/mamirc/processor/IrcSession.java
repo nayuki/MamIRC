@@ -163,10 +163,17 @@ final class IrcSession {
 		
 		public boolean isProcessingNamesReply;
 		
+		public String topicText;   // Null if not known, "" if RPL_NOTOPIC, otherwise a non-empty string
+		public String topicSetBy;  // Null if not known or topicText is null
+		public long   topicSetAt;  // Unix time in milliseconds, valid only if topicText is not null
+		
 		
 		public ChannelState() {
 			members = new TreeSet<>();
 			isProcessingNamesReply = false;
+			topicText  = null;
+			topicSetBy = null;
+			topicSetAt = 0;
 		}
 		
 	}
