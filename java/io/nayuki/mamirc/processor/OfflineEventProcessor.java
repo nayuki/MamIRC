@@ -215,7 +215,7 @@ final class OfflineEventProcessor {
 			}
 			
 			case "353": {  // RPL_NAMREPLY
-				IrcSession.ChannelState channel = session.getChannels().get(line.getParameter(2));
+				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
 				if (channel == null)
 					break;
 				if (!channel.isProcessingNamesReply) {

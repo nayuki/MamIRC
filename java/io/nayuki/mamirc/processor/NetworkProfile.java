@@ -16,10 +16,10 @@ import java.util.TreeSet;
 
 
 // Mutable structure.
-class NetworkProfile {
+final class NetworkProfile {
 	
-	// Name of this IRC network profile. Not null.
-	public String name;
+	// Name of this IRC network profile. Immutable, and not null.
+	public final String name;
 	
 	// Indicates whether to start or stop connecting to IRC servers in this profile.
 	public boolean connect;
@@ -41,7 +41,8 @@ class NetworkProfile {
 	
 	
 	
-	public NetworkProfile() {
+	public NetworkProfile(String name) {
+		this.name = name;
 		servers = new ArrayList<>();
 		nicknames = new ArrayList<>();
 		channels = new TreeSet<>();
