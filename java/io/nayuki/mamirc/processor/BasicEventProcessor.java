@@ -13,11 +13,11 @@ import java.util.Map;
 import io.nayuki.mamirc.common.Event;
 
 
-final class OfflineEventProcessor {
+final class BasicEventProcessor {
 	
 	/*---- Fields ----*/
 	
-	public Map<Integer,IrcSession> sessions;
+	public Map<Integer,BasicSessionState> sessions;
 	
 	private MessageSink msgSink;
 	
@@ -25,7 +25,7 @@ final class OfflineEventProcessor {
 	
 	/*---- Constructors ----*/
 	
-	public OfflineEventProcessor(MessageSink msgSink) {
+	public BasicEventProcessor(MessageSink msgSink) {
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
 	}
@@ -59,18 +59,18 @@ final class OfflineEventProcessor {
 		if (ev.type != Event.Type.CONNECTION)
 			throw new IllegalArgumentException();
 		final int conId = ev.connectionId;
-		IrcSession session = sessions.get(conId);  // Possibly null
+		BasicSessionState session = sessions.get(conId);  // Possibly null
 		final String line = ev.line.getString();
 		
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
-			session = new IrcSession(profileName);
+			session = new BasicSessionState(profileName);
 			sessions.put(conId, session);
 			msgSink.addMessage(session, "", conId, ev, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
-			session.setRegistrationState(IrcSession.RegState.OPENED);
+			session.setRegistrationState(BasicSessionState.RegState.OPENED);
 			msgSink.addMessage(session, "", conId, ev, "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
@@ -90,7 +90,7 @@ final class OfflineEventProcessor {
 		if (ev.type != Event.Type.RECEIVE)
 			throw new IllegalArgumentException();
 		final int conId = ev.connectionId;
-		final IrcSession session = sessions.get(conId);
+		final BasicSessionState session = sessions.get(conId);
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = new IrcLine(ev.line.getString());
@@ -101,19 +101,19 @@ final class OfflineEventProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (session.getRegistrationState() != IrcSession.RegState.REGISTERED) {
+				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED) {
 					// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
 					String feedbackNick = line.getParameter(0);
 					if (session.getCurrentNickname().startsWith(feedbackNick))
 						session.setNickname(feedbackNick);
-					session.setRegistrationState(IrcSession.RegState.REGISTERED);
+					session.setRegistrationState(BasicSessionState.RegState.REGISTERED);
 				}
 				break;
 			}
 			
 			case "432":  // ERR_ERRONEUSNICKNAME
 			case "433": {  // ERR_NICKNAMEINUSE
-				if (session.getRegistrationState() != IrcSession.RegState.REGISTERED)
+				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED)
 					session.moveNicknameToRejected();
 				break;
 			}
@@ -125,8 +125,8 @@ final class OfflineEventProcessor {
 					session.setNickname(toname);
 					msgSink.addMessage(session, "", conId, ev, "NICK", fromname, toname);
 				}
-				for (Map.Entry<CaselessString,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
-					IrcSession.ChannelState state = entry.getValue();
+				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					BasicSessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(fromname)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, fromname);
@@ -203,8 +203,8 @@ final class OfflineEventProcessor {
 			case "QUIT": {
 				String who    = line.prefixName;
 				String reason = line.getParameter(0);
-				for (Map.Entry<CaselessString,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
-					IrcSession.ChannelState state = entry.getValue();
+				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					BasicSessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(who)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, who);
@@ -215,7 +215,7 @@ final class OfflineEventProcessor {
 			}
 			
 			case "353": {  // RPL_NAMREPLY
-				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
+				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
 				if (channel == null)
 					break;
 				if (!channel.isProcessingNamesReply) {
@@ -232,8 +232,8 @@ final class OfflineEventProcessor {
 			}
 			
 			case "366": {  // RPL_ENDOFNAMES
-				for (Map.Entry<CaselessString,IrcSession.ChannelState> entry : session.getChannels().entrySet()) {
-					IrcSession.ChannelState channel = entry.getValue();
+				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					BasicSessionState.ChannelState channel = entry.getValue();
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
 						String[] names = channel.members.toArray(new String[0]);
@@ -245,7 +245,7 @@ final class OfflineEventProcessor {
 			
 			case "331": {  // RPL_NOTOPIC
 				String chan = line.getParameter(1);
-				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = "";
@@ -256,7 +256,7 @@ final class OfflineEventProcessor {
 			case "332": {  // RPL_TOPIC
 				String chan = line.getParameter(1);
 				String text = line.getParameter(2);
-				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -268,7 +268,7 @@ final class OfflineEventProcessor {
 				String chan = line.getParameter(1);
 				String who  = line.getParameter(2);
 				String time = line.getParameter(3);  // Unix time in seconds
-				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicSetBy = who;
@@ -281,7 +281,7 @@ final class OfflineEventProcessor {
 				String who  = line.prefixName;
 				String chan = line.getParameter(0);
 				String text = line.getParameter(1);
-				IrcSession.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -343,24 +343,24 @@ final class OfflineEventProcessor {
 		if (ev.type != Event.Type.SEND)
 			throw new IllegalArgumentException();
 		final int conId = ev.connectionId;
-		final IrcSession session = sessions.get(conId);
+		final BasicSessionState session = sessions.get(conId);
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = new IrcLine(ev.line.getString());
 		switch (line.command.toUpperCase()) {
 			
 			case "NICK": {
-				if (session.getRegistrationState() == IrcSession.RegState.OPENED)
-					session.setRegistrationState(IrcSession.RegState.NICK_SENT);
-				if (session.getRegistrationState() != IrcSession.RegState.REGISTERED)
+				if (session.getRegistrationState() == BasicSessionState.RegState.OPENED)
+					session.setRegistrationState(BasicSessionState.RegState.NICK_SENT);
+				if (session.getRegistrationState() != BasicSessionState.RegState.REGISTERED)
 					session.setNickname(line.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
 			
 			case "USER": {
-				if (session.getRegistrationState() == IrcSession.RegState.NICK_SENT)
-					session.setRegistrationState(IrcSession.RegState.USER_SENT);
+				if (session.getRegistrationState() == BasicSessionState.RegState.NICK_SENT)
+					session.setRegistrationState(BasicSessionState.RegState.USER_SENT);
 				break;
 			}
 			

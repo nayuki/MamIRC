@@ -56,7 +56,7 @@ final class MessageSink {
 	
 	
 	
-	public void addMessage(IrcSession profile, String party, int conId, Event timestamp, String type, String... args) {
+	public void addMessage(BasicSessionState profile, String party, int conId, Event timestamp, String type, String... args) {
 		if (profile == null || party == null || timestamp == null || type == null || args == null)
 			throw new NullPointerException();
 		try {

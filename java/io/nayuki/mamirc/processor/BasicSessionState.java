@@ -16,7 +16,7 @@ import java.util.TreeSet;
 
 
 // Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
-final class IrcSession {
+final class BasicSessionState {
 	
 	/*---- Fields ----*/
 	
@@ -44,7 +44,7 @@ final class IrcSession {
 	
 	/*---- Constructor ----*/
 	
-	public IrcSession(String profName) {
+	public BasicSessionState(String profName) {
 		if (profName == null)
 			throw new NullPointerException();
 		profileName = profName;
