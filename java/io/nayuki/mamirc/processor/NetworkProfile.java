@@ -10,7 +10,9 @@ package io.nayuki.mamirc.processor;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import io.nayuki.json.Json;
@@ -86,6 +88,32 @@ final class NetworkProfile {
 	
 	
 	
+	/*---- Methods ----*/
+	
+	// Returns a new JSON object representing the current state of this network profile.
+	Object toJson() {
+		Map<String,Object> result = new HashMap<>();
+		
+		// Simple fields
+		result.put("connect", connect);
+		result.put("username", username);
+		result.put("realname", realname);
+		
+		// Simple list fields
+		result.put("nicknames", new ArrayList<>(nicknames));
+		result.put("channels", new ArrayList<>(channels));
+		
+		// Complex list fields
+		List<Object> outServers = new ArrayList<>();
+		for (Server serv : servers)
+			outServers.add(serv.toJson());
+		result.put("servers", outServers);
+		
+		return result;
+	}
+	
+	
+	
 	/*---- Nested classes ----*/
 	
 	// Represents a server to connect to. Immutable structure, performs no I/O.
@@ -112,6 +140,16 @@ final class NetworkProfile {
 				Json.getString(root, "hostname"),
 				Json.getInt(root, "port"),
 				Json.getBoolean(root, "ssl"));
+		}
+		
+		
+		// Returns a new JSON object representing this server.
+		Object toJson() {
+			Map<String,Object> result = new HashMap<>();
+			result.put("hostname", hostnamePort.getHostString());
+			result.put("port", hostnamePort.getPort());
+			result.put("ssl", useSsl);
+			return result;
 		}
 		
 	}
