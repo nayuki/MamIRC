@@ -102,30 +102,32 @@ final class EventProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
+				if (session.registrationState != SessionState.RegState.REGISTERED)
 					session.setRegistrationState(SessionState.RegState.REGISTERED);
 				// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
 				String feedbackNick = line.getParameter(0);
-				if (session.getCurrentNickname().startsWith(feedbackNick))
-					session.setNickname(feedbackNick);
+				if (session.currentNickname.startsWith(feedbackNick))
+					session.currentNickname = feedbackNick;
 				break;
 			}
 			
 			case "432":  // ERR_ERRONEUSNICKNAME
 			case "433": {  // ERR_NICKNAMEINUSE
-				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
-					session.moveNicknameToRejected();
+				if (session.registrationState != SessionState.RegState.REGISTERED) {
+					session.rejectedNicknames.add(session.currentNickname);
+					session.currentNickname = null;
+				}
 				break;
 			}
 			
 			case "NICK": {
 				String fromname = line.prefixName;
 				String toname   = line.getParameter(0);
-				if (fromname.equals(session.getCurrentNickname())) {
-					session.setNickname(toname);
+				if (fromname.equals(session.currentNickname)) {
+					session.currentNickname = toname;
 					ev.addMessage("", "NICK", fromname, toname);
 				}
-				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
 					SessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(fromname)) {
 						CaselessString chan = entry.getKey();
@@ -168,7 +170,7 @@ final class EventProcessor {
 				if (host == null)
 					host = "";
 				CaselessString chan = new CaselessString(line.getParameter(0));
-				if (who.equals(session.getCurrentNickname()))
+				if (who.equals(session.currentNickname))
 					session.joinChannel(chan);
 				else
 					session.joinChannel(chan, who);
@@ -179,7 +181,7 @@ final class EventProcessor {
 			case "PART": {
 				String who  = line.prefixName;
 				CaselessString chan = new CaselessString(line.getParameter(0));
-				if (who.equals(session.getCurrentNickname()))
+				if (who.equals(session.currentNickname))
 					session.partChannel(chan);
 				else
 					session.partChannel(chan, who);
@@ -192,7 +194,7 @@ final class EventProcessor {
 				CaselessString chan   = new CaselessString(line.getParameter(0));
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
-				if (target.equals(session.getCurrentNickname()))
+				if (target.equals(session.currentNickname))
 					session.partChannel(chan);
 				else
 					session.partChannel(chan, target);
@@ -203,7 +205,7 @@ final class EventProcessor {
 			case "QUIT": {
 				String who    = line.prefixName;
 				String reason = line.getParameter(0);
-				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
 					SessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(who)) {
 						CaselessString chan = entry.getKey();
@@ -215,7 +217,7 @@ final class EventProcessor {
 			}
 			
 			case "353": {  // RPL_NAMREPLY
-				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
+				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(line.getParameter(2)));
 				if (channel == null)
 					break;
 				if (!channel.isProcessingNamesReply) {
@@ -232,7 +234,7 @@ final class EventProcessor {
 			}
 			
 			case "366": {  // RPL_ENDOFNAMES
-				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
 					SessionState.ChannelState channel = entry.getValue();
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
@@ -245,7 +247,7 @@ final class EventProcessor {
 			
 			case "331": {  // RPL_NOTOPIC
 				String chan = line.getParameter(1);
-				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = "";
@@ -256,7 +258,7 @@ final class EventProcessor {
 			case "332": {  // RPL_TOPIC
 				String chan = line.getParameter(1);
 				String text = line.getParameter(2);
-				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -268,7 +270,7 @@ final class EventProcessor {
 				String chan = line.getParameter(1);
 				String who  = line.getParameter(2);
 				String time = line.getParameter(3);  // Unix time in seconds
-				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicSetBy = who;
@@ -281,7 +283,7 @@ final class EventProcessor {
 				String who  = line.prefixName;
 				String chan = line.getParameter(0);
 				String text = line.getParameter(1);
-				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -349,22 +351,22 @@ final class EventProcessor {
 		switch (ev.command) {
 			
 			case "NICK": {
-				if (session.getRegistrationState() == SessionState.RegState.OPENED)
+				if (session.registrationState == SessionState.RegState.OPENED)
 					session.setRegistrationState(SessionState.RegState.NICK_SENT);
-				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
-					session.setNickname(line.getParameter(0));
+				if (session.registrationState != SessionState.RegState.REGISTERED)
+					session.currentNickname = line.getParameter(0);
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
 			
 			case "USER": {
-				if (session.getRegistrationState() == SessionState.RegState.NICK_SENT)
+				if (session.registrationState == SessionState.RegState.NICK_SENT)
 					session.setRegistrationState(SessionState.RegState.USER_SENT);
 				break;
 			}
 			
 			case "PRIVMSG": {
-				String from = session.getCurrentNickname();
+				String from = session.currentNickname;
 				String party = line.getParameter(0);
 				String text  = line.getParameter(1);
 				ev.addMessage(party, "PRIVMSG+OUTGOING", from, text);
@@ -372,7 +374,7 @@ final class EventProcessor {
 			}
 			
 			case "NOTICE": {
-				String from = session.getCurrentNickname();
+				String from = session.currentNickname;
 				String party = line.getParameter(0);
 				String text  = line.getParameter(1);
 				ev.addMessage(party, "NOTICE+OUTGOING", from, text);

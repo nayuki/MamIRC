@@ -24,15 +24,16 @@ final class SessionState {
 	public final String profileName;
 	
 	// Can be null when attempting to register, not null when REGISTERED.
-	protected String currentNickname;
+	public String currentNickname;
 	
 	// Not null, and can only progress forward in the enum order.
-	private RegState registrationState;
+	public RegState registrationState;
 	
 	// Not null before successful registration, null thereafter.
-	private Set<String> rejectedNicknames;
+	public Set<String> rejectedNicknames;
 	
-	protected final Map<CaselessString,ChannelState> currentChannels;
+	// Null before successful registration, not null thereafter.
+	public Map<CaselessString,ChannelState> currentChannels;
 	
 	
 	
@@ -47,43 +48,7 @@ final class SessionState {
 		currentNickname = null;
 		registrationState = RegState.CONNECTING;
 		rejectedNicknames = new HashSet<>();
-		currentChannels = new HashMap<>();
-	}
-	
-	
-	
-	/*---- Getter methods ----*/
-	
-	// If registration is REGISTERED, result is not null. Otherwise it can be null.
-	public String getCurrentNickname() {
-		return currentNickname;
-	}
-	
-	
-	// Result is not null.
-	public RegState getRegistrationState() {
-		return registrationState;
-	}
-	
-	
-	// Returns a boolean value, as long as the state is not REGISTERED.
-	public boolean isNicknameRejected(String name) {
-		if (rejectedNicknames == null)
-			throw new IllegalStateException();
-		return rejectedNicknames.contains(name);
-	}
-	
-	
-	public Map<CaselessString,ChannelState> getChannels() {
-		return currentChannels;
-	}
-	
-	
-	/*---- Setter/mutation methods ----*/
-	
-	// If registration state is REGISTERED, name must not be null. Otherwise it can be null.
-	public void setNickname(String name) {
-		currentNickname = name;
+		currentChannels = null;
 	}
 	
 	
@@ -98,19 +63,9 @@ final class SessionState {
 			if (currentNickname == null)
 				throw new IllegalStateException("Nickname is currently null");
 			rejectedNicknames = null;
+			currentChannels = new HashMap<>();
 		}
 		registrationState = newState;
-	}
-	
-	
-	// Returns silently if okay, otherwise throws an exception for various conditions.
-	public void moveNicknameToRejected() {
-		if (currentNickname == null)
-			throw new IllegalStateException("Current nickname is null");
-		if (registrationState == RegState.REGISTERED)
-			throw new IllegalStateException("Not tracking rejected nicknames when registered");
-		rejectedNicknames.add(currentNickname);
-		currentNickname = null;
 	}
 	
 	
