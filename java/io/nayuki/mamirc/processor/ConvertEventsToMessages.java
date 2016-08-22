@@ -34,7 +34,7 @@ public final class ConvertEventsToMessages {
 		SQLiteConnection database = new SQLiteConnection(inFile);
 		database.open(false);
 		MessageSink msgSink = new MessageSink(outFile, null);
-		EventProcessor evtProc = new EventProcessor(msgSink);
+		EventProcessor evtProc = new EventProcessor(msgSink, null);
 		
 		// Prepare query statements
 		SQLiteStatement getConnectionIds = database.prepare("SELECT DISTINCT connectionId FROM events ORDER BY connectionId ASC");
