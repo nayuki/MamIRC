@@ -13,11 +13,11 @@ import java.util.Map;
 import io.nayuki.mamirc.common.Event;
 
 
-class BasicEventProcessor {
+final class EventProcessor {
 	
 	/*---- Fields ----*/
 	
-	public Map<Integer,BasicSessionState> sessions;
+	public Map<Integer,SessionState> sessions;
 	
 	protected MessageSink msgSink;
 	
@@ -25,7 +25,7 @@ class BasicEventProcessor {
 	
 	/*---- Constructors ----*/
 	
-	public BasicEventProcessor(MessageSink msgSink) {
+	public EventProcessor(MessageSink msgSink) {
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
 	}
@@ -68,10 +68,11 @@ class BasicEventProcessor {
 		if (line.startsWith("connect ")) {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
-			sessions.put(ev.connectionId, createNewSessionState(profileName));
+			sessions.put(ev.connectionId, new SessionState(profileName));
 			ev.addMessage("", "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
+			ev.session.setRegistrationState(SessionState.RegState.OPENED);
 			ev.addMessage("", "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
@@ -90,7 +91,7 @@ class BasicEventProcessor {
 	private void processReceive(ThickEvent ev) {
 		if (ev.type != Event.Type.RECEIVE)
 			throw new IllegalArgumentException();
-		final BasicSessionState session = ev.session;
+		final SessionState session = ev.session;
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = ev.ircLine;
@@ -101,10 +102,19 @@ class BasicEventProcessor {
 			case "003":
 			case "004":
 			case "005": {
+				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
+					session.setRegistrationState(SessionState.RegState.REGISTERED);
 				// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
 				String feedbackNick = line.getParameter(0);
 				if (session.getCurrentNickname().startsWith(feedbackNick))
 					session.setNickname(feedbackNick);
+				break;
+			}
+			
+			case "432":  // ERR_ERRONEUSNICKNAME
+			case "433": {  // ERR_NICKNAMEINUSE
+				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
+					session.moveNicknameToRejected();
 				break;
 			}
 			
@@ -115,8 +125,8 @@ class BasicEventProcessor {
 					session.setNickname(toname);
 					ev.addMessage("", "NICK", fromname, toname);
 				}
-				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
-					BasicSessionState.ChannelState state = entry.getValue();
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					SessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(fromname)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, fromname);
@@ -193,8 +203,8 @@ class BasicEventProcessor {
 			case "QUIT": {
 				String who    = line.prefixName;
 				String reason = line.getParameter(0);
-				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
-					BasicSessionState.ChannelState state = entry.getValue();
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					SessionState.ChannelState state = entry.getValue();
 					if (state.members.contains(who)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, who);
@@ -205,7 +215,7 @@ class BasicEventProcessor {
 			}
 			
 			case "353": {  // RPL_NAMREPLY
-				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
+				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(line.getParameter(2)));
 				if (channel == null)
 					break;
 				if (!channel.isProcessingNamesReply) {
@@ -222,8 +232,8 @@ class BasicEventProcessor {
 			}
 			
 			case "366": {  // RPL_ENDOFNAMES
-				for (Map.Entry<CaselessString,BasicSessionState.ChannelState> entry : session.getChannels().entrySet()) {
-					BasicSessionState.ChannelState channel = entry.getValue();
+				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.getChannels().entrySet()) {
+					SessionState.ChannelState channel = entry.getValue();
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
 						String[] names = channel.members.toArray(new String[0]);
@@ -235,7 +245,7 @@ class BasicEventProcessor {
 			
 			case "331": {  // RPL_NOTOPIC
 				String chan = line.getParameter(1);
-				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = "";
@@ -246,7 +256,7 @@ class BasicEventProcessor {
 			case "332": {  // RPL_TOPIC
 				String chan = line.getParameter(1);
 				String text = line.getParameter(2);
-				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -258,7 +268,7 @@ class BasicEventProcessor {
 				String chan = line.getParameter(1);
 				String who  = line.getParameter(2);
 				String time = line.getParameter(3);  // Unix time in seconds
-				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicSetBy = who;
@@ -271,7 +281,7 @@ class BasicEventProcessor {
 				String who  = line.prefixName;
 				String chan = line.getParameter(0);
 				String text = line.getParameter(1);
-				BasicSessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
+				SessionState.ChannelState channel = session.getChannels().get(new CaselessString(chan));
 				if (channel == null)
 					break;
 				channel.topicText = text;
@@ -332,11 +342,26 @@ class BasicEventProcessor {
 	private void processSend(ThickEvent ev) {
 		if (ev.type != Event.Type.SEND)
 			throw new IllegalArgumentException();
-		final BasicSessionState session = ev.session;
+		final SessionState session = ev.session;
 		if (session == null)
 			throw new AssertionError();
 		final IrcLine line = ev.ircLine;
 		switch (ev.command) {
+			
+			case "NICK": {
+				if (session.getRegistrationState() == SessionState.RegState.OPENED)
+					session.setRegistrationState(SessionState.RegState.NICK_SENT);
+				if (session.getRegistrationState() != SessionState.RegState.REGISTERED)
+					session.setNickname(line.getParameter(0));
+				// Otherwise when registered, rely on receiving NICK from the server
+				break;
+			}
+			
+			case "USER": {
+				if (session.getRegistrationState() == SessionState.RegState.NICK_SENT)
+					session.setRegistrationState(SessionState.RegState.USER_SENT);
+				break;
+			}
 			
 			case "PRIVMSG": {
 				String from = session.getCurrentNickname();
@@ -357,11 +382,6 @@ class BasicEventProcessor {
 			default:  // No action needed for other commands
 				break;
 		}
-	}
-	
-	
-	protected BasicSessionState createNewSessionState(String profName) {
-		return new BasicSessionState(profName);
 	}
 	
 	

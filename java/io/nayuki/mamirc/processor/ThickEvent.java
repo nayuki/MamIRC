@@ -30,14 +30,14 @@ final class ThickEvent {
 	
 	/*---- Extra context fields ----*/
 	
-	public final BasicSessionState session;  // Can be null. Underlying object is mutable.
+	public final SessionState session;  // Can be null. Underlying object is mutable.
 	public final MessageSink messageSink;    // Not null. Underlying object is mutable.
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public ThickEvent(Event ev, BasicSessionState session, MessageSink msgSink) {
+	public ThickEvent(Event ev, SessionState session, MessageSink msgSink) {
 		// Check arguments
 		if (ev == null || msgSink == null || ev.type != Event.Type.CONNECTION && session == null)
 			throw new NullPointerException();

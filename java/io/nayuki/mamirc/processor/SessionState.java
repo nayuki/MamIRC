@@ -9,13 +9,14 @@
 package io.nayuki.mamirc.processor;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 
 // Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
-class BasicSessionState {
+final class SessionState {
 	
 	/*---- Fields ----*/
 	
@@ -25,19 +26,27 @@ class BasicSessionState {
 	// Can be null when attempting to register, not null when REGISTERED.
 	protected String currentNickname;
 	
+	// Not null, and can only progress forward in the enum order.
+	private RegState registrationState;
+	
+	// Not null before successful registration, null thereafter.
+	private Set<String> rejectedNicknames;
+	
 	protected final Map<CaselessString,ChannelState> currentChannels;
 	
 	
 	
 	/*---- Constructor ----*/
 	
-	public BasicSessionState(String profName) {
+	public SessionState(String profName) {
 		if (profName == null)
 			throw new NullPointerException();
 		profileName = profName;
 		
 		// Set initial values
 		currentNickname = null;
+		registrationState = RegState.CONNECTING;
+		rejectedNicknames = new HashSet<>();
 		currentChannels = new HashMap<>();
 	}
 	
@@ -51,6 +60,20 @@ class BasicSessionState {
 	}
 	
 	
+	// Result is not null.
+	public RegState getRegistrationState() {
+		return registrationState;
+	}
+	
+	
+	// Returns a boolean value, as long as the state is not REGISTERED.
+	public boolean isNicknameRejected(String name) {
+		if (rejectedNicknames == null)
+			throw new IllegalStateException();
+		return rejectedNicknames.contains(name);
+	}
+	
+	
 	public Map<CaselessString,ChannelState> getChannels() {
 		return currentChannels;
 	}
@@ -61,6 +84,33 @@ class BasicSessionState {
 	// If registration state is REGISTERED, name must not be null. Otherwise it can be null.
 	public void setNickname(String name) {
 		currentNickname = name;
+	}
+	
+	
+	// New state must be non-null, must advance over the previous state,
+	// and if new state is REGISTERED then current nickname must be non-null.
+	public void setRegistrationState(RegState newState) {
+		if (newState == null)
+			throw new NullPointerException();
+		if (newState.ordinal() <= registrationState.ordinal())
+			throw new IllegalArgumentException("Must advance the state");
+		if (newState == RegState.REGISTERED) {
+			if (currentNickname == null)
+				throw new IllegalStateException("Nickname is currently null");
+			rejectedNicknames = null;
+		}
+		registrationState = newState;
+	}
+	
+	
+	// Returns silently if okay, otherwise throws an exception for various conditions.
+	public void moveNicknameToRejected() {
+		if (currentNickname == null)
+			throw new IllegalStateException("Current nickname is null");
+		if (registrationState == RegState.REGISTERED)
+			throw new IllegalStateException("Not tracking rejected nicknames when registered");
+		rejectedNicknames.add(currentNickname);
+		currentNickname = null;
 	}
 	
 	
@@ -93,6 +143,11 @@ class BasicSessionState {
 	
 	
 	/*---- Nested classes ----*/
+	
+	public enum RegState {
+		CONNECTING, OPENED, NICK_SENT, USER_SENT, REGISTERED;
+	}
+	
 	
 	public static final class ChannelState {
 		
