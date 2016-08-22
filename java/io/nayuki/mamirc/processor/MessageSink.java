@@ -26,9 +26,13 @@ final class MessageSink {
 	
 	private int nextWindowId;
 	
+	private UpdateManager updateMgr;
 	
 	
-	public MessageSink(File dbFile) throws SQLiteException {
+	
+	public MessageSink(File dbFile, UpdateManager updateMgr) throws SQLiteException {
+		this.updateMgr = updateMgr;
+		
 		database = new SQLiteConnection(dbFile);
 		database.open(true);
 		database.exec("CREATE TABLE IF NOT EXISTS windows("
@@ -71,6 +75,17 @@ final class MessageSink {
 			insertMessage.bind(5, sb.toString());
 			Utils.stepStatement(insertMessage, false);
 		} catch (SQLiteException e) {}
+		
+		if (updateMgr != null) {
+			Object[] temp = new Object[5 + args.length];
+			temp[0] = "WINMSG";
+			temp[1] = profile;
+			temp[2] = party;
+			temp[3] = timestamp;
+			temp[4] = type;
+			System.arraycopy(args, 0, temp, 5, args.length);
+			updateMgr.addUpdate(temp);
+		}
 	}
 	
 	
