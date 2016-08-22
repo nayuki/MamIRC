@@ -17,9 +17,9 @@ final class EventProcessor {
 	
 	/*---- Fields ----*/
 	
-	public Map<Integer,SessionState> sessions;
+	private Map<Integer,SessionState> sessions;
 	
-	protected MessageSink msgSink;
+	private MessageSink msgSink;
 	
 	private UpdateManager updateMgr;
 	
@@ -41,31 +41,26 @@ final class EventProcessor {
 		if (ev == null)
 			throw new NullPointerException();
 		try {
-			processEvent(new ThickEvent(ev, sessions.get(ev.connectionId), msgSink));
+			ThickEvent tev = new ThickEvent(ev, sessions.get(ev.connectionId), msgSink);
+			switch (tev.type) {
+				case CONNECTION:
+					processConnection(tev);
+					break;
+				case RECEIVE:
+					processReceive(tev);
+					break;
+				case SEND:
+					processSend(tev);
+					break;
+				default:
+					throw new AssertionError();
+			}
 		} catch (IrcSyntaxException e) {}
 	}
 	
 	
-	protected void processEvent(ThickEvent ev) {
-		switch (ev.type) {
-			case CONNECTION:
-				processConnection(ev);
-				break;
-			case RECEIVE:
-				processReceive(ev);
-				break;
-			case SEND:
-				processSend(ev);
-				break;
-			default:
-				throw new AssertionError();
-		}
-	}
-	
-	
 	private void processConnection(ThickEvent ev) {
-		if (ev.type != Event.Type.CONNECTION)
-			throw new IllegalArgumentException();
+		assert ev.type == Event.Type.CONNECTION;
 		final String line = ev.rawLine;
 		
 		if (line.startsWith("connect ")) {
@@ -98,13 +93,10 @@ final class EventProcessor {
 	
 	
 	private void processReceive(ThickEvent ev) {
-		if (ev.type != Event.Type.RECEIVE)
-			throw new IllegalArgumentException();
+		assert ev.type == Event.Type.RECEIVE && ev.session != null;
 		final SessionState session = ev.session;
-		if (session == null)
-			throw new AssertionError();
 		final IrcLine line = ev.ircLine;
-		switch (line.command.toUpperCase()) {
+		switch (ev.command) {
 			
 			case "001":  // RPL_WELCOME and various welcome messages
 			case "002":
@@ -336,8 +328,8 @@ final class EventProcessor {
 		}
 		
 		// Show some types of server numeric replies
-		if (line.command.matches("\\d{3}")) {
-			switch (Integer.parseInt(line.command)) {
+		if (ev.command.matches("\\d{3}")) {
+			switch (Integer.parseInt(ev.command)) {
 				case 331:
 				case 332:
 				case 333:
@@ -364,11 +356,8 @@ final class EventProcessor {
 	
 	
 	private void processSend(ThickEvent ev) {
-		if (ev.type != Event.Type.SEND)
-			throw new IllegalArgumentException();
+		assert ev.type == Event.Type.SEND && ev.session != null;
 		final SessionState session = ev.session;
-		if (session == null)
-			throw new AssertionError();
 		final IrcLine line = ev.ircLine;
 		switch (ev.command) {
 			
