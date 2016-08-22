@@ -9,6 +9,9 @@
 package io.nayuki.mamirc.processor;
 
 
+/* 
+ * Thrown when an IRC line does not conform to the syntax rules, or a parser expects an argument that was not found.
+ */
 @SuppressWarnings("serial")
 final class IrcSyntaxException extends RuntimeException {
 	

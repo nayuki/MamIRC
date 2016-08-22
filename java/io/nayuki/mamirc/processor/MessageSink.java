@@ -17,6 +17,8 @@ import io.nayuki.mamirc.common.Utils;
 
 final class MessageSink {
 	
+	/*---- Fields ----*/
+	
 	private SQLiteConnection database;
 	
 	private SQLiteStatement getWindowId;
@@ -29,6 +31,8 @@ final class MessageSink {
 	private UpdateManager updateMgr;
 	
 	
+	
+	/*---- Constructors ----*/
 	
 	public MessageSink(File dbFile, UpdateManager updateMgr) throws SQLiteException {
 		this.updateMgr = updateMgr;
@@ -58,6 +62,8 @@ final class MessageSink {
 	}
 	
 	
+	
+	/*---- Methods ----*/
 	
 	public void addMessage(String profile, String party, int conId, long timestamp, String type, String... args) {
 		if (profile == null || party == null || type == null || args == null)

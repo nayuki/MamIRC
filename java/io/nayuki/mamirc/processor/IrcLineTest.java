@@ -14,6 +14,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 
+/* 
+ * A JUnit test suite for the IrcLine class.
+ */
 public final class IrcLineTest {
 	
 	@Test public void testZeroParam() {
