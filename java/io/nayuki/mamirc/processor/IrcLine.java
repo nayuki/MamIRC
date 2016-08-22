@@ -110,6 +110,15 @@ final class IrcLine {
 	}
 	
 	
+	// Returns the prefix name if it is not null, otherwise throws IrcSyntaxException.
+	public String getPrefixName() {
+		if (prefixName != null)
+			return prefixName;
+		else
+			throw new IrcSyntaxException("Missing expected prefix name");
+	}
+	
+	
 	/*---- Constants ----*/
 	
 	private static final Pattern PREFIX_COMMAND_REGEX = Pattern.compile("(:[^ ]+ +)?([^ :]*)(.*)", Pattern.DOTALL);

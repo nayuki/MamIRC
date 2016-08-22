@@ -125,7 +125,7 @@ final class EventProcessor {
 			}
 			
 			case "NICK": {
-				String fromname = line.prefixName;
+				String fromname = line.getPrefixName();
 				String toname   = line.getParameter(0);
 				if (fromname.equals(session.currentNickname)) {
 					session.currentNickname = toname;
@@ -146,7 +146,7 @@ final class EventProcessor {
 			}
 			
 			case "PRIVMSG": {
-				String from   = line.prefixName;
+				String from   = line.getPrefixName();
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
@@ -157,7 +157,7 @@ final class EventProcessor {
 			}
 			
 			case "NOTICE": {
-				String from   = line.prefixName;
+				String from   = line.getPrefixName();
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
@@ -168,7 +168,7 @@ final class EventProcessor {
 			}
 			
 			case "JOIN": {
-				String who  = line.prefixName;
+				String who  = line.getPrefixName();
 				String user = line.prefixUsername;
 				String host = line.prefixHostname;
 				if (user == null)
@@ -187,7 +187,7 @@ final class EventProcessor {
 			}
 			
 			case "PART": {
-				String who  = line.prefixName;
+				String who  = line.getPrefixName();
 				CaselessString chan = new CaselessString(line.getParameter(0));
 				if (who.equals(session.currentNickname)) {
 					session.partChannel(chan);
@@ -200,7 +200,7 @@ final class EventProcessor {
 			}
 			
 			case "KICK": {
-				String from   = line.prefixName;
+				String from   = line.getPrefixName();
 				CaselessString chan   = new CaselessString(line.getParameter(0));
 				String target = line.getParameter(1);
 				String reason = line.getParameter(2);
@@ -215,7 +215,7 @@ final class EventProcessor {
 			}
 			
 			case "QUIT": {
-				String who    = line.prefixName;
+				String who    = line.getPrefixName();
 				String reason = line.getParameter(0);
 				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
 					SessionState.ChannelState state = entry.getValue();
@@ -294,7 +294,7 @@ final class EventProcessor {
 			}
 			
 			case "TOPIC": {
-				String who  = line.prefixName;
+				String who  = line.getPrefixName();
 				String chan = line.getParameter(0);
 				String text = line.getParameter(1);
 				SessionState.ChannelState channel = session.currentChannels.get(new CaselessString(chan));
@@ -308,7 +308,7 @@ final class EventProcessor {
 			}
 			
 			case "MODE": {
-				String from   = line.prefixName;
+				String from   = line.getPrefixName();
 				String target = line.getParameter(0);
 				String party = target;
 				if (!isChannelName(target))
