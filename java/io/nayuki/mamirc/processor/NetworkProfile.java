@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import io.nayuki.json.Json;
 
 
 // Mutable structure.
@@ -49,6 +50,24 @@ final class NetworkProfile {
 	}
 	
 	
+	NetworkProfile(String name, Object root) {
+		this(name);
+		
+		// Simple fields
+		connect  = Json.getBoolean(root, "connect");
+		username = Json.getString(root, "username");
+		realname = Json.getString(root, "realname");
+		
+		// List fields
+		for (Object serv : Json.getList(root, "servers"))
+			servers.add(new Server(serv));
+		for (Object nick : Json.getList(root, "nicknames"))
+			nicknames.add((String)nick);
+		for (Object chan : Json.getList(root, "channels"))
+			channels.add((String)chan);
+	}
+	
+	
 	
 	// Immutable structure.
 	public static final class Server {
@@ -60,6 +79,14 @@ final class NetworkProfile {
 		public Server(String hostname, int port, boolean useSsl) {
 			hostnamePort = InetSocketAddress.createUnresolved(hostname, port);
 			this.useSsl = useSsl;
+		}
+		
+		
+		Server(Object root) {
+			this(
+				Json.getString(root, "hostname"),
+				Json.getInt(root, "port"),
+				Json.getBoolean(root, "ssl"));
 		}
 		
 	}
