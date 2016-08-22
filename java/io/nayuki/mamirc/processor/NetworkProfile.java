@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import io.nayuki.json.Json;
+import io.nayuki.mamirc.common.Utils;
 
 
 // Represents the user configuration of an IRC network. Mutable structure, not thread-safe.
@@ -55,6 +56,8 @@ final class NetworkProfile {
 	
 	// Constructs a blank network profile with the given name.
 	public NetworkProfile(String name) {
+		if (name == null)
+			throw new NullPointerException();
 		this.name = name;
 		servers = new ArrayList<>();
 		nicknames = new ArrayList<>();
@@ -94,6 +97,9 @@ final class NetworkProfile {
 		
 		// Constructs a server with the given parameters.
 		public Server(String hostname, int port, boolean useSsl) {
+			if (hostname == null)
+				throw new NullPointerException();
+			Utils.checkPortNumber(port);
 			hostnamePort = InetSocketAddress.createUnresolved(hostname, port);
 			this.useSsl = useSsl;
 		}
