@@ -16,8 +16,11 @@ import java.util.TreeSet;
 import io.nayuki.json.Json;
 
 
-// Mutable structure.
+// Represents the user configuration of an IRC network. Mutable structure, not thread-safe.
+// This includes information like which servers to connect to, what names to use, what channels to join, etc.
 final class NetworkProfile {
+	
+	/*---- Fields ----*/
 	
 	// Name of this IRC network profile. Immutable, and not null.
 	public final String name;
@@ -25,23 +28,32 @@ final class NetworkProfile {
 	// Indicates whether to start or stop connecting to IRC servers in this profile.
 	public boolean connect;
 	
-	// List of servers to try to connect to, in priority order. Not null; length at least 1, elements not null.
+	// List of servers to try to connect to, in priority order. Not null, elements not null.
+	// If connect is true, then this needs to have at least 1 element.
 	public final List<Server> servers;
 	
-	// List of nicknames to try to use, in priority order. Not null; length at least 1, elements not null.
+	// List of nicknames to try to use, in priority order. Not null, elements not null.
+	// If connect is true, then this needs to have at least 1 element.
 	public final List<String> nicknames;
 	
-	// User name at USER registration. Not null. Must not contain any spaces.
+	// User name at USER registration. Must not contain any spaces.
+	// If connect is true, then this must be not null.
 	public String username;
 	
-	// Real name at USER registration. Not null. Can contain spaces.
+	// Real name at USER registration. Can contain spaces.
+	// If connect is true, then this must be not null.
 	public String realname;
 	
-	// Names of channels to join when processor starts. Not null; size at least 0, elements not null.
+	// Channels to join when the Processor starts. Not null; size at least 0, elements not null.
+	// An element of this set is either a simple channel name like "#alpha",
+	// or a channel and key separated by space like "#beta key".
 	public final Set<String> channels;
 	
 	
 	
+	/*---- Constructors ----*/
+	
+	// Constructs a blank network profile with the given name.
 	public NetworkProfile(String name) {
 		this.name = name;
 		servers = new ArrayList<>();
@@ -50,6 +62,8 @@ final class NetworkProfile {
 	}
 	
 	
+	// Constructs a network profile with the given name and data from the given JSON object.
+	// Throws an exception if expected fields are missing or have wrong types.
 	NetworkProfile(String name, Object root) {
 		this(name);
 		
@@ -69,19 +83,24 @@ final class NetworkProfile {
 	
 	
 	
-	// Immutable structure.
+	/*---- Nested classes ----*/
+	
+	// Represents a server to connect to. Immutable structure, performs no I/O.
 	public static final class Server {
 		
 		public final InetSocketAddress hostnamePort;  // Not null
 		public final boolean useSsl;
 		
 		
+		// Constructs a server with the given parameters.
 		public Server(String hostname, int port, boolean useSsl) {
 			hostnamePort = InetSocketAddress.createUnresolved(hostname, port);
 			this.useSsl = useSsl;
 		}
 		
 		
+		// Constructs a server with data from the given JSON object.
+		// Throws an exception if expected fields are missing or have wrong types.
 		Server(Object root) {
 			this(
 				Json.getString(root, "hostname"),
