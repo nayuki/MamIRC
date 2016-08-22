@@ -15,23 +15,25 @@ import io.nayuki.mamirc.common.Event.Type;
 // A structure that contains most of Event's fields, plus extra context, and with the data half-parsed.
 final class ThickEvent {
 	
-	/*---- Event-related fields ----*/
+	/*---- Fields ----*/
 	
-	public final int connectionId;  // Immutable
-	public final long timestamp;    // Immutable
-	public final Type type;         // Immutable
-	public final String rawLine;    // Immutable
+	/* All fields are immutable, but some underlying objects may be mutable. */
 	
+	// Basic event-related fields. All are fully immutable and not null.
+	public final int connectionId;
+	public final long timestamp;
+	public final Type type;
+	public final String rawLine;
+	
+	// Fields derived from rawLine. Fully immutable.
 	// If type is RECEIVE or SEND, then the following fields are not null.
-	// Otherwise if type is CONNECTION, then the following fields are null.
-	public final IrcLine ircLine;  // Immutable
-	public final String command;   // Immutable, converted to uppercase
+	// Otherwise if type is CONNECTION, then these fields are null.
+	public final IrcLine ircLine;
+	public final String command;
 	
-	
-	/*---- Extra context fields ----*/
-	
-	public final SessionState session;  // Can be null. Underlying object is mutable.
-	public final MessageSink messageSink;    // Not null. Underlying object is mutable.
+	// Extra context fields. All are mutable.
+	public final SessionState session;     // Can be null
+	public final MessageSink messageSink;  // Not null
 	
 	
 	
