@@ -9,6 +9,9 @@
 package io.nayuki.mamirc.processor;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
@@ -92,6 +95,82 @@ final class MessageManager {
 			System.arraycopy(args, 0, temp, 5, args.length);
 			updateMgr.addUpdate(temp);
 		}
+	}
+	
+	
+	public Object listAllWindowsAsJson() throws SQLiteException {
+		SQLiteStatement windowsQuery = database.prepare(
+			"SELECT id, profile, partyProperCase, max(sequence) " +
+			"FROM windows JOIN messages ON windows.id=messages.windowId GROUP BY id");
+		try {
+			SQLiteStatement timestampQuery = database.prepare(
+				"SELECT timestamp FROM messages WHERE windowId=? AND sequence=?");
+			
+			try {
+				List<Object> result = new ArrayList<>();
+				while (windowsQuery.step()) {
+					int windowId = windowsQuery.columnInt(0);
+					String profile = windowsQuery.columnString(1);
+					String party = windowsQuery.columnString(2);
+					int nextSequence = windowsQuery.columnInt(3) + 1;
+					timestampQuery.bind(1, windowId);
+					timestampQuery.bind(2, nextSequence - 1);
+					Utils.stepStatement(timestampQuery, true);
+					long lastTimestamp = timestampQuery.columnLong(0);
+					timestampQuery.reset();
+					result.add(Arrays.asList(profile, party, nextSequence, lastTimestamp));
+				}
+				return result;
+				
+			} finally {
+				timestampQuery.dispose();
+			}
+		} finally {
+			windowsQuery.dispose();
+		}
+	}
+	
+	
+	public Object getWindowMessagesAsJson(String profile, String party, int start, int end) throws SQLiteException {
+		if (start < 0)
+			return "Error: Negative start index";
+		if (end < start)
+			return "Error: End index less that start index";
+		
+		int windowId;
+		SQLiteStatement windowQuery = database.prepare(
+			"SELECT id FROM windows WHERE profile=? AND partyProperCase=?");
+		try {
+			windowQuery.bind(1, profile);
+			windowQuery.bind(2, party);
+			if (!windowQuery.step())
+				return "Error: Window does not exist";
+			windowId = windowQuery.columnInt(0);
+		} finally {
+			windowQuery.dispose();
+		}
+		
+		List<Object> result = new ArrayList<>();
+		SQLiteStatement messagesQuery = database.prepare(
+			"SELECT timestamp, data FROM messages " +
+			"WHERE windowId=? AND ?<=sequence AND sequence<? " +
+			"ORDER BY sequence ASC");
+		try {
+			messagesQuery.bind(1, windowId);
+			messagesQuery.bind(2, start);
+			messagesQuery.bind(3, end);
+			while (messagesQuery.step()) {
+				long time = messagesQuery.columnLong(0);
+				String[] parts = messagesQuery.columnString(1).split("\n", -1);
+				Object[] temp = new Object[parts.length + 1];
+				temp[0] = time;
+				System.arraycopy(parts, 0, temp, 1, parts.length);
+				result.add(Arrays.asList(temp));
+			}
+		} finally {
+			messagesQuery.dispose();
+		}
+		return result;
 	}
 	
 	
