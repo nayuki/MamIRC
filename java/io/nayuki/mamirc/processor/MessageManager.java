@@ -15,7 +15,7 @@ import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Utils;
 
 
-final class MessageSink {
+final class MessageManager {
 	
 	/*---- Fields ----*/
 	
@@ -34,7 +34,7 @@ final class MessageSink {
 	
 	/*---- Constructors ----*/
 	
-	public MessageSink(File dbFile, UpdateManager updateMgr) throws SQLiteException {
+	public MessageManager(File dbFile, UpdateManager updateMgr) throws SQLiteException {
 		this.updateMgr = updateMgr;
 		
 		database = new SQLiteConnection(dbFile);

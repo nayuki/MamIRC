@@ -33,7 +33,7 @@ public final class ConvertEventsToMessages {
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		SQLiteConnection database = new SQLiteConnection(inFile);
 		database.open(false);
-		MessageSink msgSink = new MessageSink(outFile, null);
+		MessageManager msgSink = new MessageManager(outFile, null);
 		EventProcessor evtProc = new EventProcessor(msgSink, null);
 		
 		// Prepare query statements

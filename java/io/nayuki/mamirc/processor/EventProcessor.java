@@ -19,7 +19,7 @@ final class EventProcessor {
 	
 	private Map<Integer,SessionState> sessions;
 	
-	private MessageSink msgSink;
+	private MessageManager msgSink;
 	
 	private UpdateManager updateMgr;
 	
@@ -27,7 +27,7 @@ final class EventProcessor {
 	
 	/*---- Constructors ----*/
 	
-	public EventProcessor(MessageSink msgSink, UpdateManager updateMgr) {
+	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr) {
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
 		this.updateMgr = updateMgr;

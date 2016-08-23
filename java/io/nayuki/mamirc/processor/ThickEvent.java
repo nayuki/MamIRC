@@ -33,13 +33,13 @@ final class ThickEvent {
 	
 	// Extra context fields. All are mutable.
 	public final SessionState session;     // Can be null
-	public final MessageSink messageSink;  // Not null
+	public final MessageManager messageSink;  // Not null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public ThickEvent(Event ev, SessionState session, MessageSink msgSink) {
+	public ThickEvent(Event ev, SessionState session, MessageManager msgSink) {
 		// Check arguments
 		if (ev == null || msgSink == null || ev.type != Event.Type.CONNECTION && session == null)
 			throw new NullPointerException();
