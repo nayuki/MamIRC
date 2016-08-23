@@ -22,6 +22,8 @@ final class MessageManager {
 	
 	/*---- Fields ----*/
 	
+	private final File databaseFile;
+	
 	private SQLiteConnection database;
 	
 	private SQLiteStatement getWindowId;
@@ -38,6 +40,7 @@ final class MessageManager {
 	/*---- Constructors ----*/
 	
 	public MessageManager(File dbFile, UpdateManager updateMgr) throws SQLiteException {
+		databaseFile = dbFile;
 		this.updateMgr = updateMgr;
 		
 		database = new SQLiteConnection(dbFile);
@@ -99,34 +102,31 @@ final class MessageManager {
 	
 	
 	public Object listAllWindowsAsJson() throws SQLiteException {
-		SQLiteStatement windowsQuery = database.prepare(
-			"SELECT id, profile, partyProperCase, max(sequence) " +
-			"FROM windows JOIN messages ON windows.id=messages.windowId GROUP BY id");
+		SQLiteConnection db = new SQLiteConnection(databaseFile);
 		try {
-			SQLiteStatement timestampQuery = database.prepare(
+			db.open(false);
+			SQLiteStatement windowsQuery = db.prepare(
+				"SELECT id, profile, partyProperCase, max(sequence) " +
+				"FROM windows JOIN messages ON windows.id=messages.windowId GROUP BY id");
+			SQLiteStatement timestampQuery = db.prepare(
 				"SELECT timestamp FROM messages WHERE windowId=? AND sequence=?");
 			
-			try {
-				List<Object> result = new ArrayList<>();
-				while (windowsQuery.step()) {
-					int windowId = windowsQuery.columnInt(0);
-					String profile = windowsQuery.columnString(1);
-					String party = windowsQuery.columnString(2);
-					int nextSequence = windowsQuery.columnInt(3) + 1;
-					timestampQuery.bind(1, windowId);
-					timestampQuery.bind(2, nextSequence - 1);
-					Utils.stepStatement(timestampQuery, true);
-					long lastTimestamp = timestampQuery.columnLong(0);
-					timestampQuery.reset();
-					result.add(Arrays.asList(profile, party, nextSequence, lastTimestamp));
-				}
-				return result;
-				
-			} finally {
-				timestampQuery.dispose();
+			List<Object> result = new ArrayList<>();
+			while (windowsQuery.step()) {
+				int windowId = windowsQuery.columnInt(0);
+				String profile = windowsQuery.columnString(1);
+				String party = windowsQuery.columnString(2);
+				int nextSequence = windowsQuery.columnInt(3) + 1;
+				timestampQuery.bind(1, windowId);
+				timestampQuery.bind(2, nextSequence - 1);
+				Utils.stepStatement(timestampQuery, true);
+				long lastTimestamp = timestampQuery.columnLong(0);
+				timestampQuery.reset();
+				result.add(Arrays.asList(profile, party, nextSequence, lastTimestamp));
 			}
+			return result;
 		} finally {
-			windowsQuery.dispose();
+			db.dispose();
 		}
 	}
 	
@@ -137,25 +137,22 @@ final class MessageManager {
 		if (end < start)
 			return "Error: End index less that start index";
 		
-		int windowId;
-		SQLiteStatement windowQuery = database.prepare(
-			"SELECT id FROM windows WHERE profile=? AND partyProperCase=?");
+		SQLiteConnection db = new SQLiteConnection(databaseFile);
 		try {
+			db.open(false);
+			SQLiteStatement windowQuery = db.prepare(
+				"SELECT id FROM windows WHERE profile=? AND partyProperCase=?");
 			windowQuery.bind(1, profile);
 			windowQuery.bind(2, party);
 			if (!windowQuery.step())
 				return "Error: Window does not exist";
-			windowId = windowQuery.columnInt(0);
-		} finally {
-			windowQuery.dispose();
-		}
-		
-		List<Object> result = new ArrayList<>();
-		SQLiteStatement messagesQuery = database.prepare(
-			"SELECT timestamp, data FROM messages " +
-			"WHERE windowId=? AND ?<=sequence AND sequence<? " +
-			"ORDER BY sequence ASC");
-		try {
+			int windowId = windowQuery.columnInt(0);
+			
+			List<Object> result = new ArrayList<>();
+			SQLiteStatement messagesQuery = db.prepare(
+				"SELECT timestamp, data FROM messages " +
+				"WHERE windowId=? AND ?<=sequence AND sequence<? " +
+				"ORDER BY sequence ASC");
 			messagesQuery.bind(1, windowId);
 			messagesQuery.bind(2, start);
 			messagesQuery.bind(3, end);
@@ -167,10 +164,10 @@ final class MessageManager {
 				System.arraycopy(parts, 0, temp, 1, parts.length);
 				result.add(Arrays.asList(temp));
 			}
+			return result;
 		} finally {
-			messagesQuery.dispose();
+			db.dispose();
 		}
-		return result;
 	}
 	
 	

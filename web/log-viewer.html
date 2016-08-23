@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!--
+  - MamIRC
+  - Copyright (c) Project Nayuki
+  - 
+  - https://www.nayuki.io/page/mamirc-the-headless-irc-client
+  - https://github.com/nayuki/MamIRC
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Log viewer – MamIRC</title>
+		<link rel="Stylesheet" href="log-viewer.css" type="text/css" media="all"/>
+	</head>
+	
+	<body>
+		<h1>Log viewer – MamIRC</h1>
+		
+		<section id="windows-section">
+			<h2>List of windows</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Profile</th>
+						<th>Party</th>
+						<th>Last message time</th>
+						<th>Number of messages</th>
+					</tr>
+				</thead>
+				<tbody id="windows-table">
+					<tr><td colspan="4">... Loading data ...</td></tr>
+				</tbody>
+			</table>
+		</section>
+		
+		<section id="messages-section" style="display:none">
+			<h2>Messages (<span id="messages-start"></span>~<span id="messages-end"></span>)</h2>
+			<p><a id="messages-back-to-windows">Back to list of windows</a></p>
+			<table>
+				<thead>
+					<tr>
+						<th>Timestamp</th>
+						<th>Nickname</th>
+						<th>Message</th>
+					</tr>
+				</thead>
+				<thead>
+					<tr><td colspan="3"><a id="messages-previous-page">Previous page</a></td></tr>
+				</thead>
+				<tbody id="messages-table"></tbody>
+				<tfoot>
+					<tr><td colspan="3"><a id="messages-next-page">Next page</a></td></tr>
+				</tfoot>
+			</table>
+		</section>
+		
+		<script type="application/javascript" src="log-viewer.js"></script>
+	</body>
+</html>

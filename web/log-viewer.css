@@ -1,0 +1,58 @@
+/* 
+ * MamIRC
+ * Copyright (c) Project Nayuki
+ * 
+ * https://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://github.com/nayuki/MamIRC
+ */
+
+
+html {
+	font-family: sans-serif;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+td, th {
+	padding: 0.2em 0.5em;
+	border: 1px solid #E0E0E0;
+	vertical-align: top;
+}
+
+a:not([href]) {
+	cursor: pointer;
+}
+
+#windows-table td:nth-child(3) {
+	font-family: monospace;
+}
+
+#windows-table td:nth-child(4) {
+	text-align: right;
+}
+
+#windows-table tr:hover {
+	background-color: #FFFFC0;
+}
+
+#windows-table td {
+	cursor: pointer;
+}
+
+#windows-table td.server-messages {
+	font-style: italic;
+}
+
+#messages-section thead:first-child {
+	display: none;
+}
+
+#messages-section thead a, #messages-section tfoot a {
+	display: block;
+}
+
+#messages-table td:first-child {
+	white-space: pre;
+}
