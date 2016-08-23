@@ -36,8 +36,8 @@ public final class MamircProcessor {
 	
 	public static void main(String[] args) throws IOException, SQLiteException {
 		// Check the argument count
-		if (args.length != 1) {
-			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor BackendConfig.json");
+		if (args.length != 2) {
+			System.err.println("Usage: java io/nayuki/mamirc/processor/MamircProcessor BackendConfig.json UserConfig.json");
 			System.exit(1);
 		}
 		
@@ -73,17 +73,22 @@ public final class MamircProcessor {
 			Utils.startConsoleLogLevelChanger();
 		}
 		
-		// Load config and start Processor
+		// Load configs and start Processor
 		Utils.logger.info("MamIRC Processor application starting");
 		File backendConfigFile = new File(args[0]);
 		BackendConfiguration backendConfig = new BackendConfiguration(backendConfigFile);
 		Utils.logger.info("Backend configuration file parsed: " + backendConfigFile.getCanonicalPath());
-		new MamircProcessor(backendConfig);
+		File userConfigFile = new File(args[1]);
+		UserConfiguration userConfig = new UserConfiguration(userConfigFile);
+		Utils.logger.info("User configuration file parsed: " + userConfigFile.getCanonicalPath());
+		new MamircProcessor(backendConfig, userConfig);
 	}
 	
 	
 	
 	/*---- Fields (global state) ----*/
+	
+	private final UserConfiguration userConfig;
 	
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
@@ -93,10 +98,11 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(BackendConfiguration backendConfig) throws IOException, SQLiteException {
-		if (backendConfig == null)
+	public MamircProcessor(BackendConfiguration backendConfig, UserConfiguration userConfig) throws IOException, SQLiteException {
+		if (backendConfig == null || userConfig == null)
 			throw new NullPointerException();
 		
+		this.userConfig = userConfig;
 		reader = new ConnectorReaderThread(this, backendConfig);
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		writer = reader.readInitialDataAndGetWriter(connectionSequences);

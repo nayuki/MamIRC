@@ -1,6 +1,8 @@
 {
 	"data-type": "mamirc-user-config",
 	
+	"window-messages-database-file": "mamirc-window-messages.sqlite",
+	
 	"network-profiles": {
 		"Alpha": {
 			"connect": true,
@@ -25,7 +27,5 @@
 			"nickserv-password": "abc12345",
 			"channels": ["#meduka", "#meguca"]
 		}
-	},
-	
-	"date-boundary-offset-seconds": 0
+	}
 }
