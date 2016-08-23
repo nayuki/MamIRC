@@ -67,7 +67,7 @@ final class EventProcessor {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
 			sessions.put(ev.connectionId, new SessionState(profileName));
-			ev.addMessage("", "CONNECT", parts[1], parts[2], parts[3]);
+			msgSink.addMessage(profileName, "", ev.connectionId, ev.timestamp, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
 			ev.session.setRegistrationState(SessionState.RegState.OPENED);
