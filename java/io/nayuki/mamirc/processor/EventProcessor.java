@@ -10,6 +10,8 @@ package io.nayuki.mamirc.processor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import io.nayuki.mamirc.common.Event;
 
 
@@ -380,6 +382,12 @@ final class EventProcessor {
 				String from = session.currentNickname;
 				String party = line.getParameter(0);
 				String text  = line.getParameter(1);
+				if (party.equalsIgnoreCase("NickServ")) {  // Censor the password sent to NickServ
+					Pattern p = Pattern.compile("(IDENTIFY ).+", Pattern.CASE_INSENSITIVE);
+					Matcher m = p.matcher(text);
+					if (m.matches())
+						text = m.group(1) + "********";
+				}
 				ev.addMessage(party, "PRIVMSG+OUTGOING", from, text);
 				break;
 			}
