@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 
 // Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
@@ -25,6 +26,9 @@ final class SessionState {
 	
 	// Can be null when attempting to register, not null when REGISTERED.
 	public String currentNickname;
+	
+	// Is null if and only if currentNickname is null.
+	public Pattern nickflagDetector;
 	
 	// Not null, and can only progress forward in the enum order.
 	public RegState registrationState;
@@ -46,9 +50,24 @@ final class SessionState {
 		
 		// Set initial values
 		currentNickname = null;
+		nickflagDetector = null;
 		registrationState = RegState.CONNECTING;
 		rejectedNicknames = new HashSet<>();
 		currentChannels = null;
+	}
+	
+	
+	
+	/*---- Methods ----*/
+	
+	public void setNickname(String name) {
+		if (name == null) {
+			if (registrationState == RegState.REGISTERED)
+				throw new NullPointerException();
+			nickflagDetector = null;
+		} else
+			nickflagDetector = Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(name) + "(?![A-Za-z0-9_])", Pattern.CASE_INSENSITIVE);
+		currentNickname = name;
 	}
 	
 	

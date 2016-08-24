@@ -110,7 +110,7 @@ final class EventProcessor {
 				// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
 				String feedbackNick = line.getParameter(0);
 				if (session.currentNickname.startsWith(feedbackNick)) {
-					session.currentNickname = feedbackNick;
+					session.setNickname(feedbackNick);
 					if (updateMgr != null)
 						updateMgr.addUpdate("MYNICK", feedbackNick);
 				}
@@ -121,7 +121,7 @@ final class EventProcessor {
 			case "433": {  // ERR_NICKNAMEINUSE
 				if (session.registrationState != SessionState.RegState.REGISTERED) {
 					session.rejectedNicknames.add(session.currentNickname);
-					session.currentNickname = null;
+					session.setNickname(null);
 				}
 				break;
 			}
@@ -130,7 +130,7 @@ final class EventProcessor {
 				String fromname = line.getPrefixName();
 				String toname   = line.getParameter(0);
 				if (fromname.equals(session.currentNickname)) {
-					session.currentNickname = toname;
+					session.setNickname(toname);
 					if (updateMgr != null)
 						updateMgr.addUpdate("MYNICK", toname);
 					ev.addMessage("", "NICK", fromname, toname);
@@ -154,7 +154,10 @@ final class EventProcessor {
 				if (!isChannelName(target))
 					party = from;
 				String text = line.getParameter(1);
-				ev.addMessage(party, "PRIVMSG", from, text);
+				String command = "PRIVMSG";
+				if (session.nickflagDetector.matcher(text).find())
+					command += "+NICKFLAG";
+				ev.addMessage(party, command, from, text);
 				break;
 			}
 			
@@ -377,7 +380,7 @@ final class EventProcessor {
 				if (session.registrationState == SessionState.RegState.OPENED)
 					session.setRegistrationState(SessionState.RegState.NICK_SENT);
 				if (session.registrationState != SessionState.RegState.REGISTERED)
-					session.currentNickname = line.getParameter(0);
+					session.setNickname(line.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
 				break;
 			}
