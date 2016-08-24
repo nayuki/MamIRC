@@ -359,7 +359,7 @@ final class EventProcessor {
 							sb.append(" ");
 						sb.append(line.getParameter(i));
 					}
-					ev.addMessage("", "SERVRPL", sb.toString());
+					ev.addMessage("", "SERVRPL+" + ev.command, sb.toString());
 					break;
 				}
 			}

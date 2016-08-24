@@ -133,6 +133,7 @@ function formatMessageRow(row) {
 	var args = row.slice(2);
 	
 	var nickname = "\u25CF";  // Filled circle
+	var nickTitle = null;
 	var text = "Undefined";
 	if (command == "OPENED") {
 		text = "Socket opened to IP address " + args[0];
@@ -182,6 +183,7 @@ function formatMessageRow(row) {
 	} else if (command == "MODE") {
 		text = args[0] + " set mode " + args[1];
 	} else if (command == "SERVRPL") {
+		nickTitle = "Server reply code " + flags[0];
 		text = args[0];
 	} else if (command == "INVITE") {
 		text = args[0] + " invites you to " + args[1];
@@ -198,6 +200,8 @@ function formatMessageRow(row) {
 	result.appendChild(td);
 	var td = document.createElement("td");
 	td.appendChild(document.createTextNode(nickname));
+	if (nickTitle != null)
+		td.title = nickTitle;
 	result.appendChild(td);
 	var td = document.createElement("td");
 	td.appendChild(document.createTextNode(text));
