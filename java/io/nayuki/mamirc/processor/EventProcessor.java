@@ -114,6 +114,25 @@ final class EventProcessor {
 					if (updateMgr != null)
 						updateMgr.addUpdate("MYNICK", feedbackNick);
 				}
+				if (ev.command.equals("005")) {
+					// Try to parse some capabilities
+					for (int i = 1; i < line.parameters.size(); i++) {
+						String capa = line.getParameter(i);
+						if (capa.startsWith("PREFIX=")) {  // Looks like "PREFIX=(ohv)@%+"
+							Pattern p = Pattern.compile("PREFIX=\\(([a-z]*)\\)([^A-Za-z0-9]*)");
+							Matcher m = p.matcher(capa);
+							if (!m.matches())
+								break;
+							String letters = m.group(1);
+							String symbols = m.group(2);
+							if (letters.length() != symbols.length())
+								break;
+							session.namesReplyModeMap.clear();
+							for (int j = 0; j < letters.length(); j++)
+								session.namesReplyModeMap.put(symbols.charAt(j), letters.charAt(j));
+						}
+					}
+				}
 				break;
 			}
 			
@@ -244,8 +263,8 @@ final class EventProcessor {
 					channel.members.clear();
 				}
 				for (String name : line.getParameter(3).split(" ")) {
-					char head = name.length() > 0 ? name.charAt(0) : '\0';
-					if (head == '@' || head == '+' || head == '!' || head == '%' || head == '&' || head == '~')
+					// Strip prefixes
+					while (name.length() > 0 && session.namesReplyModeMap.containsKey(name.charAt(0)))
 						name = name.substring(1);
 					channel.members.add(name);
 				}

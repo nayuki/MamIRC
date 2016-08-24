@@ -39,6 +39,8 @@ final class SessionState {
 	// Null before successful registration, not null thereafter.
 	public Map<CaselessString,ChannelState> currentChannels;
 	
+	public Map<Character,Character> namesReplyModeMap;
+	
 	
 	
 	/*---- Constructor ----*/
@@ -54,6 +56,11 @@ final class SessionState {
 		registrationState = RegState.CONNECTING;
 		rejectedNicknames = new HashSet<>();
 		currentChannels = null;
+		
+		// Default value
+		namesReplyModeMap = new HashMap<>();
+		namesReplyModeMap.put('+', 'v');
+		namesReplyModeMap.put('@', 'o');
 	}
 	
 	
