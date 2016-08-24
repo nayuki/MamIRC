@@ -94,21 +94,7 @@ function getAndShowMessages(profile, party, start, end, scroll) {
 		
 		var tableElem = document.getElementById("messages-table");
 		data.forEach(function(row) {
-			var timestamp = new Date(row[0]);
-			var command = row[1];
-			var args = row.slice(2);
-			
-			var tr = document.createElement("tr");
-			var td = document.createElement("td");
-			td.appendChild(document.createTextNode(formatDatetime(timestamp)));
-			tr.appendChild(td);
-			td = document.createElement("td");
-			td.appendChild(document.createTextNode(command));
-			tr.appendChild(td);
-			td = document.createElement("td");
-			td.appendChild(document.createTextNode(args.join(" ")));
-			tr.appendChild(td);
-			tableElem.appendChild(tr);
+			tableElem.appendChild(formatMessageRow(row));
 		});
 		
 		if (scroll === "top")
@@ -132,6 +118,87 @@ function getAndShowMessages(profile, party, start, end, scroll) {
 		}
 		showScreen("messages-section");
 	}
+}
+
+
+function formatMessageRow(row) {
+	var timestamp = new Date(row[0]);
+	var command = row[1];
+	var flags = [];
+	if (command.indexOf("+") != -1) {
+		flags = command.split("+");
+		command = flags[0];
+		flags = flags.slice(1);
+	}
+	var args = row.slice(2);
+	
+	var nickname = "\u25CF";  // Filled circle
+	var text = "Undefined";
+	if (command == "OPENED") {
+		text = "Socket opened to IP address " + args[0];
+	} else if (command == "CONNECT") {
+		text = "Connecting to server at " + args[0] + ", port " + args[1] + ", " + (args[2] == "ssl" ? "SSL" : "no SSL") + "...";
+	} else if (command == "DISCONNECT") {
+		text = "Closing connection to server...";
+	} else if (command == "CLOSED") {
+		text = "Disconnected from server";
+	} else if (command == "NICK") {
+		text = args[0] + " changed their name to " + args[1];
+	} else if (command == "PRIVMSG") {
+		nickname = args[0];
+		text = args[1];
+	} else if (command == "NOTICE") {
+		nickname = "(" + args[0] + ")";
+		text = args[1];
+	} else if (command == "JOIN") {
+		nickname = "\u2192";  // Rightwards arrow
+		text = args[0];
+		if (args[2] != "") {
+			text += " (";
+			if (args[1] != "")
+				text += args[1] + "@";
+			text += args[2] + ")";
+		}
+		text += " joined the channel";
+	} else if (command == "PART") {
+		nickname = "\u2190";  // Leftwards arrow
+		text = args[0] + " left the channel";
+	} else if (command == "KICK") {
+		nickname = "\u2190";  // Leftwards arrow
+		text = args[1] + " was kicked by " + args[2] + ": " + args[2];
+	} else if (command == "QUIT") {
+		nickname = "\u2190";  // Leftwards arrow
+		text = args[0] + " has quit: " + args[1];
+	} else if (command == "NAMES") {
+		text = "Users in channel: " + args.join(", ");
+	} else if (command == "TOPIC") {
+		text = args[0] + " set the channel topic to: " + args[1];
+	} else if (command == "NOTOPIC") {
+		text = "No channel topic is set";
+	} else if (command == "HASTOPIC") {
+		text = "The channel topic is: " + args[0];
+	} else if (command == "TOPICSET") {
+		text = "Channel topic was set by " + args[0] + " at " + formatDatetime(new Date(parseInt(args[1], 10) * 1000));
+	} else if (command == "MODE") {
+		text = args[0] + " set mode " + args[1];
+	} else if (command == "SERVRPL") {
+		text = args[0];
+	} else {  // Should not happen if this logic is synchronized with the Processor!
+		nickname = "RAW";
+		text = command + " " + args.join(" ");
+	}
+	
+	var result = document.createElement("tr");
+	var td = document.createElement("td");
+	td.appendChild(document.createTextNode(formatDatetime(timestamp)));
+	result.appendChild(td);
+	var td = document.createElement("td");
+	td.appendChild(document.createTextNode(nickname));
+	result.appendChild(td);
+	var td = document.createElement("td");
+	td.appendChild(document.createTextNode(text));
+	result.appendChild(td);
+	return result;
 }
 
 
