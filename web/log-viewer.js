@@ -183,6 +183,10 @@ function formatMessageRow(row) {
 		text = args[0] + " set mode " + args[1];
 	} else if (command == "SERVRPL") {
 		text = args[0];
+	} else if (command == "INVITE") {
+		text = args[0] + " invites you to " + args[1];
+	} else if (command == "ERROR") {
+		text = "Server error: " + args[0];
 	} else {  // Should not happen if this logic is synchronized with the Processor!
 		nickname = "RAW";
 		text = command + " " + args.join(" ");

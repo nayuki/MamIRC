@@ -325,6 +325,16 @@ final class EventProcessor {
 				break;
 			}
 			
+			case "INVITE": {
+				ev.addMessage("", "INVITE", line.getPrefixName(), line.getParameter(1));
+				break;
+			}
+			
+			case "ERROR": {
+				ev.addMessage("", "ERROR", line.getParameter(0));
+				break;
+			}
+			
 			default:  // No action needed for other commands
 				break;
 		}
