@@ -155,12 +155,11 @@ final class EventProcessor {
 					ev.addMessage("", "NICK", fromname, toname);
 				}
 				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
-					SessionState.ChannelState state = entry.getValue();
-					if (state.members.contains(fromname)) {
-						CaselessString chan = entry.getKey();
-						session.partChannel(chan, fromname);
-						session.joinChannel(chan, toname);
-						ev.addMessage(chan.properCase, "NICK", fromname, toname);
+					SessionState.ChannelState chstate = entry.getValue();
+					SessionState.ChannelState.MemberState mbrstate = chstate.members.remove(fromname);
+					if (mbrstate != null) {
+						chstate.members.put(toname, mbrstate);
+						ev.addMessage(entry.getKey().properCase, "NICK", fromname, toname);
 					}
 				}
 				break;
@@ -243,7 +242,7 @@ final class EventProcessor {
 				String reason = line.getParameter(0);
 				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
 					SessionState.ChannelState state = entry.getValue();
-					if (state.members.contains(who)) {
+					if (state.members.containsKey(who)) {
 						CaselessString chan = entry.getKey();
 						session.partChannel(chan, who);
 						ev.addMessage(chan.properCase, "QUIT", who, reason);
@@ -266,7 +265,7 @@ final class EventProcessor {
 					// Strip prefixes
 					while (name.length() > 0 && session.namesReplyModeMap.containsKey(name.charAt(0)))
 						name = name.substring(1);
-					channel.members.add(name);
+					channel.members.put(name, new SessionState.ChannelState.MemberState());
 				}
 				break;
 			}
@@ -276,7 +275,7 @@ final class EventProcessor {
 					SessionState.ChannelState channel = entry.getValue();
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
-						String[] names = channel.members.toArray(new String[0]);
+						String[] names = channel.members.keySet().toArray(new String[0]);
 						ev.addMessage(entry.getKey().properCase, "NAMES", names);
 					}
 				}

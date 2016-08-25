@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 
@@ -106,7 +106,7 @@ final class SessionState {
 	public void joinChannel(CaselessString channel, String nickname) {
 		if (!currentChannels.containsKey(channel))
 			return;
-		currentChannels.get(channel).members.add(nickname);
+		currentChannels.get(channel).members.put(nickname, new ChannelState.MemberState());
 	}
 	
 	
@@ -132,7 +132,7 @@ final class SessionState {
 	
 	public static final class ChannelState {
 		
-		public final Set<String> members;  // Not null, size at least 0
+		public final Map<String,MemberState> members;  // Not null, size at least 0
 		
 		public boolean isProcessingNamesReply;  // Usually false, unless received RPL_NAMREPLY but not RPL_ENDOFNAMES yet
 		
@@ -142,11 +142,43 @@ final class SessionState {
 		
 		
 		public ChannelState() {
-			members = new TreeSet<>();
+			members = new TreeMap<>();
 			isProcessingNamesReply = false;
 			topicText  = null;
 			topicSetBy = null;
 			topicSetAt = 0;
+		}
+		
+		
+		
+		public static final class MemberState {
+			
+			// A set (orderless, duplicateless list) of lowercase letters.
+			// For example, "ao" represents admin and operator.
+			public String modes;
+			
+			
+			public MemberState() {
+				modes = "";
+			}
+			
+			
+			public void addMode(char c) {
+				if (c < 'a' || c > 'z')
+					throw new IllegalArgumentException();
+				if (modes.indexOf(c) == -1)
+					modes += c;
+			}
+			
+			
+			public void removeMode(char c) {
+				if (c < 'a' || c > 'z')
+					throw new IllegalArgumentException();
+				int i = modes.indexOf(c);
+				if (i != -1)
+					modes = modes.substring(0, i) + modes.substring(i + 1);
+			}
+			
 		}
 		
 	}
