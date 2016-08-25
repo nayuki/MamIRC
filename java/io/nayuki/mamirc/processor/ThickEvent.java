@@ -12,7 +12,7 @@ import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.Event.Type;
 
 
-// A structure that contains most of Event's fields, plus extra context, and with the data half-parsed.
+// A structure that contains most of Event's fields, plus extra context, and with the data half-parsed. Mostly immutable.
 final class ThickEvent {
 	
 	/*---- Fields ----*/
@@ -31,17 +31,17 @@ final class ThickEvent {
 	public final IrcLine ircLine;
 	public final String command;
 	
-	// Extra context fields. All are mutable.
-	public final SessionState session;     // Can be null
-	public final MessageManager messageSink;  // Not null
+	// Extra context fields. All are mutable objects.
+	public final SessionState session;  // Can be null
+	private final MessageManager msgMgr;  // Not null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public ThickEvent(Event ev, SessionState session, MessageManager msgSink) {
+	public ThickEvent(Event ev, SessionState session, MessageManager msgMgr) {
 		// Check arguments
-		if (ev == null || msgSink == null || ev.type != Event.Type.CONNECTION && session == null)
+		if (ev == null || msgMgr == null || ev.type != Event.Type.CONNECTION && session == null)
 			throw new NullPointerException();
 		
 		// Set simple event fields
@@ -62,7 +62,7 @@ final class ThickEvent {
 		
 		// Set extra context fields
 		this.session = session;
-		messageSink = msgSink;
+		this.msgMgr = msgMgr;
 	}
 	
 	
@@ -70,7 +70,7 @@ final class ThickEvent {
 	/*---- Methods ----*/
 	
 	public void addMessage(String party, String msgType, String... args) {
-		messageSink.addMessage(session.profileName, party, connectionId, timestamp, msgType, args);
+		msgMgr.addMessage(session.profileName, party, connectionId, timestamp, msgType, args);
 	}
 	
 }
