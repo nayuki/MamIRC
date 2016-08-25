@@ -92,7 +92,10 @@ public final class MamircProcessor {
 	
 	private ConnectorReaderThread reader;
 	private OutputWriterThread writer;
-	private boolean isEventRealtime;
+	
+	private UpdateManager updateManager;
+	private MessageManager messageManager;
+	private EventProcessor eventProcessor;
 	
 	
 	
@@ -106,7 +109,13 @@ public final class MamircProcessor {
 		reader = new ConnectorReaderThread(this, backendConfig);
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		writer = reader.readInitialDataAndGetWriter(connectionSequences);
+		
+		updateManager = new UpdateManager();
+		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile, updateManager);
+		eventProcessor = new EventProcessor(messageManager, updateManager, this);
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
+		eventProcessor.finishCatchup(userConfig.profiles);
+		
 		reader.start();
 	}
 	
@@ -116,7 +125,6 @@ public final class MamircProcessor {
 	
 	private void processExistingConnections(File dbFile, Map<Integer,Integer> connectionSequences) throws SQLiteException {
 		// Read archived events from database and process them
-		isEventRealtime = false;
 		SQLiteConnection database = new SQLiteConnection(dbFile);
 		try {
 			database.open(false);
@@ -135,19 +143,25 @@ public final class MamircProcessor {
 						query.columnLong(1),
 						Event.Type.fromOrdinal(query.columnInt(2)),
 						new CleanLine(query.columnBlob(3), false));
-					processEvent(ev);  // Non-real-time
+					eventProcessor.processEvent(ev);  // Non-real-time
 				}
 				query.reset();
 			}
 		} finally {
 			database.dispose();  // Automatically disposes its associated statements
 		}
-		
-		isEventRealtime = true;
 	}
 	
 	
-	synchronized void processEvent(Event ev) {}
+	// Only called by ConnectorReaderThread.run().
+	synchronized void processEvent(Event ev) {
+		eventProcessor.processEvent(ev);  // Real-time
+	}
+	
+	
+	public synchronized void sendCommand(String line) {
+		writer.postWrite(line);
+	}
 	
 	
 	synchronized void terminateProcessor(String reason) {

@@ -9,7 +9,9 @@
 package io.nayuki.mamirc.processor;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,20 +23,31 @@ final class EventProcessor {
 	
 	/*---- Fields ----*/
 	
-	private Map<Integer,SessionState> sessions;
+	private Map<Integer,SessionState> sessions;  // Not null
 	
-	private MessageManager msgSink;
+	private boolean isRealtime;  // Initially false
 	
-	private UpdateManager updateMgr;
+	private MessageManager msgSink;  // Not null
+	
+	private UpdateManager updateMgr;  // Can be null
+	
+	private MamircProcessor master;  // Can be null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr) {
+	public EventProcessor(MessageManager msgSink) {
+		this(msgSink, null, null);
+	}
+	
+	
+	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr, MamircProcessor master) {
 		sessions = new HashMap<>();
+		isRealtime = false;
 		this.msgSink = msgSink;
 		this.updateMgr = updateMgr;
+		this.master = master;
 	}
 	
 	
@@ -501,6 +514,44 @@ final class EventProcessor {
 				}
 			}
 		}
+	}
+	
+	
+	public void finishCatchup(Map<String,NetworkProfile> profiles) {
+		if (master == null || isRealtime)
+			throw new IllegalStateException();
+		isRealtime = true;
+		
+		// Disconnect every current connection where at least one of these is true:
+		// - Doesn't belong to a known profile
+		// - Belongs to a profile with the "connect" flag set to false
+		// - Belongs to a profile with multiple concurrent connections, but isn't the highest connection ID
+		Set<Integer> toDisconnect = new HashSet<>();
+		Map<String,Integer> profileToConId = new HashMap<>();
+		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
+			int conId = entry.getKey();
+			String profName = entry.getValue().profileName;
+			if (!profiles.containsKey(profName) || !profiles.get(profName).connect)
+				toDisconnect.add(conId);
+			else {
+				if (!profileToConId.containsKey(profName))  // First seen connection for a known profile
+					profileToConId.put(profName, conId);
+				else {  // Keep only the higher connection ID value
+					int oldConId = profileToConId.get(profName);
+					if (oldConId < conId) {
+						toDisconnect.add(oldConId);
+						profileToConId.put(profName, conId);
+					} else if (conId < oldConId)
+						toDisconnect.add(conId);
+					else
+						throw new AssertionError("Duplicate connection ID");
+				}
+			}
+		}
+		
+		// Send commands to disconnect the unwanted connections
+		for (int conId : toDisconnect)
+			master.sendCommand("disconnect " + conId);
 	}
 	
 	
