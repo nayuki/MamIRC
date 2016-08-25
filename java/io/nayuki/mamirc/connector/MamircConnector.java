@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -139,7 +140,8 @@ public final class MamircConnector {
 		// Dump current connection IDs and sequences to the Processor
 		databaseLogger.flushQueue();
 		writer.postWrite("active-connections");
-		for (Map.Entry<Integer,ConnectionInfo> entry : serverConnections.entrySet())
+		Map<Integer,ConnectionInfo> temp = new TreeMap<>(serverConnections);  // Force ascending sort
+		for (Map.Entry<Integer,ConnectionInfo> entry : temp.entrySet())
 			writer.postWrite(entry.getKey() + " " + entry.getValue().nextSequence);
 		writer.postWrite("end-list");
 	}
