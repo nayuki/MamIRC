@@ -132,9 +132,10 @@ final class SessionState {
 	
 	public static final class ChannelState {
 		
-		public final Map<String,MemberState> members;  // Not null, size at least 0
+		public Map<String,MemberState> members;  // Not null, size at least 0
 		
 		public boolean isProcessingNamesReply;  // Usually false, unless received RPL_NAMREPLY but not RPL_ENDOFNAMES yet
+		public Map<String,MemberState> oldMembers;  // Is null if and only if isProcessingNamesReply is false
 		
 		public String topicText;   // Null if not known, "" if RPL_NOTOPIC, otherwise a non-empty string
 		public String topicSetBy;  // Null if not known or topicText is null
@@ -144,6 +145,7 @@ final class SessionState {
 		public ChannelState() {
 			members = new TreeMap<>();
 			isProcessingNamesReply = false;
+			oldMembers = null;
 			topicText  = null;
 			topicSetBy = null;
 			topicSetAt = 0;

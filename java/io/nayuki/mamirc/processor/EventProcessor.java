@@ -10,9 +10,11 @@ package io.nayuki.mamirc.processor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.Utils;
 
 
 final class EventProcessor {
@@ -259,14 +261,32 @@ final class EventProcessor {
 					break;
 				if (!channel.isProcessingNamesReply) {
 					channel.isProcessingNamesReply = true;
-					channel.members.clear();
+					channel.oldMembers = channel.members;
+					channel.members = new TreeMap<>();
 				}
+				boolean initial = channel.oldMembers.size() == 1;
+				boolean missing = false; 
 				for (String name : line.getParameter(3).split(" ")) {
-					// Strip prefixes
-					while (name.length() > 0 && session.namesReplyModeMap.containsKey(name.charAt(0)))
+					// Handle and strip prefixes
+					String modes = "";
+					while (name.length() > 0) {
+						Character temp = session.namesReplyModeMap.get(name.charAt(0));
+						if (temp == null)
+							break;
+						if (modes.indexOf(temp) == -1)
+							modes += temp;
 						name = name.substring(1);
-					channel.members.put(name, new SessionState.ChannelState.MemberState());
+					}
+					SessionState.ChannelState.MemberState mbrstate = channel.oldMembers.remove(name);
+					if (mbrstate == null) {
+						mbrstate = new SessionState.ChannelState.MemberState();
+						missing = true;
+					}
+					mbrstate.modes = modes;
+					channel.members.put(name, mbrstate);
 				}
+				if (!initial && (missing || channel.oldMembers.size() > 0))
+					Utils.logger.warning("Desynchronization of the set of channel members between IRC server and client");
 				break;
 			}
 			
@@ -275,6 +295,7 @@ final class EventProcessor {
 					SessionState.ChannelState channel = entry.getValue();
 					if (channel.isProcessingNamesReply) {
 						channel.isProcessingNamesReply = false;
+						channel.oldMembers = null;
 						String[] names = channel.members.keySet().toArray(new String[0]);
 						ev.addMessage(entry.getKey().properCase, "NAMES", names);
 					}
@@ -334,8 +355,12 @@ final class EventProcessor {
 				String from   = line.getPrefixName();
 				String target = line.getParameter(0);
 				String party = target;
-				if (!isChannelName(target))
-					party = "";  // Assume it is a mode message for my user
+				if (isChannelName(target)) {
+					SessionState.ChannelState chan = session.currentChannels.get(new CaselessString(target));
+					if (chan != null)
+						handleReceiveMode(chan, line);
+				} else  // Assume it is a mode message for my user
+					party = "";
 				StringBuilder sb = new StringBuilder();
 				for (int i = 1; i < line.parameters.size(); i++) {
 					if (sb.length() > 0)
@@ -433,6 +458,48 @@ final class EventProcessor {
 			
 			default:  // No action needed for other commands
 				break;
+		}
+	}
+	
+	
+	// For example, line = :ChanServ MODE #chat -b+ov *!*@* Alice Bob
+	private void handleReceiveMode(SessionState.ChannelState chan, IrcLine line) {
+		// Iterate over every character in the flags parameter, while consuming
+		// subsequent parameters for each flag that requires a parameter
+		String flags = line.getParameter(1);
+		int sign = 0;
+		for (int i = 0, j = 2; i < flags.length(); i++) {
+			char c = flags.charAt(i);
+			if (c == '+')
+				sign = +1;
+			else if (c == '-')
+				sign = -1;
+			else {
+				if (sign == 0)
+					throw new IrcSyntaxException("No sign set for mode flag");
+				switch (c) {
+					case 'a':  // Admin
+					case 'h':  // Halfop
+					case 'o':  // Operator
+					case 'q':  // Owner
+					case 'v':  // Voice
+						String nick = line.getParameter(j);
+						SessionState.ChannelState.MemberState mbrstate = chan.members.get(nick);
+						if (mbrstate != null) {
+							if (sign == +1)
+								mbrstate.addMode(c);
+							else
+								mbrstate.removeMode(c);
+						}
+						j++;
+						break;
+					case 'b':  // Simply consume a parameter without processing it
+						j++;
+						break;
+					default:  // Ignore unknown mode flags
+						break;
+				}
+			}
 		}
 	}
 	
