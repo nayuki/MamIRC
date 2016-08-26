@@ -50,8 +50,9 @@ In addition to the schema, here are more notes and semantics about the data form
 
    0. "connect &lt;hostname> &lt;port> &lt;ssl/nossl> &lt;metadata>", where metadata is zero or more characters, possibly having spaces, and not containing '\0'; sequence must be 0.
    0. "opened &lt;IPv4/IPv6 address string>"; sequence must be 1.
-   0. "disconnect"; if this event exists then it must come after "connect".
-   0. "closed"; if this event exists then it must come after "connect", and after "disconnect" (if any).
+   0. "disconnect"; if this event exists then it must come after "connect". Any number of disconnect events can happen.
+   0. "closed"; if this event exists then it must come after "connect", and be the last sequence number for the connection.
+   0. "connect" and "disconnect" are actions initiated from the user side; "opened" and "closed" are actions received from the remote IRC server side.
 
 * Note that not necessarily every connection in the database will have a "closed" event, because the Connector could abruptly terminate before the connection is cleanly closed and logged. Also, no event can have a higher sequence number than a "closed" event, since it makes no sense to send or receive data after a connection is closed.
 
@@ -59,7 +60,7 @@ In addition to the schema, here are more notes and semantics about the data form
 
 * If the database is manipulated with an external tool, it is okay to leave gaps in `connectionId` values. Whenever the Connector is restarted, it finds the maximum `connectionId` in the database, and uses this value plus one as the next `connectionId`. (It will not reuse a lower ID in a gap.)
 
-* If the database is manipulated with an external tool while a Connector is running, it is okay to manipulate events on any `connectionId` that is not a current active connection. It is not okay to manipulate events on active `connectionId` values because if the Processor is restarted, it learns of the current IDs and needs to read the database to get all the events that happened in these current connections.
+* If the database is manipulated with an external tool while a Connector is running, it is okay to manipulate events on any `connectionId` that is not a current active connection. It is not okay to manipulate events on active `connectionId` values because if the Processor is restarted, it learns of the current connection IDs and needs to read the database to get all the events that happened in these current connections.
 
 * Beware of concurrent access to a MamIRC database. Only one Connector instance can use a particular database file at any given time; it is wrong to run two or more Connectors on the same database file because it will cause crashes and data corruption. Also when using an external program to read/write a database currently used by a MamIRC Connector, be sure to avoid locking the database for more than ~10 seconds, or else the Connector will exceed the maximum write timeout, and will terminate itself (along with all your IRC connections).
 
@@ -80,12 +81,12 @@ The Connector and Processor communicate with each other over a single socket, us
 
 ### Example session
 
-For those of you curious about how to implement a Processor, here is what a typical connection looks like from the perspective of the Processor. Annotations are preceded by `#`, and no blank lines are in the actual protocol.
+For those who are curious about how to communicate with a Connector, here is what a typical connection looks like from the perspective of the Processor. (Annotations are preceded by `#`, there are no leading or trailing spaces in each line, and no blank lines are in the actual protocol.)
 
     # Initial handshake
     <-- MyPassword123         # Send password and newline.
     <-- attach                # Send initial action.
-    --> active-connections    # Static string.
+    --> active-connections    # Static string. (First line received from the Connector.)
     --> 1 2308                # Connection ID = 1, next sequence = 2308.
     --> 7 459                 # Connection ID = 7, next sequence = 459.
     --> end-list              # Static string.
@@ -97,7 +98,7 @@ For those of you curious about how to implement a Processor, here is what a typi
     --> 1 2308 1449104543985 1 :Alice PRIVMSG #London :Hello, world!
     --> 1 2309 1449104546870 1 :Alice PRIVMSG Bob :Can we talk?
     
-    # Send a line; echoed back with sequence and timestamp.
+    # Send a line; the Connector echoes back with sequence and timestamp.
     <-- send 1 PRIVMSG Alice :Yes I'm here
     --> 1 2310 1449104552109 2 PRIVMSG Alice :Yes I'm here
     
@@ -108,8 +109,10 @@ For those of you curious about how to implement a Processor, here is what a typi
     --> 8 1 1449105037245 0 opened 139.62.177.78
     <-- send 8 NICK John
     <-- send 8 USER John 0 * :John Smith
+    --> 8 2 1449105037250 2 NICK John
+    --> 8 3 1449105037250 2 USER John 0 * :John Smith
 
-The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](../java/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For curious developers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
+The set of commands that a Connector can accept from a Processor is documented fully in [ProcessorReaderThread.java](../java/io/nayuki/mamirc/connector/ProcessorReaderThread.java). For adventurous hackers out there, it is indeed possible to converse with a MamIRC Connector using raw telnet; it is a good way to learn and debug the protocol.
 
 
 Project links
