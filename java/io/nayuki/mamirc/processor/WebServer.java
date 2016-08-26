@@ -62,11 +62,7 @@ final class WebServer {
 			public void handle(HttpExchange he) throws IOException {
 				try {
 					Object respData = msgMgr.listAllWindowsAsJson();
-					byte[] respBytes = Utils.toUtf8(Json.serialize(respData));
-					he.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
-					he.sendResponseHeaders(200, respBytes.length);
-					he.getResponseBody().write(respBytes);
-					he.close();
+					writeJsonResponse(respData, he);
 				} catch (SQLiteException e) {
 					he.sendResponseHeaders(500, -1);
 				}
@@ -92,12 +88,7 @@ final class WebServer {
 							Json.getString(reqData, "party"),
 							Json.getInt(reqData, "start"),
 							Json.getInt(reqData, "end"));
-					byte[] respBytes = Utils.toUtf8(Json.serialize(respData));
-					
-					he.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
-					he.sendResponseHeaders(200, respBytes.length);
-					he.getResponseBody().write(respBytes);
-					he.close();
+					writeJsonResponse(respData, he);
 				} catch (SQLiteException e) {
 					he.sendResponseHeaders(500, -1);
 				}
@@ -107,11 +98,7 @@ final class WebServer {
 		server.createContext("/get-network-profiles.json", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
 				Object respData = master.getNetworkProfilesAsJson();
-				byte[] respBytes = Utils.toUtf8(Json.serialize(respData));
-				he.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
-				he.sendResponseHeaders(200, respBytes.length);
-				he.getResponseBody().write(respBytes);
-				he.close();
+				writeJsonResponse(respData, he);
 			}
 		});
 		
@@ -145,6 +132,20 @@ final class WebServer {
 	
 	
 	/*---- Static members ----*/
+	
+	// Writes the given JSON-compatible object as an HTTP response in JSON text to the given connection.
+	// The HTTP exchange is closed after this function is called. Note that data can be null.
+	private static void writeJsonResponse(Object data, HttpExchange he) throws IOException {
+		if (he == null)
+			throw new NullPointerException();
+		String str = Json.serialize(data);
+		byte[] bytes = Utils.toUtf8(str);
+		he.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+		he.sendResponseHeaders(200, bytes.length > 0 ? bytes.length : -1);
+		he.getResponseBody().write(bytes);
+		he.close();
+	}
+	
 	
 	// Maps a lowercase file extension to an Internet media type.
 	private static final Map<String,String> EXTENSION_TO_MEDIA_TYPE;
