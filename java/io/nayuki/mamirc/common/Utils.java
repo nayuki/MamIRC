@@ -114,6 +114,7 @@ public final class Utils {
 				}
 			}
 		};
+		consoleLogLevelChanger.setDaemon(true);
 		consoleLogLevelChanger.start();
 	}
 	
