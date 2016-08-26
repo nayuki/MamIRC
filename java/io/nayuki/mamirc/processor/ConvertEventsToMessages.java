@@ -41,6 +41,7 @@ public final class ConvertEventsToMessages {
 		SQLiteStatement getConnectionEvents = database.prepare(
 			"SELECT sequence, timestamp, type, data FROM events " +
 			"WHERE connectionId=? ORDER BY sequence ASC");
+		msgSink.beginTransaction();
 		
 		// For each connection ID in ascending order
 		while (getConnectionIds.step()) {
@@ -65,6 +66,7 @@ public final class ConvertEventsToMessages {
 		}
 		
 		// Clean up
+		msgSink.commitTransaction();
 		msgSink.dispose();
 		database.dispose();
 	}

@@ -112,9 +112,11 @@ public final class MamircProcessor {
 		
 		updateManager = new UpdateManager();
 		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile, updateManager);
+		messageManager.beginTransaction();
 		eventProcessor = new EventProcessor(messageManager, updateManager, this);
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
 		eventProcessor.finishCatchup(userConfig.profiles);
+		messageManager.commitTransaction();
 		
 		reader.start();
 		new WebServer(backendConfig.webServerPort, this, messageManager);

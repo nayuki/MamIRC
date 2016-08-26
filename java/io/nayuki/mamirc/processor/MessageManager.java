@@ -64,12 +64,21 @@ final class MessageManager {
 		getMaxSequence = database.prepare("SELECT max(sequence) FROM messages WHERE windowId=?");
 		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?,?)");
 		insertMessage  = database.prepare("INSERT INTO messages VALUES(?,?,?,?,?)");
-		database.exec("BEGIN TRANSACTION");
 	}
 	
 	
 	
 	/*---- Methods ----*/
+	
+	public void beginTransaction() throws SQLiteException {
+		database.exec("BEGIN TRANSACTION");
+	}
+	
+	
+	public void commitTransaction() throws SQLiteException {
+		database.exec("COMMIT TRANSACTION");
+	}
+	
 	
 	public void addMessage(String profile, String party, int conId, long timestamp, String type, String... args) {
 		if (profile == null || party == null || type == null || args == null)
@@ -196,8 +205,7 @@ final class MessageManager {
 	}
 	
 	
-	public void dispose() throws SQLiteException {
-		database.exec("COMMIT TRANSACTION");
+	public void dispose() {
 		database.dispose();
 	}
 	
