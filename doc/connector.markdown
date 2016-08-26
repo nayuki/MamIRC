@@ -34,7 +34,7 @@ The Connector logs all events to a simple SQLite database file, which has a sing
 
 In addition to the schema, here are more notes and semantics about the data format:
 
-* `connectionId` starts at 0 and increments (with no gaps) for each connection attempt. It should fit in a signed int32 for convenience in Java, and negative values are invalid.
+* `connectionId` starts at 0 and increases for each connection attempt. It should fit in a signed int32 for convenience in Java, and negative values are invalid.
 
 * `sequence` starts at 0 for each connectionId, and increments (with no gaps) for each event in the connection. It should fit in a signed int32, and negative values are invalid.
 

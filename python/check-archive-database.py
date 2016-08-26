@@ -68,8 +68,8 @@ def _check_connection_id(conid, dbcur):
 	# Check if the connection ID has any events at all
 	dbcur.execute("SELECT * FROM events WHERE connectionId=? LIMIT 1", (conid,))
 	if dbcur.fetchone() is None:
-		print("[ERROR] The set of connection IDs contains a gap at: {}".format(conid), file=sys.stderr)
-		return True
+		print("[WARNING] The set of connection IDs contains a gap at: {}".format(conid), file=sys.stderr)
+		return False
 	
 	# Check all events for this connection ID in sequential order
 	dbcur.execute("SELECT sequence, type, data FROM events WHERE connectionId=? ORDER BY sequence ASC", (conid,))
