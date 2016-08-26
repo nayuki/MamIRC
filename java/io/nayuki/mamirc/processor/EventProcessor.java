@@ -308,9 +308,9 @@ final class EventProcessor {
 				if (!channel.isProcessingNamesReply) {
 					channel.isProcessingNamesReply = true;
 					channel.oldMembers = channel.members;
+					channel.oldMembersIsInitial = channel.oldMembers.size() == 1;
 					channel.members = new TreeMap<>();
 				}
-				boolean initial = channel.oldMembers.size() == 1;
 				boolean missing = false; 
 				for (String name : line.getParameter(3).split(" ")) {
 					// Handle and strip prefixes
@@ -331,7 +331,7 @@ final class EventProcessor {
 					mbrstate.modes = modes;
 					channel.members.put(name, mbrstate);
 				}
-				if (!initial && (missing || channel.oldMembers.size() > 0))
+				if (!channel.oldMembersIsInitial && (missing || channel.oldMembers.size() > 0))
 					Utils.logger.warning("Desynchronization of the set of channel members between IRC server and client");
 				break;
 			}
