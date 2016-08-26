@@ -101,6 +101,31 @@ final class MessageManager {
 	}
 	
 	
+	// Clears all messages in all windows of the given profile, such that the message's connection ID >= the given conId.
+	public void clearLaterMessages(String profile, int conId) throws SQLiteException {
+		SQLiteStatement windowsQuery = database.prepare(
+			"SELECT id FROM windows WHERE profile=?");
+		try {
+			SQLiteStatement deleteMessages = database.prepare(
+				"DELETE FROM messages WHERE windowId=? AND connectionId>=?");
+			
+			try {
+				windowsQuery.bind(1, profile);
+				while (windowsQuery.step()) {
+					deleteMessages.bind(1, windowsQuery.columnInt(0));
+					deleteMessages.bind(2, conId);
+					Utils.stepStatement(deleteMessages, false);
+				}
+				
+			} finally {
+				deleteMessages.dispose();
+			}
+		} finally {
+			windowsQuery.dispose();
+		}
+	}
+	
+	
 	public Object listAllWindowsAsJson() throws SQLiteException {
 		SQLiteConnection db = new SQLiteConnection(databaseFile);
 		try {

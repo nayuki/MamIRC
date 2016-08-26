@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.almworks.sqlite4java.SQLiteException;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.Utils;
 
@@ -86,6 +87,13 @@ final class EventProcessor {
 			String[] parts = line.split(" ", 5);
 			String profileName = parts[4];
 			sessions.put(ev.connectionId, new SessionState(profileName));
+			if (!isRealtime) {
+				try {
+					msgSink.clearLaterMessages(profileName, ev.connectionId);
+				} catch (SQLiteException e) {
+					e.printStackTrace();
+				}
+			}
 			msgSink.addMessage(profileName, "", ev.connectionId, ev.timestamp, "CONNECT", parts[1], parts[2], parts[3]);
 			
 		} else if (line.startsWith("opened ")) {
