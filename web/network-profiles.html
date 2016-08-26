@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!--
+  - MamIRC
+  - Copyright (c) Project Nayuki
+  - 
+  - https://www.nayuki.io/page/mamirc-the-headless-irc-client
+  - https://github.com/nayuki/MamIRC
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Network profiles – MamIRC</title>
+		<link rel="Stylesheet" href="network-profiles.css" type="text/css" media="all"/>
+	</head>
+	
+	<body>
+		<h1>Network profiles – MamIRC</h1>
+		<div id="network-profiles-container"></div>
+		
+		<div>
+			<input type="button" value="Add new network profile" id="add-network-button"/>
+			<input type="button" value="Save profiles" id="save-button"/>
+		</div>
+		
+		<table id="network-profile-template">
+			<tbody>
+				<tr class="profile-name-display-row">
+					<td colspan="2"></td>
+				</tr>
+				<tr class="profile-name-input-row">
+					<td>Profile name:</td>
+					<td><input type="text"/></td>
+				</tr>
+				<tr class="connect-row">
+					<td colspan="2"><input type="checkbox"/> <label>Connect</label></td>
+				</tr>
+				<tr class="servers-row">
+					<td>IRC servers</td>
+					<td>
+						<ul>
+							<li>
+								<input type="text" placeholder="hostname.irc.example.com" class="hostname-input"/>
+								<input type="number" min="0" max="65535" placeholder="port" class="port-input"/>
+								<input type="checkbox"/>
+								<label>SSL</label>
+							</li>
+							<li><a>+ Add alternate server</a></li>
+						</ul>
+					</td>
+				</tr>
+				<tr class="nicknames-row">
+					<td>Nicknames:</td>
+					<td><input type="text"/></td>
+				</tr>
+				<tr class="username-row">
+					<td>Username:</td>
+					<td><input type="text"/></td>
+				</tr>
+				<tr class="realname-row">
+					<td>Real name:</td>
+					<td><input type="text"/></td>
+				</tr>
+				<tr class="channels-row">
+					<td>Channels to join:</td>
+					<td><input type="text"/></td>
+				</tr>
+			</tbody>
+		</table>
+		<script type="application/javascript" src="network-profiles.js"></script>
+	</body>
+</html>

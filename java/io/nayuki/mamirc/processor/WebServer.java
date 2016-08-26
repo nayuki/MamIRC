@@ -26,12 +26,7 @@ import io.nayuki.mamirc.common.Utils;
 
 public class WebServer {
 	
-	public static void main(String[] args) throws IOException, SQLiteException {
-		new WebServer(8080, new MessageManager(new File("mamirc-window-messages.sqlite"), null));
-	}
-	
-	
-	public WebServer(int port, final MessageManager msgMgr) throws IOException {
+	public WebServer(int port, final MamircProcessor master, final MessageManager msgMgr) throws IOException {
 		HttpServer server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		server.createContext("/log-viewer", new HttpHandler() {
@@ -104,6 +99,44 @@ public class WebServer {
 				} catch (SQLiteException e) {
 					he.sendResponseHeaders(500, -1);
 				}
+			}
+		});
+		
+		server.createContext("/network-profiles", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				he.getResponseHeaders().set("Content-Type", "application/xhtml+xml");
+				he.sendResponseHeaders(200, 0);
+				Files.copy(new File("web/network-profiles.html").toPath(), he.getResponseBody());
+				he.close();
+			}
+		});
+		
+		server.createContext("/network-profiles.css", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				he.getResponseHeaders().set("Content-Type", "text/css");
+				he.sendResponseHeaders(200, 0);
+				Files.copy(new File("web/network-profiles.css").toPath(), he.getResponseBody());
+				he.close();
+			}
+		});
+		
+		server.createContext("/network-profiles.js", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				he.getResponseHeaders().set("Content-Type", "application/javascript");
+				he.sendResponseHeaders(200, 0);
+				Files.copy(new File("web/network-profiles.js").toPath(), he.getResponseBody());
+				he.close();
+			}
+		});
+		
+		server.createContext("/get-network-profiles.json", new HttpHandler() {
+			public void handle(HttpExchange he) throws IOException {
+				Object respData = master.getNetworkProfilesAsJson();
+				byte[] respBytes = Utils.toUtf8(Json.serialize(respData));
+				he.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+				he.sendResponseHeaders(200, respBytes.length);
+				he.getResponseBody().write(respBytes);
+				he.close();
 			}
 		});
 		

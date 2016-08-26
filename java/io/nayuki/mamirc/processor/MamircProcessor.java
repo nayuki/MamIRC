@@ -117,6 +117,7 @@ public final class MamircProcessor {
 		eventProcessor.finishCatchup(userConfig.profiles);
 		
 		reader.start();
+		new WebServer(backendConfig.webServerPort, this, messageManager);
 	}
 	
 	
@@ -168,6 +169,14 @@ public final class MamircProcessor {
 		Utils.logger.info("MamIRC Processor application terminating");
 		System.exit(1);
 		throw new AssertionError("Unreachable");
+	}
+	
+	
+	public synchronized Object getNetworkProfilesAsJson() {
+		Map<String,Object> result = new HashMap<>();
+		for (NetworkProfile profile : userConfig.profiles.values())
+			result.put(profile.name, profile.toJson());
+		return result;
 	}
 	
 }
