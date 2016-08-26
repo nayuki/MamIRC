@@ -65,6 +65,7 @@ final class WebServer {
 					writeJsonResponse(respData, he);
 				} catch (SQLiteException e) {
 					he.sendResponseHeaders(500, -1);
+					he.close();
 				}
 			}
 		});
@@ -84,13 +85,14 @@ final class WebServer {
 					Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
 					
 					Object respData = msgMgr.getWindowMessagesAsJson(
-							Json.getString(reqData, "profile"),
-							Json.getString(reqData, "party"),
-							Json.getInt(reqData, "start"),
-							Json.getInt(reqData, "end"));
+						Json.getString(reqData, "profile"),
+						Json.getString(reqData, "party"),
+						Json.getInt(reqData, "start"),
+						Json.getInt(reqData, "end"));
 					writeJsonResponse(respData, he);
 				} catch (SQLiteException e) {
 					he.sendResponseHeaders(500, -1);
+					he.close();
 				}
 			}
 		});

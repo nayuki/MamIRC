@@ -6,6 +6,8 @@
  * https://github.com/nayuki/MamIRC
  */
 
+"use strict";
+
 
 function initialize() {
 	document.getElementById("messages-back-to-windows").onclick = function() {
