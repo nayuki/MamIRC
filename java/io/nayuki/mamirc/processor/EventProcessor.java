@@ -33,6 +33,8 @@ final class EventProcessor {
 	
 	private MamircProcessor master;  // Can be null
 	
+	private Map<String,NetworkProfile> profiles;
+	
 	
 	
 	/*---- Constructors ----*/
@@ -91,6 +93,10 @@ final class EventProcessor {
 			if (updateMgr != null)
 				updateMgr.addUpdate("ONLINE", ev.session.profileName);
 			ev.addMessage("", "OPENED", line.split(" ", 2)[1]);
+			if (isRealtime) {
+				String nickname = profiles.get(ev.session.profileName).nicknames.get(0);
+				master.sendCommand("send " + ev.connectionId + " NICK " + nickname);
+			}
 			
 		} else if (line.equals("disconnect")) {
 			ev.addMessage("", "DISCONNECT");
@@ -120,8 +126,22 @@ final class EventProcessor {
 			case "003":
 			case "004":
 			case "005": {
-				if (session.registrationState != SessionState.RegState.REGISTERED)
+				if (session.registrationState != SessionState.RegState.REGISTERED) {
 					session.setRegistrationState(SessionState.RegState.REGISTERED);
+					if (isRealtime) {
+						NetworkProfile profile = profiles.get(ev.session.profileName);
+						for (String chanName : profile.channels) {
+							String[] parts = chanName.split(" ", 2);
+							String keyStr = "";
+							if (parts.length == 2) {
+								chanName = parts[0];
+								keyStr = ":" + parts[1];
+							}
+							if (!session.currentChannels.containsKey(new CaselessString(chanName)))
+								master.sendCommand("send " + ev.connectionId + " JOIN " + chanName + keyStr);
+						}
+					}
+				}
 				// This piece of workaround logic handles servers that silently truncate your proposed nickname at registration time
 				String feedbackNick = line.getParameter(0);
 				if (session.currentNickname.startsWith(feedbackNick)) {
@@ -156,6 +176,19 @@ final class EventProcessor {
 				if (session.registrationState != SessionState.RegState.REGISTERED) {
 					session.rejectedNicknames.add(session.currentNickname);
 					session.setNickname(null);
+					if (isRealtime) {
+						boolean found = false;
+						NetworkProfile profile = profiles.get(ev.session.profileName);
+						for (String nickname : profile.nicknames) {
+							if (!session.rejectedNicknames.contains(nickname)) {
+								master.sendCommand("send " + ev.connectionId + " NICK " + nickname);
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+							master.sendCommand("disconnect " + ev.connectionId);
+					}
 				}
 				break;
 			}
@@ -433,8 +466,13 @@ final class EventProcessor {
 		switch (ev.command) {
 			
 			case "NICK": {
-				if (session.registrationState == SessionState.RegState.OPENED)
+				if (session.registrationState == SessionState.RegState.OPENED) {
 					session.setRegistrationState(SessionState.RegState.NICK_SENT);
+					if (isRealtime) {
+						NetworkProfile profile = profiles.get(ev.session.profileName);
+						master.sendCommand("send " + ev.connectionId + " USER " + profile.username + " 0 * :" + profile.realname);
+					}
+				}
 				if (session.registrationState != SessionState.RegState.REGISTERED)
 					session.setNickname(line.getParameter(0));
 				// Otherwise when registered, rely on receiving NICK from the server
@@ -521,13 +559,14 @@ final class EventProcessor {
 		if (master == null || isRealtime)
 			throw new IllegalStateException();
 		isRealtime = true;
+		this.profiles = profiles;
 		
 		// Disconnect every current connection where at least one of these is true:
 		// - Doesn't belong to a known profile
 		// - Belongs to a profile with the "connect" flag set to false
 		// - Belongs to a profile with multiple concurrent connections, but isn't the highest connection ID
 		Set<Integer> toDisconnect = new HashSet<>();
-		Map<String,Integer> profileToConId = new HashMap<>();
+		Map<String,Integer> profileToConId = new HashMap<>();  // Connections to keep
 		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
 			int conId = entry.getKey();
 			String profName = entry.getValue().profileName;
@@ -552,6 +591,62 @@ final class EventProcessor {
 		// Send commands to disconnect the unwanted connections
 		for (int conId : toDisconnect)
 			master.sendCommand("disconnect " + conId);
+		
+		// Join channels in current connections, as specified in profiles
+		for (Map.Entry<String,Integer> entry : profileToConId.entrySet()) {
+			NetworkProfile profile = profiles.get(entry.getKey());
+			int conId = entry.getValue();
+			SessionState session = sessions.get(conId);
+			switch (session.registrationState) {
+				case CONNECTING:
+					break;
+				case OPENED: {
+					String nickname = profiles.get(session.profileName).nicknames.get(0);
+					master.sendCommand("send " + conId + " NICK " + nickname);
+					break;
+				}
+				case NICK_SENT:
+				case USER_SENT: {
+					if (session.currentNickname == null) {
+						boolean found = false;
+						for (String nickname : profile.nicknames) {
+							if (!session.rejectedNicknames.contains(nickname)) {
+								master.sendCommand("send " + conId + " NICK " + nickname);
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+							master.sendCommand("disconnect " + conId);
+					} else if (session.registrationState == SessionState.RegState.NICK_SENT)
+						master.sendCommand("send " + conId + " USER " + profile.username + " 0 * :" + profile.realname);
+					break;
+				}
+				case REGISTERED: {
+					for (String chanName : profile.channels) {
+						String[] parts = chanName.split(" ", 2);
+						String keyStr = "";
+						if (parts.length == 2) {
+							chanName = parts[0];
+							keyStr = ":" + parts[1];
+						}
+						if (!session.currentChannels.containsKey(new CaselessString(chanName)))
+							master.sendCommand("send " + conId + " JOIN " + chanName + keyStr);
+					}
+					break;
+				}
+				default:
+					throw new AssertionError();
+			}
+		}
+		
+		// Connect to profiles that are enabled but not currently connected
+		for (NetworkProfile profile : profiles.values()) {
+			if (!profileToConId.containsKey(profile.name) && profile.connect && profile.servers.size() > 0) {
+				NetworkProfile.Server serv = profile.servers.get(0);
+				master.sendCommand("connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + profile.name);
+			}
+		}
 	}
 	
 	
