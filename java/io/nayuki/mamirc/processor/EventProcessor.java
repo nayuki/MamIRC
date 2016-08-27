@@ -517,6 +517,26 @@ final class EventProcessor {
 				break;
 			}
 			
+			case "JOIN": {
+				if (isRealtime) {
+					String temp = line.getParameter(0);
+					if (line.parameters.size() == 2)
+						temp += " " + line.getParameter(1);  // Channel key
+					if (line.parameters.size() > 2)
+						return;
+					profiles.get(session.profileName).channels.add(temp);
+				}
+				break;
+			}
+			
+			case "PART": {
+				if (isRealtime) {
+					String chan = line.getParameter(0);
+					profiles.get(session.profileName).channels.remove(chan);
+				}
+				break;
+			}
+			
 			default:  // No action needed for other commands
 				break;
 		}
