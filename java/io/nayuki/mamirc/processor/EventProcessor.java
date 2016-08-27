@@ -591,42 +591,40 @@ final class EventProcessor {
 		isRealtime = true;
 		this.profiles = profiles;
 		
-		// Disconnect every current connection where at least one of these is true:
-		// - Doesn't belong to a known profile
-		// - Belongs to a profile with the "connect" flag set to false
-		// - Belongs to a profile with multiple concurrent connections, but isn't the highest connection ID
-		Set<Integer> toDisconnect = new HashSet<>();
-		Map<String,Integer> profileToConId = new HashMap<>();  // Connections to keep
+		// Detect and disconnect multiple current connections to a profile, the ones without the highest connection ID
+		Set<Integer> disconnectConIds = new HashSet<>();
+		Map<String,Integer> profNameToConId = new HashMap<>();  // Connections to keep
 		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
 			int conId = entry.getKey();
 			String profName = entry.getValue().profileName;
-			if (!profiles.containsKey(profName) || !profiles.get(profName).connect)
-				toDisconnect.add(conId);
-			else {
-				if (!profileToConId.containsKey(profName))  // First seen connection for a known profile
-					profileToConId.put(profName, conId);
-				else {  // Keep only the higher connection ID value
-					int oldConId = profileToConId.get(profName);
-					if (oldConId < conId) {
-						toDisconnect.add(oldConId);
-						profileToConId.put(profName, conId);
-					} else if (conId < oldConId)
-						toDisconnect.add(conId);
-					else
-						throw new AssertionError("Duplicate connection ID");
-				}
+			if (!profNameToConId.containsKey(profName))  // First seen connection for a given profile name
+				profNameToConId.put(profName, conId);
+			else {  // Keep only the higher connection ID value
+				int oldConId = profNameToConId.get(profName);
+				if (oldConId < conId) {
+					disconnectConIds.add(oldConId);
+					profNameToConId.put(profName, conId);
+				} else if (conId < oldConId)
+					disconnectConIds.add(conId);
+				else
+					throw new AssertionError("Duplicate connection ID");
 			}
 		}
-		
-		// Send commands to disconnect the unwanted connections
-		for (int conId : toDisconnect)
+		for (int conId : disconnectConIds)  // Disconnect the unwanted connections
 			master.sendCommand("disconnect " + conId);
 		
-		// Join channels in current connections, as specified in profiles
-		for (Map.Entry<String,Integer> entry : profileToConId.entrySet()) {
-			NetworkProfile profile = profiles.get(entry.getKey());
-			int conId = entry.getValue();
-			SessionState session = sessions.get(conId);
+		applyNetworkProfiles(disconnectConIds);
+		
+		// Resume the registration logic for existing connections
+		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
+			int conId = entry.getKey();
+			SessionState session = entry.getValue();
+			NetworkProfile profile = profiles.get(session.profileName);
+			if (disconnectConIds.contains(conId))
+				continue;  // Ignore connections that are already condemned
+			if (profile == null)
+				throw new AssertionError();
+			
 			switch (session.registrationState) {
 				case CONNECTING:
 					break;
@@ -652,7 +650,33 @@ final class EventProcessor {
 						master.sendCommand("send " + conId + " USER " + profile.username + " 0 * :" + profile.realname);
 					break;
 				}
-				case REGISTERED: {
+				case REGISTERED:
+					break;
+				default:
+					throw new AssertionError();
+			}
+		}
+	}
+	
+	
+	public void applyNetworkProfiles(Set<Integer> disconnectConIds) {
+		Set<String> activeProfNames = new HashSet<>();
+		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
+			int conId = entry.getKey();
+			SessionState session = entry.getValue();
+			if (disconnectConIds.contains(conId))
+				continue;  // Ignore connections that already have disconnect requested
+			
+			NetworkProfile profile = profiles.get(session.profileName);
+			if (profile == null || !profile.connect) {
+				// Disconnect connections that have no known profile or whose profile has connect disabled
+				master.sendCommand("disconnect " + conId);
+				disconnectConIds.add(conId);
+				
+			} else {
+				activeProfNames.add(session.profileName);
+				if (session.registrationState == SessionState.RegState.REGISTERED) {
+					// Join channels in current connections, as specified in profiles
 					for (String chanName : profile.channels) {
 						String[] parts = chanName.split(" ", 2);
 						String keyStr = "";
@@ -663,16 +687,13 @@ final class EventProcessor {
 						if (!session.currentChannels.containsKey(new CaselessString(chanName)))
 							master.sendCommand("send " + conId + " JOIN " + chanName + keyStr);
 					}
-					break;
 				}
-				default:
-					throw new AssertionError();
 			}
 		}
 		
 		// Connect to profiles that are enabled but not currently connected
 		for (NetworkProfile profile : profiles.values()) {
-			if (!profileToConId.containsKey(profile.name) && profile.connect && profile.servers.size() > 0) {
+			if (!activeProfNames.contains(profile.name) && profile.connect && profile.servers.size() > 0) {
 				NetworkProfile.Server serv = profile.servers.get(0);
 				master.sendCommand("connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + profile.name);
 			}
