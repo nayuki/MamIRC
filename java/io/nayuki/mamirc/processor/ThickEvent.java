@@ -35,7 +35,7 @@ final class ThickEvent {
 	
 	// Extra context fields. All are mutable objects.
 	public final SessionState session;  // Can be null
-	private final MessageManager msgMgr;  // Not null
+	private final MessageManager messageManager;  // Not null
 	
 	
 	
@@ -44,7 +44,7 @@ final class ThickEvent {
 	// Constructs an event based on the given values. Note that IrcSyntaxException can be thrown.
 	public ThickEvent(Event ev, SessionState session, MessageManager msgMgr) {
 		// Check arguments
-		if (ev == null || msgMgr == null || ev.type != Event.Type.CONNECTION && session == null)
+		if (ev == null || msgMgr == null || session == null && ev.type != Event.Type.CONNECTION)
 			throw new NullPointerException();
 		
 		// Set basic event fields
@@ -65,7 +65,7 @@ final class ThickEvent {
 		
 		// Set extra context fields
 		this.session = session;
-		this.msgMgr = msgMgr;
+		this.messageManager = msgMgr;
 	}
 	
 	
@@ -74,7 +74,7 @@ final class ThickEvent {
 	
 	// Adds a window message with the given values to the message manager.
 	public void addMessage(String party, String msgType, String... args) {
-		msgMgr.addMessage(session.profileName, party, connectionId, timestamp, msgType, args);
+		messageManager.addMessage(session.profileName, party, connectionId, timestamp, msgType, args);
 	}
 	
 }
