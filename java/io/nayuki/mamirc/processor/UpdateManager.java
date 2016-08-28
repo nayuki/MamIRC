@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/* 
+ * Buffers sequential updates and allows waiting for and retrieving them. Thread-safe.
+ */
 final class UpdateManager {
 	
 	/*---- Fields ----*/
@@ -36,7 +39,7 @@ final class UpdateManager {
 	public synchronized void addUpdate(Object... data) {
 		recentUpdates.add(data);
 		nextUpdateId++;
-		if (recentUpdates.size() > 10000)
+		if (recentUpdates.size() > 10000)  // Purge old updates to reduce memory usage
 			recentUpdates.subList(0, recentUpdates.size() / 2).clear();
 		this.notifyAll();
 	}

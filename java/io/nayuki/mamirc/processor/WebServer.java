@@ -27,11 +27,22 @@ import io.nayuki.json.Json;
 import io.nayuki.mamirc.common.Utils;
 
 
+/* 
+ * Defines handlers for HTTP URLs, such as serving static files, data retrieval, and action performing.
+ */
 final class WebServer {
 	
 	/*---- Fields ----*/
 	
-	// Maps a path to a file and media type, e.g. "/foo.png" -> (File("/bin/mamirc/web/foo.png"), "image/png").
+	// This maps a URL path to a local file and a media type, e.g.
+	// "/foo.png" -> (File("/bin/mamirc/web/foo.png"), "image/png").
+	// The data structure has no provisions for thread safety, so it must be set once
+	// at the beginning before the server is started, and never modified thereafter.
+	// 
+	// We use this approach of explicitly defining known files instead of taking the raw URL
+	// and using it to query the file system, because some paths and metacharacters may be unsafe.
+	// For example, querying the existence of a path on Windows may suffer from aliasing
+	// due to case-insensitivity and legacy 8.3 DOS names.
 	private Map<String,Object[]> authorizedStaticFiles;
 	
 	
@@ -41,6 +52,10 @@ final class WebServer {
 	// Constructs and starts a web server with the given arguments.
 	public WebServer(int port, final MamircProcessor master, final MessageManager msgMgr) throws IOException {
 		scanAuthorizedStaticFiles(new File("web"));
+		
+		// Create (but not start) the server. By default we only listen to connections from this machine itself,
+		// and you are expected put an SSL proxy server in front of MamIRC. If you want to expose
+		// the unencrypted HTTP server, then change this line to listen to "0.0.0.0" at your own risk.
 		HttpServer server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		// Mainly handles all static files, plus miscellaneous
@@ -104,6 +119,7 @@ final class WebServer {
 			}
 		});
 		
+		// Define threads and start serving requests
 		ExecutorService executor = Executors.newFixedThreadPool(10);
 		server.setExecutor(executor);
 		server.start();
@@ -117,15 +133,15 @@ final class WebServer {
 		authorizedStaticFiles = new HashMap<>();
 		for (File item : rootDir.listFiles()) {
 			if (!item.isFile())
-				continue;
+				continue;  // Skip non-files (directories, special objects, etc.)
 			String name = item.getName();
 			if (name.indexOf('.') == -1)
-				continue;
+				continue;  // Skip files with no extension
 			String ext = name.substring(name.lastIndexOf('.') + 1);
 			String type = EXTENSION_TO_MEDIA_TYPE.get(ext);
 			if (type == null)
-				continue;
-			if (name.endsWith(".html"))
+				continue;  // Skip extensions that don't have a known media type
+			if (name.endsWith(".html"))  // Map HTML files to extensionless URL paths
 				name = name.substring(0, name.length() - ".html".length());
 			authorizedStaticFiles.put("/" + name, new Object[]{item, type});
 		}
@@ -135,8 +151,8 @@ final class WebServer {
 	
 	/*---- Static members ----*/
 	
-	// Writes the given JSON-compatible object as an HTTP response in JSON text to the given connection.
-	// The HTTP exchange is closed after this function is called. Note that data can be null.
+	// Writes the given JSON-compatible object as an HTTP response in JSON text to the given HTTP response.
+	// The HTTP exchange is closed by this function call. Note that data can be null.
 	private static void writeJsonResponse(Object data, HttpExchange he) throws IOException {
 		if (he == null)
 			throw new NullPointerException();
@@ -169,7 +185,7 @@ final class WebServer {
 	}
 	
 	
-	// Returns the full contents of the given file as a byte array.
+	// Reads and returns the full contents of the given file as a byte array.
 	private static byte[] readFile(File file) throws IOException {
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		Files.copy(file.toPath(), bout);

@@ -12,7 +12,9 @@ import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.Event.Type;
 
 
-// A structure that contains most of Event's fields, plus extra context, and with the data half-parsed. Mostly immutable.
+// A helper structure for EventProcessor, which contains most of Event's fields, plus extra context,
+// and with the data half-parsed. All fields are final, and all simple data values are immutable.
+// References to complex/active objects (e.g. SessionState) do have mutable state however.
 final class ThickEvent {
 	
 	/*---- Fields ----*/
@@ -39,12 +41,13 @@ final class ThickEvent {
 	
 	/*---- Constructors ----*/
 	
+	// Constructs an event based on the given values. Note that IrcSyntaxException can be thrown.
 	public ThickEvent(Event ev, SessionState session, MessageManager msgMgr) {
 		// Check arguments
 		if (ev == null || msgMgr == null || ev.type != Event.Type.CONNECTION && session == null)
 			throw new NullPointerException();
 		
-		// Set simple event fields
+		// Set basic event fields
 		connectionId = ev.connectionId;
 		timestamp = ev.timestamp;
 		type = ev.type;
@@ -69,6 +72,7 @@ final class ThickEvent {
 	
 	/*---- Methods ----*/
 	
+	// Adds a window message with the given values to the message manager.
 	public void addMessage(String party, String msgType, String... args) {
 		msgMgr.addMessage(session.profileName, party, connectionId, timestamp, msgType, args);
 	}

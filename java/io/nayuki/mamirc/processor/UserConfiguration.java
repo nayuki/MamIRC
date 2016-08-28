@@ -22,10 +22,12 @@ final class UserConfiguration {
 	
 	/*---- Fields ----*/
 	
-	// Not null. This is an uninterpreted string, and file existence is not checked.
+	// Not null, and immutable. This is an uninterpreted string, and
+	// file existence is not checked. In fact, a new file may be created.
 	public final File windowMessagesDatabaseFile;
 	
-	public final Map<String,NetworkProfile> profiles;  // Not null; keys and values not null.
+	// Not null; keys and values not null. The mapping and the profile objects are both mutable.
+	public final Map<String,NetworkProfile> profiles;
 	
 	
 	
