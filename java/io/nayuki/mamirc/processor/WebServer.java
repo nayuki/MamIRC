@@ -43,7 +43,7 @@ final class WebServer {
 	// and using it to query the file system, because some paths and metacharacters may be unsafe.
 	// For example, querying the existence of a path on Windows may suffer from aliasing
 	// due to case-insensitivity and legacy 8.3 DOS names.
-	private Map<String,Object[]> authorizedStaticFiles;
+	private final Map<String,Object[]> authorizedStaticFiles;
 	
 	
 	
@@ -51,7 +51,8 @@ final class WebServer {
 	
 	// Constructs and starts a web server with the given arguments.
 	public WebServer(int port, final MamircProcessor master, final MessageManager msgMgr) throws IOException {
-		scanAuthorizedStaticFiles(new File("web"));
+		// Initialize set of known static files from the "web" subdirectory
+		authorizedStaticFiles = scanStaticFiles(new File("web"));
 		
 		// Create (but not start) the server. By default we only listen to connections from this machine itself,
 		// and you are expected put an SSL proxy server in front of MamIRC. If you want to expose
@@ -129,8 +130,10 @@ final class WebServer {
 	
 	/*---- Methods ----*/
 	
-	private void scanAuthorizedStaticFiles(File rootDir) {
-		authorizedStaticFiles = new HashMap<>();
+	// Scans all files in the given directory non-recursively, and
+	// returns a new mapping from URL paths to files and media types.
+	private static Map<String,Object[]> scanStaticFiles(File rootDir) {
+		Map<String,Object[]> result = new HashMap<>();
 		for (File item : rootDir.listFiles()) {
 			if (!item.isFile())
 				continue;  // Skip non-files (directories, special objects, etc.)
@@ -143,8 +146,9 @@ final class WebServer {
 				continue;  // Skip extensions that don't have a known media type
 			if (name.endsWith(".html"))  // Map HTML files to extensionless URL paths
 				name = name.substring(0, name.length() - ".html".length());
-			authorizedStaticFiles.put("/" + name, new Object[]{item, type});
+			result.put("/" + name, new Object[]{item, type});
 		}
+		return result;
 	}
 	
 	
