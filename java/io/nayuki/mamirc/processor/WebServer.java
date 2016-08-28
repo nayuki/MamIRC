@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -94,17 +95,8 @@ final class WebServer {
 		server.createContext("/get-window-messages.json", new HttpHandler() {
 			public void handle(HttpExchange he) throws IOException {
 				try {
-					ByteArrayOutputStream bout = new ByteArrayOutputStream();
-					byte[] buf = new byte[1024];
-					InputStream hin = he.getRequestBody();
-					while (true) {
-						int n = hin.read(buf);
-						if (n == -1)
-							break;
-						bout.write(buf, 0, n);
-					}
-					Object reqData = Json.parse(Utils.fromUtf8(bout.toByteArray()));
-					
+					byte[] reqBytes = readBounded(he.getRequestBody(), MAX_REQUEST_BODY_LEN);
+					Object reqData = Json.parse(Utils.fromUtf8(reqBytes));
 					Object respData = msgMgr.getWindowMessagesAsJson(
 						Json.getString(reqData, "profile"),
 						Json.getString(reqData, "party"),
@@ -192,6 +184,31 @@ final class WebServer {
 			map.put(pair[0], pair[1]);
 		EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
 	}
+	
+	
+	// Reads up to the given number of bytes from the given input stream,
+	// either returning the full data or throwing an exception.
+	private static byte[] readBounded(InputStream in, int lengthLimit) throws IOException {
+		if (in == null)
+			throw new NullPointerException();
+		if (lengthLimit < 0)
+			throw new IllegalArgumentException("Negative length limit");
+		
+		byte[] buf = new byte[lengthLimit + 1];
+		int off = 0;
+		while (true) {
+			int n = in.read(buf, off, buf.length - off);
+			if (n == -1)
+				break;
+			off += n;
+			if (off > lengthLimit)
+				throw new RuntimeException("Data exceeds length limit");
+		}
+		return Arrays.copyOf(buf, off);
+	}
+	
+	
+	private static final int MAX_REQUEST_BODY_LEN = 10000;
 	
 	
 	// Reads and returns the full contents of the given file as a byte array.
