@@ -36,11 +36,16 @@ final class UpdateManager {
 	
 	/*---- Methods ----*/
 	
+	public synchronized int getNextUpdateId() {
+		return nextUpdateId;
+	}
+	
+	
 	public synchronized void addUpdate(Object... data) {
 		recentUpdates.add(data);
 		nextUpdateId++;
-		if (recentUpdates.size() > 10000)  // Purge old updates to reduce memory usage
-			recentUpdates.subList(0, recentUpdates.size() / 2).clear();
+		if (recentUpdates.size() > 30000)  // Purge old updates to reduce memory usage
+			recentUpdates.subList(0, recentUpdates.size() / 10).clear();
 		this.notifyAll();
 	}
 	
@@ -48,8 +53,8 @@ final class UpdateManager {
 	public synchronized List<Object[]> getUpdates(int startId, int maxWait) throws InterruptedException {
 		if (maxWait < 0 || startId < 0)
 			throw new IllegalArgumentException();
-		while (maxWait > 0 && startId == nextUpdateId)
-			this.wait();
+		if (maxWait > 0 && startId == nextUpdateId)
+			this.wait(maxWait);
 		int size = recentUpdates.size();
 		if (nextUpdateId - size <= startId && startId <= nextUpdateId)
 			return new ArrayList<>(recentUpdates.subList(size - (nextUpdateId - startId), size));
