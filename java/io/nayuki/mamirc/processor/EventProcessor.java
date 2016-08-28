@@ -46,6 +46,8 @@ final class EventProcessor {
 	
 	
 	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr, MamircProcessor master) {
+		if (msgSink == null)
+			throw new NullPointerException();
 		sessions = new HashMap<>();
 		isRealtime = false;
 		this.msgSink = msgSink;

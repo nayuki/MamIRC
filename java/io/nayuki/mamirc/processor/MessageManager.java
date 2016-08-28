@@ -40,6 +40,8 @@ final class MessageManager {
 	/*---- Constructors ----*/
 	
 	public MessageManager(File dbFile, UpdateManager updateMgr) throws SQLiteException {
+		if (dbFile == null)
+			throw new NullPointerException();
 		databaseFile = dbFile;
 		this.updateMgr = updateMgr;
 		
@@ -112,6 +114,11 @@ final class MessageManager {
 	
 	// Clears all messages in all windows of the given profile, such that the message's connection ID >= the given conId.
 	public void clearLaterMessages(String profile, int conId) throws SQLiteException {
+		if (profile == null)
+			throw new NullPointerException();
+		if (conId < 0)
+			throw new IllegalArgumentException();
+		
 		SQLiteStatement windowsQuery = database.prepare(
 			"SELECT id FROM windows WHERE profile=?");
 		try {
@@ -166,6 +173,8 @@ final class MessageManager {
 	
 	
 	public Object getWindowMessagesAsJson(String profile, String party, int start, int end) throws SQLiteException {
+		if (profile == null || party == null)
+			throw new NullPointerException();
 		if (start < 0)
 			return "Error: Negative start index";
 		if (end < start)
@@ -234,6 +243,8 @@ final class MessageManager {
 	
 	
 	private int getNextSequence(int winId) throws SQLiteException {
+		if (winId < 0)
+			throw new IllegalArgumentException();
 		getMaxSequence.bind(1, winId);
 		Utils.stepStatement(getMaxSequence, true);
 		int result;

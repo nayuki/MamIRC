@@ -51,6 +51,11 @@ final class WebServer {
 	
 	// Constructs and starts a web server with the given arguments.
 	public WebServer(int port, final MamircProcessor master, final MessageManager msgMgr) throws IOException {
+		// Check arguments
+		Utils.checkPortNumber(port);
+		if (master == null || msgMgr == null)
+			throw new NullPointerException();
+		
 		// Initialize set of known static files from the "web" subdirectory
 		authorizedStaticFiles = scanStaticFiles(new File("web"));
 		
@@ -191,6 +196,8 @@ final class WebServer {
 	
 	// Reads and returns the full contents of the given file as a byte array.
 	private static byte[] readFile(File file) throws IOException {
+		if (file == null)
+			throw new NullPointerException();
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		Files.copy(file.toPath(), bout);
 		return bout.toByteArray();
