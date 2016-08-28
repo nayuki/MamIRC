@@ -537,6 +537,12 @@ final class EventProcessor {
 				break;
 			}
 			
+			case "QUIT": {
+				if (isRealtime)
+					profiles.get(session.profileName).connect = false;
+				break;
+			}
+			
 			default:  // No action needed for other commands
 				break;
 		}
