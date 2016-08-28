@@ -340,7 +340,7 @@ final class EventProcessor {
 					mbrstate.modes = modes;
 					channel.members.put(name, mbrstate);
 				}
-				if (!channel.receivedInitialNames && missing)
+				if (channel.receivedInitialNames && missing)
 					Utils.logger.warning("Desynchronization of the set of channel members between IRC server and client");
 				break;
 			}
@@ -352,7 +352,7 @@ final class EventProcessor {
 						channel.isProcessingNamesReply = false;
 						String[] names = channel.members.keySet().toArray(new String[0]);
 						ev.addMessage(entry.getKey().properCase, "NAMES", names);
-						if (!channel.receivedInitialNames && channel.oldMembers.size() > 0)
+						if (channel.receivedInitialNames && channel.oldMembers.size() > 0)
 							Utils.logger.warning("Desynchronization of the set of channel members between IRC server and client");
 						channel.receivedInitialNames = true;
 						channel.oldMembers = null;
