@@ -908,6 +908,7 @@ const formatTextModule = new function() {
 			var a = utilsModule.createElementWithText("a", match[2]);
 			a.href = match[2];
 			a.target = "_blank";
+			a.rel = "noopener noreferrer";
 			a.oncontextmenu = function(ev) { ev.stopPropagation(); };  // Show system context menu instead of custom menu
 			result.appendChild(a);
 			str = str.substring(match[0].length);
