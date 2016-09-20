@@ -105,7 +105,7 @@ For those who are curious about how to communicate with a Connector, here is wha
     # Request to open new connection: Hostname, port, SSL, profile name.
     <-- connect irc.foobarqux.com 6697 true FBQ IRC Network
     # Connection status change, new connectionId = 8.
-    --> 8 0 1449105037216 0 connect irc.foobarbaz.com 6697 true FBQ IRC Network
+    --> 8 0 1449105037216 0 connect irc.foobarqux.com 6697 true FBQ IRC Network
     --> 8 1 1449105037245 0 opened 139.62.177.78
     <-- send 8 NICK John
     <-- send 8 USER John 0 * :John Smith
