@@ -110,13 +110,15 @@ public final class MamircProcessor {
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		writer = reader.readInitialDataAndGetWriter(connectionSequences);
 		
-		updateManager = new UpdateManager();
-		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile, updateManager);
+		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile);
 		messageManager.beginTransaction();
-		eventProcessor = new EventProcessor(messageManager, updateManager, this);
+		eventProcessor = new EventProcessor(messageManager, this);
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
 		eventProcessor.finishCatchup(userConfig.profiles);
 		messageManager.commitTransaction();
+		updateManager = new UpdateManager();
+		messageManager.updateMgr = updateManager;
+		eventProcessor.updateMgr = updateManager;
 		
 		reader.start();
 		new WebServer(backendConfig.webServerPort, this, messageManager);

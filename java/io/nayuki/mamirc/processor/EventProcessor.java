@@ -30,7 +30,7 @@ final class EventProcessor {
 	
 	private MessageManager msgSink;  // Not null
 	
-	private UpdateManager updateMgr;  // Can be null
+	public UpdateManager updateMgr;  // Can be null
 	
 	private MamircProcessor master;  // Can be null
 	
@@ -41,17 +41,16 @@ final class EventProcessor {
 	/*---- Constructors ----*/
 	
 	public EventProcessor(MessageManager msgSink) {
-		this(msgSink, null, null);
+		this(msgSink, null);
 	}
 	
 	
-	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr, MamircProcessor master) {
+	public EventProcessor(MessageManager msgSink, MamircProcessor master) {
 		if (msgSink == null)
 			throw new NullPointerException();
 		sessions = new HashMap<>();
 		isRealtime = false;
 		this.msgSink = msgSink;
-		this.updateMgr = updateMgr;
 		this.master = master;
 	}
 	

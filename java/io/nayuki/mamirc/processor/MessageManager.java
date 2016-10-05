@@ -33,17 +33,17 @@ final class MessageManager {
 	
 	private int nextWindowId;
 	
-	private UpdateManager updateMgr;
+	public UpdateManager updateMgr;  // Can be null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public MessageManager(File dbFile, UpdateManager updateMgr) throws SQLiteException {
+	public MessageManager(File dbFile) throws SQLiteException {
 		if (dbFile == null)
 			throw new NullPointerException();
 		databaseFile = dbFile;
-		this.updateMgr = updateMgr;
+		updateMgr = null;
 		
 		database = new SQLiteConnection(dbFile);
 		database.open(true);
