@@ -9,8 +9,7 @@
 package io.nayuki.mamirc.connector;
 
 import java.io.File;
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -48,7 +47,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 	private final Condition condFlushed;
 	
 	// Shared mutable state protected by the monitor
-	private Queue<Event> queue;
+	private ArrayList<Event> queue;
 	private boolean flushRequested;
 	private boolean terminateRequested;
 	
@@ -76,7 +75,7 @@ final class DatabaseLoggerThread extends WorkerThread {
 		condUrgent  = lock.newCondition();
 		condFlushed = lock.newCondition();
 		
-		queue = new ArrayDeque<>();
+		queue = new ArrayList<>();
 		flushRequested = false;
 		terminateRequested = false;
 	}
@@ -163,8 +162,9 @@ final class DatabaseLoggerThread extends WorkerThread {
 		if (flushRequested || terminateRequested) {
 			// Drain the queue straightforwardly
 			Utils.stepStatement(beginTransaction, false);
-			while (!queue.isEmpty())
-				insertEventIntoDb(queue.remove());
+			for (Event ev : queue)
+				insertEventIntoDb(ev);
+			queue.clear();
 			Utils.stepStatement(commitTransaction, false);
 			Utils.logger.finest("Wrote all pending events to database");
 			flushRequested = false;
@@ -175,11 +175,8 @@ final class DatabaseLoggerThread extends WorkerThread {
 			condUrgent.await(WRITE_DELAY, TimeUnit.MILLISECONDS);
 			
 			// Drain the queue without blocking on I/O
-			Event[] events = new Event[queue.size()];
-			for (int i = 0; i < events.length; i++)
-				events[i] = queue.remove();
-			if (!queue.isEmpty())
-				throw new AssertionError();
+			Event[] events = queue.toArray(new Event[queue.size()]);
+			queue.clear();
 			
 			// Do all database I/O while allowing other threads to post events.
 			// Note: Queue is empty and lock is dropped, but the data is not committed yet!
