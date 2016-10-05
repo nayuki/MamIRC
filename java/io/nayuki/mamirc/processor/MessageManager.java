@@ -83,6 +83,7 @@ final class MessageManager {
 	
 	
 	public void addMessage(String profile, String party, int conId, long timestamp, String type, String... args) {
+		Utils.logger.fine(Thread.currentThread().toString());
 		if (profile == null || party == null || type == null || args == null)
 			throw new NullPointerException();
 		try {
@@ -97,7 +98,9 @@ final class MessageManager {
 				sb.append("\n").append(arg);
 			insertMessage.bind(5, sb.toString());
 			Utils.stepStatement(insertMessage, false);
-		} catch (SQLiteException e) {}
+		} catch (SQLiteException e) {
+			e.printStackTrace();
+		}
 		
 		if (updateMgr != null) {
 			Object[] temp = new Object[5 + args.length];

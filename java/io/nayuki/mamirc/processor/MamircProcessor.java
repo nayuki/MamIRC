@@ -47,7 +47,7 @@ public final class MamircProcessor {
 			Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 			
 			// Set the default logging level for this MamIRC Processor application (can be changed)
-			Utils.logger.setLevel(Level.INFO);
+			Utils.logger.setLevel(Level.FINE);
 			
 			// Create new console output handler to overcome the default console handler only showing messages
 			// down to Level.INFO (but not Level.FINE), and to define a more readable custom log line format
