@@ -40,13 +40,17 @@ final class MessageManager {
 	/*---- Constructors ----*/
 	
 	public MessageManager(File dbFile) throws SQLiteException {
+		// Handle arguments
 		if (dbFile == null)
 			throw new NullPointerException();
 		databaseFile = dbFile;
 		updateMgr = null;
 		
+		// Connect to database
 		database = new SQLiteConnection(dbFile);
 		database.open(true);
+		
+		// Create tables if necessary
 		database.exec("CREATE TABLE IF NOT EXISTS windows("
 			+ "id INTEGER, profile TEXT NOT NULL, partyProperCase TEXT NOT NULL, partyLowerCase TEXT NOT NULL, "
 			+ "PRIMARY KEY(id))");
@@ -54,6 +58,7 @@ final class MessageManager {
 			+ "windowId INTEGER, sequence INTEGER, connectionId INTEGER NOT NULL, timestamp INTEGER NOT NULL, data TEXT NOT NULL, "
 			+ "PRIMARY KEY(windowId, sequence), FOREIGN KEY(windowId) REFERENCES windows(id))");
 		
+		// Get maximum connection ID
 		SQLiteStatement getMaxWinId = database.prepare("SELECT max(id) FROM windows");
 		Utils.stepStatement(getMaxWinId, true);
 		if (getMaxWinId.columnNull(0))
@@ -62,6 +67,7 @@ final class MessageManager {
 			nextWindowId = getMaxWinId.columnInt(0) + 1;
 		getMaxWinId.dispose();
 		
+		// Prepare statements to be used repeatedly later
 		getWindowId    = database.prepare("SELECT id FROM windows WHERE profile=? AND partyLowerCase=?");
 		getMaxSequence = database.prepare("SELECT max(sequence) FROM messages WHERE windowId=?");
 		insertWindow   = database.prepare("INSERT INTO windows VALUES(?,?,?,?)");

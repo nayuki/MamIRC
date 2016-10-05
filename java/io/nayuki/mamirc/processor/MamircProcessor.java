@@ -75,12 +75,15 @@ public final class MamircProcessor {
 		
 		// Load configs and start Processor
 		Utils.logger.info("MamIRC Processor application starting");
+		
 		File backendConfigFile = new File(args[0]);
 		BackendConfiguration backendConfig = new BackendConfiguration(backendConfigFile);
 		Utils.logger.info("Backend configuration file parsed: " + backendConfigFile.getCanonicalPath());
+		
 		File userConfigFile = new File(args[1]);
 		UserConfiguration userConfig = new UserConfiguration(userConfigFile);
 		Utils.logger.info("User configuration file parsed: " + userConfigFile.getCanonicalPath());
+		
 		new MamircProcessor(backendConfig, userConfig);
 	}
 	
@@ -101,25 +104,33 @@ public final class MamircProcessor {
 	
 	/*---- Constructor ----*/
 	
-	public MamircProcessor(BackendConfiguration backendConfig, UserConfiguration userConfig) throws IOException, SQLiteException {
+	public MamircProcessor(BackendConfiguration backendConfig, UserConfiguration userConfig)
+			throws IOException, SQLiteException {
+		
+		// Handle arguments
 		if (backendConfig == null || userConfig == null)
 			throw new NullPointerException();
-		
 		this.userConfig = userConfig;
+		
+		// Connect to Connector and get current connections
 		reader = new ConnectorReaderThread(this, backendConfig);
 		Map<Integer,Integer> connectionSequences = new HashMap<>();
 		writer = reader.readInitialDataAndGetWriter(connectionSequences);
 		
+		// Create part of event-processing stream and handle previous events in live connections
 		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile);
 		messageManager.beginTransaction();
 		eventProcessor = new EventProcessor(messageManager, this);
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
+		
+		// Perform more processing to prepare to transition to live event processing
 		eventProcessor.finishCatchup(userConfig.profiles);
 		messageManager.commitTransaction();
 		updateManager = new UpdateManager();
 		messageManager.updateMgr = updateManager;
 		eventProcessor.updateMgr = updateManager;
 		
+		// Start live event processing, and start up the web server
 		reader.start();
 		new WebServer(backendConfig.webServerPort, this, messageManager);
 	}
@@ -128,6 +139,7 @@ public final class MamircProcessor {
 	
 	/*---- Methods ----*/
 	
+	// Only called once by the constructor.
 	private void processExistingConnections(File dbFile, Map<Integer,Integer> connectionSequences) throws SQLiteException {
 		// Read archived events from database and process them
 		SQLiteConnection database = new SQLiteConnection(dbFile);

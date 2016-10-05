@@ -23,7 +23,7 @@ import io.nayuki.mamirc.common.WorkerThread;
 /* 
  * A worker thread that reads event lines from a socket connection to the MamIRC Connector.
  * Additional functionality:
- * - Authenticates with the connector
+ * - Authenticates with the Connector
  * - Parses the list of current active connections
  * - Creates and terminates a writer thread for the socket
  */
@@ -46,9 +46,11 @@ final class ConnectorReaderThread extends WorkerThread {
 			throw new NullPointerException();
 		this.master = master;
 		
-		// Connect and authenticate
+		// Connect and authenticate. We assume that the Connector is hosted on the same machine.
 		socket = new Socket("localhost", config.connectorServerPort);
 		Utils.logger.info("Socket opened to " + socket.getInetAddress() + " port " + socket.getPort());
+		
+		// Initialize the socket writer and send initial request lines
 		writer = new OutputWriterThread(socket.getOutputStream(), new byte[]{'\n'});
 		writer.start();
 		writer.postWrite(new CleanLine(config.getConnectorPassword(), false));
@@ -63,7 +65,7 @@ final class ConnectorReaderThread extends WorkerThread {
 			throw new RuntimeException("Invalid data format");
 		Utils.logger.info("Connector connection successfully authenticated");
 	}
-		
+	
 	
 	
 	/*---- Methods ----*/
