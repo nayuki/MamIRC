@@ -51,7 +51,7 @@ final class UpdateManager {
 	
 	
 	public synchronized List<Object[]> getUpdates(int startId, int maxWait) throws InterruptedException {
-		if (maxWait < 0 || startId < 0)
+		if (startId < 0 || maxWait < 0 || maxWait > 5 * 60 * 1000)
 			throw new IllegalArgumentException();
 		if (maxWait > 0 && startId == nextUpdateId)
 			this.wait(maxWait);

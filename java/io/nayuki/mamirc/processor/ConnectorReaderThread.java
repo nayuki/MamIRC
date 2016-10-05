@@ -69,6 +69,13 @@ final class ConnectorReaderThread extends WorkerThread {
 	/*---- Methods ----*/
 	
 	public OutputWriterThread readInitialDataAndGetWriter(Map<Integer,Integer> connectionSequences) throws IOException {
+		if (connectionSequences == null)
+			throw new NullPointerException();
+		if (connectionSequences.size() != 0)
+			throw new IllegalArgumentException();
+		if (getState() != Thread.State.NEW)
+			throw new IllegalStateException();
+		
 		// Read the set of current connections
 		while (true) {
 			String line = readStringLine(reader);
