@@ -319,7 +319,7 @@ final class EventProcessor {
 					channel.oldMembers = channel.members;
 					channel.members = new TreeMap<>();
 				}
-				boolean missing = false; 
+				boolean missing = false;
 				for (String name : line.getParameter(3).split(" ")) {
 					// Handle and strip prefixes
 					String modes = "";

@@ -102,7 +102,7 @@ public final class LineReader {
 						case '\r':
 							prevWasCr = true;
 							return takeCurrentLine();
-						
+							
 						case '\n':
 							if (prevWasCr) {
 								prevWasCr = false;

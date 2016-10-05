@@ -21,7 +21,7 @@ Caveats of the Processor implementation:
 
 * Not as stable as the Connector. It might unexpectedly run out of memory, hang, or crash on various inputs.
 
-* Not hardened against deliberate attacks from IRC servers or web clients. 
+* Not hardened against deliberate attacks from IRC servers or web clients.
 
 Fortunately, the MamIRC architecture is forgiving toward a less-than-perfect Processor. As long as the Connector stays up and running, the Processor can crash, be upgraded, be restarted, or even not be running - without affecting the user's IRC connections. Generally speaking, other IRC users cannot see how the software sitting behind the MamIRC Connector is restarted or manipulated.
 
