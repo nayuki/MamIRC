@@ -164,7 +164,8 @@ public final class MamircProcessor {
 	}
 	
 	
-	public synchronized void sendCommand(String line) {
+	// Only called by EventProcessor.
+	synchronized void sendCommand(String line) {
 		writer.postWrite(line);
 	}
 	
@@ -176,7 +177,8 @@ public final class MamircProcessor {
 	}
 	
 	
-	public synchronized Object getNetworkProfilesAsJson() {
+	// Only called by WebServer.
+	synchronized Object getNetworkProfilesAsJson() {
 		Map<String,Object> result = new HashMap<>();
 		for (NetworkProfile profile : userConfig.profiles.values())
 			result.put(profile.name, profile.toJson());
