@@ -81,9 +81,9 @@ final class NetworkProfile {
 		for (Object serv : Json.getList(root, "servers"))
 			servers.add(new Server(serv));
 		for (Object nick : Json.getList(root, "nicknames"))
-			nicknames.add((String)nick);
+			nicknames.add(Json.getString(nick));
 		for (Object chan : Json.getList(root, "channels"))
-			channels.add((String)chan);
+			channels.add(Json.getString(chan));
 	}
 	
 	
