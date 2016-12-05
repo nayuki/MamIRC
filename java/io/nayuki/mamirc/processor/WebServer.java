@@ -8,7 +8,6 @@
 
 package io.nayuki.mamirc.processor;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,7 +70,7 @@ final class WebServer {
 				Object[] info = authorizedStaticFiles.get(he.getRequestURI().getPath());
 				if (info != null) {
 					he.getResponseHeaders().set("Content-Type", (String)info[1]);
-					byte[] data = readFile((File)info[0]);
+					byte[] data = Files.readAllBytes(((File)info[0]).toPath());
 					he.sendResponseHeaders(200, data.length > 0 ? data.length : -1);
 					he.getResponseBody().write(data);
 				} else
@@ -209,15 +208,5 @@ final class WebServer {
 	
 	
 	private static final int MAX_REQUEST_BODY_LEN = 10000;
-	
-	
-	// Reads and returns the full contents of the given file as a byte array.
-	private static byte[] readFile(File file) throws IOException {
-		if (file == null)
-			throw new NullPointerException();
-		ByteArrayOutputStream bout = new ByteArrayOutputStream();
-		Files.copy(file.toPath(), bout);
-		return bout.toByteArray();
-	}
 	
 }
