@@ -28,13 +28,13 @@ class EventProcessor {
 	
 	protected MessageManager msgSink;  // Not null
 	
-	protected UpdateManager updateMgr;  // Not null
+	protected StateUpdateHistory updateMgr;  // Not null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr) {
+	public EventProcessor(MessageManager msgSink, StateUpdateHistory updateMgr) {
 		if (msgSink == null || updateMgr == null)
 			throw new NullPointerException();
 		sessions = new HashMap<>();

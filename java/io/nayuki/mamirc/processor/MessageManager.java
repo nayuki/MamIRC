@@ -33,7 +33,7 @@ final class MessageManager {
 	
 	private int nextWindowId;
 	
-	public UpdateManager updateMgr;  // Can be null
+	public StateUpdateHistory updateMgr;  // Can be null
 	
 	
 	

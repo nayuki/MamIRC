@@ -16,7 +16,7 @@ import java.util.List;
  * Buffers a sequence of updates in memory, and allows waiting for and retrieving them.
  * Thread-safe. Synchronization occurs on the intrinsic lock of objects of this class.
  */
-final class UpdateManager {
+final class StateUpdateHistory {
 	
 	/*---- Fields ----*/
 	
@@ -34,7 +34,7 @@ final class UpdateManager {
 	
 	/*---- Constructors ----*/
 	
-	public UpdateManager(int bufSize) {
+	public StateUpdateHistory(int bufSize) {
 		if (bufSize < 0)
 			throw new IllegalArgumentException("Negative buffer size");
 		bufferSize = bufSize;
