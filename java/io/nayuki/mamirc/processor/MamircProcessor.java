@@ -14,7 +14,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
@@ -96,7 +95,7 @@ public final class MamircProcessor {
 	// Essentially all operations need to be performed with this master lock held.
 	// This ensures that at most one thread is reading or writing any part of
 	// the entire MamIRC Processor application's state at any given moment.
-	Lock lock;
+	ReentrantLock lock;
 	
 	private final UserConfiguration userConfig;
 	
@@ -226,6 +225,13 @@ public final class MamircProcessor {
 		} finally {
 			lock.unlock();
 		}
+	}
+	
+	
+	// Can be called from any thread, whether it holds the lock or not (obviously).
+	void checkLock() {
+		if (!lock.isHeldByCurrentThread())
+			throw new AssertionError("Master lock is not held");
 	}
 	
 }

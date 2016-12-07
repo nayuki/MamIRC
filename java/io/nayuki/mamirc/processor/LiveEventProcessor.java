@@ -46,6 +46,7 @@ final class LiveEventProcessor extends EventProcessor {
 	/*---- Methods ----*/
 	
 	protected void processConnection(ThickEvent ev) {
+		master.checkLock();
 		super.processConnection(ev);
 		final String line = ev.rawLine;
 		
@@ -85,6 +86,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	
 	protected void processReceive(ThickEvent ev) {
+		master.checkLock();
 		super.processReceive(ev);
 		final SessionState session = ev.session;
 		switch (ev.command) {
@@ -138,6 +140,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	
 	protected void processSend(ThickEvent ev) {
+		master.checkLock();
 		super.processSend(ev);
 		final SessionState session = ev.session;
 		final IrcLine line = ev.ircLine;
@@ -184,6 +187,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	
 	public void finishCatchup(Map<String,NetworkProfile> profiles) {
+		master.checkLock();
 		if (master == null || isRealtime)
 			throw new IllegalStateException();
 		isRealtime = true;
@@ -258,6 +262,8 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	
 	public void applyNetworkProfiles(Set<Integer> disconnectConIds) {
+		master.checkLock();
+		
 		// Cancel all pending connection attempts
 		for (ConnectionAttemptState attempt : attempts.values()) {
 			if (attempt.timerTask != null) {
@@ -309,6 +315,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	
 	private void tryConnect(String profileName, int serverIndex) {
+		master.checkLock();
 		NetworkProfile profile = profiles.get(profileName);
 		if (profile == null || !profile.connect)
 			return;
