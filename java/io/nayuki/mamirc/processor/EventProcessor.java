@@ -757,6 +757,8 @@ final class EventProcessor {
 	}
 	
 	
+	// Tests whether the given string represents a channel name (as opposed to a user name).
+	// For example, "#politics" and "&help" are channel names, whereas "Alice" and "_bob" are user names.
 	private static boolean isChannelName(String target) {
 		if (target == null)
 			throw new NullPointerException();

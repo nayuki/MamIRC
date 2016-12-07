@@ -39,15 +39,16 @@ final class NetworkProfile {
 	// If connect is true, then this needs to have at least 1 element.
 	public final List<String> nicknames;
 	
-	// User name at USER registration. Must not contain any spaces.
+	// User name when the USER registration command is sent. Must not contain any spaces.
 	// If connect is true, then this must be not null.
 	public String username;
 	
-	// Real name at USER registration. Can contain spaces.
+	// Real name when the USER registration command is sent. Can contain spaces.
 	// If connect is true, then this must be not null.
 	public String realname;
 	
-	// Channels to join when the Processor starts. Not null; size at least 0, elements not null.
+	// Channels to join when the Processor starts or when the profile is applied.
+	// Not null; size at least 0, elements not null.
 	// An element of this set is either a simple channel name like "#alpha",
 	// or a channel and key separated by space like "#beta key".
 	public final Set<String> channels;
