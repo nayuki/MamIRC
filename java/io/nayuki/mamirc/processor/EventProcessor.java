@@ -28,17 +28,18 @@ class EventProcessor {
 	
 	protected MessageManager msgSink;  // Not null
 	
-	public UpdateManager updateMgr;  // Can be null
+	protected UpdateManager updateMgr;  // Not null
 	
 	
 	
 	/*---- Constructors ----*/
 	
-	public EventProcessor(MessageManager msgSink) {
-		if (msgSink == null)
+	public EventProcessor(MessageManager msgSink, UpdateManager updateMgr) {
+		if (msgSink == null || updateMgr == null)
 			throw new NullPointerException();
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
+		this.updateMgr = updateMgr;
 	}
 	
 	
@@ -84,19 +85,16 @@ class EventProcessor {
 			
 		} else if (line.startsWith("opened ")) {
 			ev.session.setRegistrationState(SessionState.RegState.OPENED);
-			if (updateMgr != null)
-				updateMgr.addUpdate("ONLINE", ev.session.profileName);
+			updateMgr.addUpdate("ONLINE", ev.session.profileName);
 			ev.addMessage("", "OPENED", line.split(" ", 2)[1]);
 			
 		} else if (line.equals("disconnect")) {
 			ev.addMessage("", "DISCONNECT");
-			if (updateMgr != null)
-				updateMgr.addUpdate("OFFLINE", ev.session.profileName);
+			updateMgr.addUpdate("OFFLINE", ev.session.profileName);
 			
 		} else if (line.equals("closed")) {
 			ev.addMessage("", "CLOSED");
-			if (updateMgr != null)
-				updateMgr.addUpdate("OFFLINE", ev.session.profileName);
+			updateMgr.addUpdate("OFFLINE", ev.session.profileName);
 			if (ev.session != null)
 				sessions.remove(ev.connectionId);
 			
@@ -122,8 +120,7 @@ class EventProcessor {
 				String feedbackNick = line.getParameter(0);
 				if (session.currentNickname.startsWith(feedbackNick)) {
 					session.setNickname(feedbackNick);
-					if (updateMgr != null)
-						updateMgr.addUpdate("MYNICK", feedbackNick);
+					updateMgr.addUpdate("MYNICK", feedbackNick);
 				}
 				if (ev.command.equals("005")) {
 					// Try to parse some capabilities
@@ -161,8 +158,7 @@ class EventProcessor {
 				String toname   = line.getParameter(0);
 				if (fromname.equals(session.currentNickname)) {
 					session.setNickname(toname);
-					if (updateMgr != null)
-						updateMgr.addUpdate("MYNICK", toname);
+					updateMgr.addUpdate("MYNICK", toname);
 					ev.addMessage("", "NICK", fromname, toname);
 				}
 				for (Map.Entry<CaselessString,SessionState.ChannelState> entry : session.currentChannels.entrySet()) {
@@ -212,8 +208,7 @@ class EventProcessor {
 				CaselessString chan = new CaselessString(line.getParameter(0));
 				if (who.equals(session.currentNickname)) {
 					session.joinChannel(chan);
-					if (updateMgr != null)
-						updateMgr.addUpdate("JOINCHAN", session.profileName, chan.properCase);
+					updateMgr.addUpdate("JOINCHAN", session.profileName, chan.properCase);
 				} else
 					session.joinChannel(chan, who);
 				ev.addMessage(chan.properCase, "JOIN", who, user, host);
@@ -225,8 +220,7 @@ class EventProcessor {
 				CaselessString chan = new CaselessString(line.getParameter(0));
 				if (who.equals(session.currentNickname)) {
 					session.partChannel(chan);
-					if (updateMgr != null)
-						updateMgr.addUpdate("PARTCHAN", session.profileName, chan.properCase);
+					updateMgr.addUpdate("PARTCHAN", session.profileName, chan.properCase);
 				} else
 					session.partChannel(chan, who);
 				ev.addMessage(chan.properCase, "PART", who);
@@ -240,8 +234,7 @@ class EventProcessor {
 				String reason = line.getParameter(2);
 				if (target.equals(session.currentNickname)) {
 					session.partChannel(chan);
-					if (updateMgr != null)
-						updateMgr.addUpdate("PARTCHAN", session.profileName, chan.properCase);
+					updateMgr.addUpdate("PARTCHAN", session.profileName, chan.properCase);
 				} else
 					session.partChannel(chan, target);
 				ev.addMessage(chan.properCase, "KICK", from, target, reason);
@@ -259,7 +252,7 @@ class EventProcessor {
 						ev.addMessage(chan.properCase, "QUIT", who, reason);
 					}
 				}
-				if (who.equals(session.currentNickname) && updateMgr != null)
+				if (who.equals(session.currentNickname))
 					updateMgr.addUpdate("OFFLINE", session.profileName);
 				break;
 			}

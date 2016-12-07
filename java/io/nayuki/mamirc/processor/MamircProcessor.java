@@ -120,7 +120,7 @@ public final class MamircProcessor {
 		// Create part of event-processing stream and handle previous events in live connections
 		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile);
 		messageManager.beginTransaction();
-		eventProcessor = new LiveEventProcessor(messageManager, this);
+		eventProcessor = new LiveEventProcessor(messageManager, new UpdateManager(0), this);
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
 		
 		// Perform more processing to prepare to transition to live event processing
