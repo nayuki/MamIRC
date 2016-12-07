@@ -126,7 +126,7 @@ public final class MamircProcessor {
 		// Perform more processing to prepare to transition to live event processing
 		eventProcessor.finishCatchup(userConfig.profiles);
 		messageManager.commitTransaction();
-		updateManager = new UpdateManager();
+		updateManager = new UpdateManager(30000);
 		messageManager.updateMgr = updateManager;
 		eventProcessor.updateMgr = updateManager;
 		
