@@ -130,10 +130,12 @@ public final class MamircProcessor {
 		messageManager = new MessageManager(userConfig.windowMessagesDatabaseFile);
 		messageManager.beginTransaction();
 		eventProcessor = new LiveEventProcessor(messageManager, this);
+		lock.lock();
 		processExistingConnections(backendConfig.connectorDatabaseFile, connectionSequences);
 		
 		// Perform more processing to prepare to transition to live event processing
 		eventProcessor.finishCatchup(userConfig.profiles);
+		lock.unlock();
 		messageManager.commitTransaction();
 		updateManager = new LiveStateUpdateHistory(30000);
 		messageManager.updateMgr = updateManager;
