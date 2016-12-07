@@ -65,11 +65,14 @@ final class LiveEventProcessor extends EventProcessor {
 					int delay = attempt.nextAttempt();
 					attempt.timerTask = new TimerTask() {
 						public void run() {
-							synchronized(master) {
+							master.lock.lock();
+							try {
 								if (attempt.timerTask != this)
 									return;
 								attempt.timerTask = null;
 								tryConnect(profileName, attempt.serverIndex);
+							} finally {
+								master.lock.unlock();
 							}
 						}
 					};

@@ -14,6 +14,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
@@ -91,6 +93,11 @@ public final class MamircProcessor {
 	
 	/*---- Fields (global state) ----*/
 	
+	// Essentially all operations need to be performed with this master lock held.
+	// This ensures that at most one thread is reading or writing any part of
+	// the entire MamIRC Processor application's state at any given moment.
+	Lock lock;
+	
 	private final UserConfiguration userConfig;
 	
 	private ConnectorReaderThread reader;
@@ -111,6 +118,8 @@ public final class MamircProcessor {
 		if (backendConfig == null || userConfig == null)
 			throw new NullPointerException();
 		this.userConfig = userConfig;
+		
+		lock = new ReentrantLock();
 		
 		// Connect to Connector and get current connections
 		reader = new ConnectorReaderThread(this, backendConfig);
@@ -171,30 +180,50 @@ public final class MamircProcessor {
 	
 	
 	// Only called by ConnectorReaderThread.run().
-	synchronized void processEvent(Event ev) {
-		eventProcessor.processEvent(ev);  // Real-time
+	void processEvent(Event ev) {
+		lock.lock();
+		try {
+			eventProcessor.processEvent(ev);  // Real-time
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
 	// Only called by EventProcessor.
-	synchronized void sendCommand(String line) {
-		writer.postWrite(line);
+	void sendCommand(String line) {
+		lock.lock();
+		try {
+			writer.postWrite(line);
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
-	synchronized void terminateProcessor(String reason) {
-		Utils.logger.info("MamIRC Processor application terminating");
-		System.exit(1);
-		throw new AssertionError("Unreachable");
+	void terminateProcessor(String reason) {
+		lock.lock();
+		try {
+			Utils.logger.info("MamIRC Processor application terminating");
+			System.exit(1);
+			throw new AssertionError("Unreachable");
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	
 	// Only called by WebServer.
-	synchronized Object getNetworkProfilesAsJson() {
-		Map<String,Object> result = new HashMap<>();
-		for (NetworkProfile profile : userConfig.profiles.values())
-			result.put(profile.name, profile.toJson());
-		return result;
+	Object getNetworkProfilesAsJson() {
+		lock.lock();
+		try {
+			Map<String,Object> result = new HashMap<>();
+			for (NetworkProfile profile : userConfig.profiles.values())
+				result.put(profile.name, profile.toJson());
+			return result;
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 }
