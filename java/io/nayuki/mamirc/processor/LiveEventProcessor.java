@@ -24,7 +24,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	private boolean isRealtime;  // Initially false
 	
-	private MamircProcessor master;  // Can be null
+	private MamircProcessor master;
 	
 	private Timer timer;
 	
@@ -34,6 +34,8 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	public LiveEventProcessor(MessageManager msgSink, MamircProcessor master) {
 		super(msgSink);
+		if (master == null)
+			throw new NullPointerException();
 		attempts = new HashMap<>();
 		isRealtime = false;
 		this.msgSink = msgSink;
@@ -188,7 +190,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	public void finishCatchup(Map<String,NetworkProfile> profiles) {
 		master.checkLock();
-		if (master == null || isRealtime)
+		if (isRealtime)
 			throw new IllegalStateException();
 		isRealtime = true;
 		this.profiles = profiles;
