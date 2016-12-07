@@ -96,13 +96,13 @@ final class NetworkProfile {
 		Map<String,Object> result = new HashMap<>();
 		
 		// Simple fields
-		result.put("connect", connect);
+		result.put("connect" , connect );
 		result.put("username", username);
 		result.put("realname", realname);
 		
 		// Simple list fields
 		result.put("nicknames", new ArrayList<>(nicknames));
-		result.put("channels", new ArrayList<>(channels));
+		result.put("channels" , new ArrayList<>(channels ));
 		
 		// Complex list fields
 		List<Object> outServers = new ArrayList<>();
