@@ -34,12 +34,12 @@ class EventProcessor {
 	
 	/*---- Constructors ----*/
 	
-	public EventProcessor(MessageManager msgSink, StateUpdateHistory updateMgr) {
+	public EventProcessor(MessageManager msgSink) {
 		if (msgSink == null || updateMgr == null)
 			throw new NullPointerException();
 		sessions = new HashMap<>();
 		this.msgSink = msgSink;
-		this.updateMgr = updateMgr;
+		this.updateMgr = new StateUpdateHistory();
 	}
 	
 	

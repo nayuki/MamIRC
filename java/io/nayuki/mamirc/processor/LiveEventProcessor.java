@@ -32,8 +32,8 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	/*---- Constructors ----*/
 	
-	public LiveEventProcessor(MessageManager msgSink, StateUpdateHistory updateMgr, MamircProcessor master) {
-		super(msgSink, updateMgr);
+	public LiveEventProcessor(MessageManager msgSink, MamircProcessor master) {
+		super(msgSink);
 		attempts = new HashMap<>();
 		isRealtime = false;
 		this.msgSink = msgSink;
