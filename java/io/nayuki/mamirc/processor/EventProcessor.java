@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +28,8 @@ final class EventProcessor {
 	
 	private Map<Integer,SessionState> sessions;  // Not null
 	
+	private Map<String,ConnectionAttemptState> attempts;  // Not null
+	
 	private boolean isRealtime;  // Initially false
 	
 	private MessageManager msgSink;  // Not null
@@ -35,6 +39,8 @@ final class EventProcessor {
 	private MamircProcessor master;  // Can be null
 	
 	private Map<String,NetworkProfile> profiles;
+	
+	private Timer timer;
 	
 	
 	
@@ -48,10 +54,12 @@ final class EventProcessor {
 	public EventProcessor(MessageManager msgSink, MamircProcessor master) {
 		if (msgSink == null)
 			throw new NullPointerException();
+		attempts = new HashMap<>();
 		sessions = new HashMap<>();
 		isRealtime = false;
 		this.msgSink = msgSink;
 		this.master = master;
+		timer = new Timer();
 	}
 	
 	
@@ -118,6 +126,28 @@ final class EventProcessor {
 				updateMgr.addUpdate("OFFLINE", ev.session.profileName);
 			if (ev.session != null)
 				sessions.remove(ev.connectionId);
+			final String profileName = ev.session.profileName;
+			if (isRealtime && profiles.containsKey(profileName) && profiles.get(profileName).connect) {
+				if (!attempts.containsKey(profileName)) {
+					ConnectionAttemptState attempt = new ConnectionAttemptState();
+					attempts.put(profileName, attempt);
+					tryConnect(profileName, attempt.serverIndex);
+				} else {
+					final ConnectionAttemptState attempt = attempts.get(profileName);
+					int delay = attempt.nextAttempt();
+					attempt.timerTask = new TimerTask() {
+						public void run() {
+							synchronized(master) {
+								if (attempt.timerTask != this)
+									return;
+								attempt.timerTask = null;
+								tryConnect(profileName, attempt.serverIndex);
+							}
+						}
+					};
+					timer.schedule(attempt.timerTask, delay);
+				}
+			}
 			
 		} else
 			throw new AssertionError();
@@ -138,6 +168,7 @@ final class EventProcessor {
 				if (session.registrationState != SessionState.RegState.REGISTERED) {
 					session.setRegistrationState(SessionState.RegState.REGISTERED);
 					if (isRealtime) {
+						attempts.remove(session.profileName);
 						NetworkProfile profile = profiles.get(ev.session.profileName);
 						for (String chanName : profile.channels) {
 							String[] parts = chanName.split(" ", 2);
@@ -667,6 +698,15 @@ final class EventProcessor {
 	
 	
 	public void applyNetworkProfiles(Set<Integer> disconnectConIds) {
+		// Cancel all pending connection attempts
+		for (ConnectionAttemptState attempt : attempts.values()) {
+			if (attempt.timerTask != null) {
+				attempt.timerTask.cancel();
+				attempt.timerTask = null;
+			}
+		}
+		attempts.clear();
+		
 		Set<String> activeProfNames = new HashSet<>();
 		for (Map.Entry<Integer,SessionState> entry : sessions.entrySet()) {
 			int conId = entry.getKey();
@@ -705,6 +745,15 @@ final class EventProcessor {
 				master.sendCommand("connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + profile.name);
 			}
 		}
+	}
+	
+	
+	private void tryConnect(String profileName, int serverIndex) {
+		NetworkProfile profile = profiles.get(profileName);
+		if (profile == null || !profile.connect)
+			return;
+		NetworkProfile.Server serv = profile.servers.get(serverIndex % profile.servers.size());
+		master.sendCommand("connect " + serv.hostnamePort.getHostString() + " " + serv.hostnamePort.getPort() + " " + serv.useSsl + " " + profile.name);
 	}
 	
 	
