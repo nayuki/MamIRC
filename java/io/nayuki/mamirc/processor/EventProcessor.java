@@ -175,7 +175,7 @@ final class EventProcessor {
 							String keyStr = "";
 							if (parts.length == 2) {
 								chanName = parts[0];
-								keyStr = ":" + parts[1];
+								keyStr = " :" + parts[1];
 							}
 							if (!session.currentChannels.containsKey(new CaselessString(chanName)))
 								master.sendCommand("send " + ev.connectionId + " JOIN " + chanName + keyStr);
@@ -729,7 +729,7 @@ final class EventProcessor {
 						String keyStr = "";
 						if (parts.length == 2) {
 							chanName = parts[0];
-							keyStr = ":" + parts[1];
+							keyStr = " :" + parts[1];
 						}
 						if (!session.currentChannels.containsKey(new CaselessString(chanName)))
 							master.sendCommand("send " + conId + " JOIN " + chanName + keyStr);
