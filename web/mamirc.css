@@ -479,7 +479,7 @@ footer form {
 	height: 2.0em;
 	border: 0.1em solid #A0A0A0;
 	background-color: #FFFFFF;
-	transition: background-color 0.05s ease, color 0.05s ease;
+	transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 footer form::after {  /* Workaround mechanism for padding, because padding <textarea> goes internally */
@@ -508,7 +508,7 @@ footer form::after {  /* Workaround mechanism for padding, because padding <text
 	border-color: #D0D0D0;
 	background-color: #FAFAFA;
 	color: #808080;
-	transition: background-color 0.10s ease, color 0.10s ease;
+	transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 
