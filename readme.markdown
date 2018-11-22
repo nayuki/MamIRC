@@ -15,7 +15,7 @@ Architecture
 
 Software components and data flow:
 
-![doc/architecture.png](doc/architecture.png)
+![doc/architecture.svg](doc/architecture.svg)
 
 
 Project links
