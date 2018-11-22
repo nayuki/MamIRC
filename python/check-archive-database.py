@@ -10,7 +10,7 @@
 # https://github.com/nayuki/MamIRC
 # 
 
-import pathlib, sqlite3, sys
+import contextlib, pathlib, sqlite3, sys
 if sys.version_info[ : 3] < (3, 4, 0):
 	raise RuntimeError("Requires Python 3.4+")
 
@@ -24,8 +24,8 @@ def main(argv):
 		sys.exit("[ERROR] File does not exist: {}".format(filepath))
 	
 	# Open database file
-	con = sqlite3.connect("file:{}?mode=ro".format(filepath), uri=True)
-	try:
+	with contextlib.closing(sqlite3.connect("file:{}?mode=ro".format(filepath), uri=True)) as con:
+		
 		print("[INFO] Database file: {}".format(filepath.resolve()), file=sys.stderr)
 		cur = con.cursor()
 		
@@ -57,11 +57,6 @@ def main(argv):
 			sys.exit("[ERROR] Some integrity checks failed for this MamIRC archive database")
 		else:
 			print("[INFO] Integrity checks passed for this MamIRC archive database", file=sys.stderr)
-		
-		# Clean up
-		cur.close()
-	finally:
-		con.close()
 
 
 def _check_connection_id(conid, dbcur):
