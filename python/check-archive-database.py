@@ -48,11 +48,8 @@ def main(argv):
 		conidcur = con.cursor()
 		conidcur.execute("SELECT DISTINCT connectionId FROM events ORDER BY connectionId ASC")
 		haserror = False
-		while True:
-			row = conidcur.fetchone()
-			if row is None:
-				break
-			haserror = _check_connection_id(row[0], cur) or haserror
+		for (conid,) in _row_iterator(conidcur):
+			haserror = _check_connection_id(conid, cur) or haserror
 		
 		# Print summary
 		if haserror:
@@ -72,70 +69,74 @@ def _check_connection_id(conid, dbcur):
 	state = 0  # 0 = init, 1 = connecting, 2 = opened, 3 = closed
 	nextseq = 0
 	haserror = False
-	while True:
-		rows = dbcur.fetchmany(1000)
-		if len(rows) == 0:
-			break
+	for (seq, type, data) in _row_iterator(dbcur):
+		# Handle sequence number
+		if seq != nextseq:
+			print("[ERROR] Connection ID {} has a sequence number gap at {}".format(conid, nextseq), file=sys.stderr)
+			haserror = True
+		nextseq = seq + 1
 		
-		for (seq, type, data) in rows:
-			# Handle sequence number
-			if seq != nextseq:
-				print("[ERROR] Connection ID {} has a sequence number gap at {}".format(conid, nextseq), file=sys.stderr)
-				haserror = True
-			nextseq = seq + 1
-			
-			# Handle event type
-			if not (0 <= type <= 2):
-				print("[ERROR] Invalid event type {} on connection ID {} at sequence number {}".format(type, conid, seq), file=sys.stderr)
-				haserror = True
-			if type == 0:  # Connection events always have data in UTF-8
-				data = data.decode("UTF-8")
-				if data.startswith("connect"):
-					data = data.split(" ", 4)
-					if len(data) != 5:
-						print("[ERROR] Invalid event data on connection ID {} at sequence number {}".format(conid, seq), file=sys.stderr)
-						haserror = True
-				else:
-					data = data.split(" ", 1)
-					if data[0] not in ("opened", "disconnect", "closed") or (data[0] == "opened" and len(data) != 2) or (data[0] in ("disconnect", "closed") and len(data) != 1):
-						print("[ERROR] Invalid event data on connection ID {} at sequence number {}".format(conid, seq), file=sys.stderr)
-						haserror = True
-			
-			# Drive the state machine
-			if state == 0:
-				if type == 0 and len(data) == 5:
-					state = 1
-				else:
-					print('[ERROR] Expected "connect" event on connection ID {} at sequence number {}'.format(conid, seq), file=sys.stderr)
-					return True
-			elif state == 1:
-				if type == 0:
-					if data[0] == "opened":
-						state = 2
-					elif data[0] == "disconnect":
-						pass
-					elif data[0] == "closed":
-						state = 3
-					else:
-						print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
-						haserror = True
-				else:
-					print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
+		# Handle event type
+		if not (0 <= type <= 2):
+			print("[ERROR] Invalid event type {} on connection ID {} at sequence number {}".format(type, conid, seq), file=sys.stderr)
+			haserror = True
+		if type == 0:  # Connection events always have data in UTF-8
+			data = data.decode("UTF-8")
+			if data.startswith("connect"):
+				data = data.split(" ", 4)
+				if len(data) != 5:
+					print("[ERROR] Invalid event data on connection ID {} at sequence number {}".format(conid, seq), file=sys.stderr)
 					haserror = True
-			elif state == 2:
-				if type == 1 or type == 2 or (type == 0 and data[0] == "disconnect"):
+			else:
+				data = data.split(" ", 1)
+				if data[0] not in ("opened", "disconnect", "closed") or (data[0] == "opened" and len(data) != 2) or (data[0] in ("disconnect", "closed") and len(data) != 1):
+					print("[ERROR] Invalid event data on connection ID {} at sequence number {}".format(conid, seq), file=sys.stderr)
+					haserror = True
+		
+		# Drive the state machine
+		if state == 0:
+			if type == 0 and len(data) == 5:
+				state = 1
+			else:
+				print('[ERROR] Expected "connect" event on connection ID {} at sequence number {}'.format(conid, seq), file=sys.stderr)
+				return True
+		elif state == 1:
+			if type == 0:
+				if data[0] == "opened":
+					state = 2
+				elif data[0] == "disconnect":
 					pass
-				elif type == 0 and len(data) == 1 and data[0] == "closed":
+				elif data[0] == "closed":
 					state = 3
 				else:
 					print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
 					haserror = True
-			elif state == 3:
+			else:
 				print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
 				haserror = True
+		elif state == 2:
+			if type == 1 or type == 2 or (type == 0 and data[0] == "disconnect"):
+				pass
+			elif type == 0 and len(data) == 1 and data[0] == "closed":
+				state = 3
 			else:
-				raise AssertionError("Invalid state")
+				print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
+				haserror = True
+		elif state == 3:
+			print("[ERROR] Invalid event occurred on connection ID {} at sequence number {} based on the connection state".format(conid, seq), file=sys.stderr)
+			haserror = True
+		else:
+			raise AssertionError("Invalid state")
 	return haserror
+
+
+# Generates a row tuple for each fetchone() call that doesn't return None.
+def _row_iterator(dbcur):
+	while True:
+		rows = dbcur.fetchmany(1000)
+		if len(rows) == 0:
+			break
+		yield from rows
 
 
 if __name__ == "__main__":
