@@ -77,6 +77,11 @@ def _check_connection_id(conid, dbcur):
 			haserror = True
 		nextseq = seq + 1
 		
+		# Check characters
+		if type in (1, 2) and (b"\0" in data or b"\n" in data or b"\r" in data):
+			print("[ERROR] Connection ID {}, sequence number {} has invalid NUL/LF/CR byte".format(conid, seq))
+			haserror = True
+		
 		# Handle event type
 		if not (0 <= type <= 2):
 			print("[ERROR] Invalid event type {} on connection ID {} at sequence number {}".format(type, conid, seq), file=sys.stderr)
