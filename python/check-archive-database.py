@@ -1,8 +1,13 @@
 # 
-# Check MamIRC archive database integrity
+# Check integrity of MamIRC archive database
 # 
 # Usage: python check-archive-database.py MamircArchive.sqlite
-# This prints a bunch of messages to standard error.
+# This program reads from the given database file and prints a bunch of info/warning/error messages to standard error.
+# This exits with status code 0 if and only if no known forms of corruption are found in the database.
+# 
+# It is semi-safe to run this on a database that is actively being used by a MamIRC Connector process.
+# No corrupt data will be read or written. But if this reader takes more time
+# than the SQLite busy timeout, then it can cause the writer to throw an error.
 # 
 # Copyright (c) Project Nayuki
 # 
@@ -16,7 +21,7 @@ if sys.version_info[ : 3] < (3, 4, 0):
 
 
 def main(argv):
-	# Get and check command line arguments
+	# Check command line arguments
 	if len(argv) != 2:
 		sys.exit("Usage: python {} MamircArchive.sqlite".format(argv[0]))
 	filepath = pathlib.Path(argv[1])
@@ -28,7 +33,7 @@ def main(argv):
 	with contextlib.closing(sqlite3.connect("file:{}?mode=ro".format(filepath), uri=True)) as con:
 		cur = con.cursor()
 		
-		# Perform SQLite's built-in integrity check
+		# Perform SQLite's built-in data structure check
 		cur.execute("PRAGMA integrity_check")
 		if cur.fetchone()[0] != "ok":
 			sys.exit("[ERROR] SQLite integrity check failed. Aborting")
@@ -37,19 +42,17 @@ def main(argv):
 		# Print basic statistics
 		cur.execute("SELECT count(*) FROM events")
 		print("[INFO] Number of events: {}".format(cur.fetchone()[0]), file=sys.stderr)
-		
-		# Get maximum connection ID
 		cur.execute("SELECT max(connectionId) FROM events")
 		print("[INFO] Highest connection ID: {}".format(cur.fetchone()[0]), file=sys.stderr)
 		
-		# Check connection IDs
+		# Check all events for each connection ID
 		conidcur = con.cursor()
 		conidcur.execute("SELECT DISTINCT connectionId FROM events ORDER BY connectionId ASC")
 		haserror = False
 		for (conid,) in _row_iterator(conidcur):
 			haserror = _check_connection_id(conid, cur) or haserror
 		
-		# Print summary
+		# Print final summary
 		if haserror:
 			sys.exit("[ERROR] Some integrity checks failed for this MamIRC archive database")
 		else:
@@ -62,7 +65,7 @@ def _check_connection_id(conid, dbcur):
 		print("[ERROR] Negative connection ID: {}".format(conid), file=sys.stderr)
 		haserror = True
 	
-	# Check all events for this connection ID in sequential order
+	# Check all events for this connection in sequential order
 	dbcur.execute("SELECT sequence, type, data FROM events WHERE connectionId=? ORDER BY sequence ASC", (conid,))
 	state = 0  # 0 = init, 1 = connecting, 2 = opened, 3 = closed
 	nextseq = 0
