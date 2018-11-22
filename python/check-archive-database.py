@@ -15,11 +15,11 @@ if sys.version_info[ : 3] < (3, 0, 0):
 	raise RuntimeError("Requires Python 3+")
 
 
-def main(args):
+def main(argv):
 	# Get and check command line arguments
-	if len(args) != 1:
-		sys.exit("Usage: python check-archive-database.py MamircArchive.sqlite")
-	filepath = args[0]
+	if len(argv) != 2:
+		sys.exit("Usage: python {} MamircArchive.sqlite".format(argv[0]))
+	filepath = argv[1]
 	if not os.path.isfile(filepath):
 		sys.exit("[ERROR] File does not exist: " + filepath)
 	
@@ -143,4 +143,4 @@ def _check_connection_id(conid, dbcur):
 
 
 if __name__ == "__main__":
-	main(sys.argv[1 : ])
+	main(sys.argv)
