@@ -10,23 +10,23 @@
 # https://github.com/nayuki/MamIRC
 # 
 
-import os, sqlite3, sys
-if sys.version_info[ : 3] < (3, 0, 0):
-	raise RuntimeError("Requires Python 3+")
+import pathlib, sqlite3, sys
+if sys.version_info[ : 3] < (3, 4, 0):
+	raise RuntimeError("Requires Python 3.4+")
 
 
 def main(argv):
 	# Get and check command line arguments
 	if len(argv) != 2:
 		sys.exit("Usage: python {} MamircArchive.sqlite".format(argv[0]))
-	filepath = argv[1]
-	if not os.path.isfile(filepath):
-		sys.exit("[ERROR] File does not exist: " + filepath)
+	filepath = pathlib.Path(argv[1])
+	if not filepath.is_file():
+		sys.exit("[ERROR] File does not exist: {}".format(filepath))
 	
 	# Open database file
-	con = sqlite3.connect(filepath)
+	con = sqlite3.connect("file:{}?mode=ro".format(filepath), uri=True)
 	try:
-		print("[INFO] Database file: {}".format(os.path.realpath(filepath)), file=sys.stderr)
+		print("[INFO] Database file: {}".format(filepath.resolve()), file=sys.stderr)
 		cur = con.cursor()
 		
 		# Perform SQLite's built-in integrity check
