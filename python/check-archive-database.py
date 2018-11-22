@@ -39,18 +39,20 @@ def main(argv):
 		cur.execute("SELECT count(*) FROM events")
 		print("[INFO] Number of events: {}".format(cur.fetchone()[0]), file=sys.stderr)
 		
-		# Get range of connection IDs
-		cur.execute("SELECT min(connectionId), max(connectionId) FROM events")
-		minconid, maxconid = cur.fetchone()
+		# Get maximum connection ID
+		cur.execute("SELECT max(connectionId) FROM events")
+		maxconid = cur.fetchone()[0]
 		print("[INFO] Highest connection ID: {}".format(maxconid), file=sys.stderr)
 		
 		# Check connection IDs
+		conidcur = con.cursor()
+		conidcur.execute("SELECT DISTINCT connectionId FROM events ORDER BY connectionId ASC")
 		haserror = False
-		if minconid != 0:
-			print("[ERROR] Invalid lowest connection ID: {}".format(minconid), file=sys.stderr)
-			haserror = True
-		for conid in range(maxconid + 1):
-			haserror = _check_connection_id(conid, cur) or haserror
+		while True:
+			row = conidcur.fetchone()
+			if row is None:
+				break
+			haserror = _check_connection_id(row[0], cur) or haserror
 		
 		# Print summary
 		if haserror:
@@ -60,11 +62,10 @@ def main(argv):
 
 
 def _check_connection_id(conid, dbcur):
-	# Check if the connection ID has any events at all
-	dbcur.execute("SELECT * FROM events WHERE connectionId=? LIMIT 1", (conid,))
-	if dbcur.fetchone() is None:
-		print("[WARNING] The set of connection IDs contains a gap at: {}".format(conid), file=sys.stderr)
-		return False
+	# Check negative connection ID
+	if conid < 0:
+		print("[ERROR] Negative connection ID: {}".format(conid), file=sys.stderr)
+		haserror = True
 	
 	# Check all events for this connection ID in sequential order
 	dbcur.execute("SELECT sequence, type, data FROM events WHERE connectionId=? ORDER BY sequence ASC", (conid,))
