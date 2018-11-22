@@ -24,9 +24,8 @@ def main(argv):
 		sys.exit("[ERROR] File does not exist: {}".format(filepath))
 	
 	# Open database file
+	print("[INFO] Database file: {}".format(filepath.resolve()), file=sys.stderr)
 	with contextlib.closing(sqlite3.connect("file:{}?mode=ro".format(filepath), uri=True)) as con:
-		
-		print("[INFO] Database file: {}".format(filepath.resolve()), file=sys.stderr)
 		cur = con.cursor()
 		
 		# Perform SQLite's built-in integrity check
@@ -41,8 +40,7 @@ def main(argv):
 		
 		# Get maximum connection ID
 		cur.execute("SELECT max(connectionId) FROM events")
-		maxconid = cur.fetchone()[0]
-		print("[INFO] Highest connection ID: {}".format(maxconid), file=sys.stderr)
+		print("[INFO] Highest connection ID: {}".format(cur.fetchone()[0]), file=sys.stderr)
 		
 		# Check connection IDs
 		conidcur = con.cursor()
