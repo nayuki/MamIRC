@@ -10,6 +10,8 @@ package io.nayuki.mamirc.connector;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteConnection;
@@ -46,6 +48,8 @@ public final class MamircConnector {
 	
 	private final ProcessorListenWorker processorListener;
 	
+	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
+	
 	
 	
 	/*---- Constructor and its helpers ----*/
@@ -79,7 +83,15 @@ public final class MamircConnector {
 			dbCon.dispose();
 		}
 		
-		processorListener = new ProcessorListenWorker(this, serverPort, password);
+		scheduler = Executors.newSingleThreadScheduledExecutor();
+		try {
+			
+			processorListener = new ProcessorListenWorker(this, serverPort, password);
+			
+		} catch (IOException e) {
+			scheduler.shutdown();
+			throw e;
+		}
 	}
 	
 	
