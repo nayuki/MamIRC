@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.OutputWriteWorker;
 
 
 public final class MamircConnector {
@@ -104,6 +105,33 @@ public final class MamircConnector {
 		} finally {
 			getConfig.reset();
 		}
+	}
+	
+	
+	
+	/*---- Callback methods from ProcessorReadWorker ----*/
+	
+	synchronized void attachProcessor(ProcessorReadWorker reader, OutputWriteWorker writer) {
+	}
+	
+	
+	synchronized void detachProcessor(ProcessorReadWorker reader) {
+	}
+	
+	
+	synchronized void connectServer(ProcessorReadWorker reader, String hostname, int port, boolean useSsl, String metadata) {
+	}
+	
+	
+	synchronized void disconnectServer(ProcessorReadWorker reader, int conId) {
+	}
+	
+	
+	synchronized void sendMessage(ProcessorReadWorker reader, int conId, byte[] line) {
+	}
+	
+	
+	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) {
 	}
 	
 }

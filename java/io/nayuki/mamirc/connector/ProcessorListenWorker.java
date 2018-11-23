@@ -48,6 +48,7 @@ final class ProcessorListenWorker extends Thread {
 		try {
 			while (true) {
 				Socket sock = serverSocket.accept();
+				new ProcessorReadWorker(master, sock, password);
 				Thread.sleep(100);  // Safety delay
 			}
 		} catch (IOException|InterruptedException e) {
