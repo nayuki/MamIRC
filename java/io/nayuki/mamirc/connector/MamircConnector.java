@@ -9,6 +9,7 @@
 package io.nayuki.mamirc.connector;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteConnection;
@@ -41,9 +42,15 @@ public final class MamircConnector {
 	
 	
 	
+	/*---- Instance fields ----*/
+	
+	private final ProcessorListenWorker processorListener;
+	
+	
+	
 	/*---- Constructor and its helpers ----*/
 	
-	private MamircConnector(File config) throws SQLiteException {
+	private MamircConnector(File config) throws SQLiteException, IOException {
 		// Fields to read from config
 		int serverPort;
 		File archiveDb;
@@ -71,6 +78,8 @@ public final class MamircConnector {
 		} finally {
 			dbCon.dispose();
 		}
+		
+		processorListener = new ProcessorListenWorker(this, serverPort, password);
 	}
 	
 	
