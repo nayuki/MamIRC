@@ -10,6 +10,7 @@ package io.nayuki.mamirc.connector;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
@@ -132,6 +133,21 @@ public final class MamircConnector {
 	
 	
 	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) {
+	}
+	
+	
+	
+	/*---- Callback methods from IrcServerReadWorker ----*/
+	
+	synchronized void connectionOpened(int conId, InetAddress addr, IrcServerReadWorker reader, OutputWriteWorker writer) {
+	}
+	
+	
+	synchronized void connectionClosed(int conId) {
+	}
+	
+	
+	synchronized void messageReceived(int conId, byte[] line) {
 	}
 	
 }
