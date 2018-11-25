@@ -42,6 +42,7 @@ final class DatabaseWriteWorker extends Thread {
 		database = new SQLiteConnection(file);
 		try {
 			database.open(true);
+			database.exec("PRAGMA journal_mode = WAL");
 			
 			database.exec("CREATE TABLE IF NOT EXISTS events(\n" +
 				"	connectionId INTEGER NOT NULL,\n" +
@@ -82,13 +83,12 @@ final class DatabaseWriteWorker extends Thread {
 			database.open(false);
 			try {
 				database.setBusyTimeout(60000);
-				database.exec("PRAGMA journal_mode = WAL");
 				database.exec("BEGIN IMMEDIATE");
 				addEvent    = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
 				addUnfinCon = database.prepare("INSERT INTO unfinished_connections VALUES(?)");
 				delUnfinCon = database.prepare("DELETE FROM unfinished_connections WHERE connectionId=?");
-				while (handleEvent());
 				
+				while (handleEvent());
 				database.exec("DELETE FROM unfinished_connections");
 				database.exec("COMMIT TRANSACTION");
 				synchronized(this) {
