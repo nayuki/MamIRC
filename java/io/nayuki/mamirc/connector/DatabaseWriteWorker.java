@@ -10,9 +10,9 @@ package io.nayuki.mamirc.connector;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.Objects;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
@@ -30,7 +30,8 @@ final class DatabaseWriteWorker extends Thread {
 	private SQLiteStatement delUnfinCon;
 	
 	private int nextConnectionId;
-	private BlockingQueue<Event> queue = new ArrayBlockingQueue<>(1000);
+	private Queue<Event> queue = new ArrayDeque<>();
+	private boolean isWriting = false;
 	
 	
 	
@@ -84,6 +85,13 @@ final class DatabaseWriteWorker extends Thread {
 				database.exec("PRAGMA journal_mode = WAL");
 				database.exec("BEGIN IMMEDIATE");
 				while (handleEvent());
+				
+				database.exec("DELETE FROM unfinished_connections");
+				database.exec("COMMIT TRANSACTION");
+				synchronized(this) {
+					isWriting = false;
+					notifyAll();
+				}
 			} finally {
 				database.dispose();
 			}
@@ -92,11 +100,15 @@ final class DatabaseWriteWorker extends Thread {
 	
 	
 	private boolean handleEvent() throws SQLiteException, InterruptedException {
-		Event ev = queue.take();
-		if (ev == TERMINATOR) {
-			database.exec("COMMIT TRANSACTION");
-			return false;
+		Event ev;
+		synchronized(this) {
+			while (queue.isEmpty())
+				wait();
+			ev = queue.remove();
+			isWriting = true;
 		}
+		if (ev == TERMINATOR)
+			return false;
 		
 		addEvent.bind(1, ev.connectionId);
 		addEvent.bind(2, ev.sequence);
@@ -121,22 +133,37 @@ final class DatabaseWriteWorker extends Thread {
 			}
 		}
 		
-		if (queue.isEmpty()) {
+		boolean isEmpty;
+		synchronized(this) {
+			isEmpty = queue.isEmpty();
+		}
+		if (isEmpty) {
 			database.exec("COMMIT TRANSACTION");
+			synchronized(this) {
+				isWriting = false;
+				notifyAll();
+			}
 			database.exec("BEGIN IMMEDIATE");
 		}
 		return true;
 	}
 	
 	
-	public void writeEvent(Event ev) throws InterruptedException {
+	public synchronized void writeEvent(Event ev) {
 		Objects.requireNonNull(ev);
-		queue.put(ev);
+		queue.add(ev);
+		notifyAll();
 	}
 	
 	
-	public void terminate() throws InterruptedException {
-		queue.put(TERMINATOR);
+	public synchronized void flush() throws InterruptedException {
+		while (!queue.isEmpty() || isWriting)
+			wait();
+	}
+	
+	
+	public synchronized void terminate() {
+		writeEvent(TERMINATOR);
 	}
 	
 	
