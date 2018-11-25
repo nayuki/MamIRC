@@ -76,7 +76,7 @@ final class IrcServerReadWorker extends Thread {
 			// Successfully connected; make a writer worker thread
 			OutputWriteWorker writer = new OutputWriteWorker(socket.getOutputStream(), new byte[]{'\r','\n'});  // IRC protocol mandates the use of CR+LF
 			try {
-				master.connectionOpened(connectionId, socket.getInetAddress(), this, writer);
+				master.connectionOpened(connectionId, socket.getInetAddress(), writer);
 				
 				// Repeatedly read and relay lines until connection ends
 				LineReader reader = new LineReader(socket.getInputStream(), 1000);

@@ -8,10 +8,17 @@
 
 package io.nayuki.mamirc.connector;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
@@ -56,6 +63,8 @@ public final class MamircConnector {
 	
 	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
 	private final DatabaseWriteWorker databaseWriter;
+	
+	private final Map<Integer,ConnectionInfo> serverConnections = new HashMap<>();
 	
 	
 	
@@ -118,16 +127,22 @@ public final class MamircConnector {
 	
 	/*---- Callback methods from ProcessorReadWorker ----*/
 	
-	synchronized void attachProcessor(ProcessorReadWorker reader, OutputWriteWorker writer) {
+	synchronized void attachProcessor(ProcessorReadWorker reader, OutputWriteWorker writer) throws InterruptedException {
 		Objects.requireNonNull(reader);
 		Objects.requireNonNull(writer);
-		if (reader != processorReader)
-			return;
 		
 		if (processorReader != null)
 			processorReader.terminate();
 		processorReader = reader;
 		processorWriter = writer;
+		
+		databaseWriter.flush();
+		processorWriter.writeLine("active-connections");
+		Map<Integer,ConnectionInfo> temp = new TreeMap<>(serverConnections);  // Force ascending sort
+		for (Map.Entry<Integer,ConnectionInfo> entry : temp.entrySet())
+			writer.writeLine(entry.getKey() + " " + entry.getValue().nextSequence);
+		processorWriter.writeLine("end-list");
+		processorWriter.writeLine("live-events");
 	}
 	
 	
@@ -147,6 +162,15 @@ public final class MamircConnector {
 		Objects.requireNonNull(metadata);
 		if (reader != processorReader)
 			return;
+		
+		int conId = databaseWriter.getNextConnectionIdAndIncrement();
+		if (serverConnections.containsKey(conId))
+			throw new AssertionError();
+		ConnectionInfo info = new ConnectionInfo(conId,
+			new IrcServerReadWorker(this, conId, hostname, port, useSsl));
+		serverConnections.put(conId, info);
+		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
+		distributeEvent(info, Event.Type.CONNECTION, str.getBytes(StandardCharsets.UTF_8));
 	}
 	
 	
@@ -154,22 +178,45 @@ public final class MamircConnector {
 		Objects.requireNonNull(reader);
 		if (reader != processorReader)
 			return;
+		
+		ConnectionInfo info = serverConnections.get(conId);
+		if (info != null) {
+			distributeEvent(info, Event.Type.CONNECTION, "disconnect".getBytes(StandardCharsets.UTF_8));
+			info.reader.terminate();
+		}
 	}
 	
 	
 	synchronized void sendMessage(ProcessorReadWorker reader, int conId, byte[] line) {
 		Objects.requireNonNull(reader);
-		if (reader != processorReader)
-			return;
-	}
-	
-	
-	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
-		Objects.requireNonNull(reader);
+		Objects.requireNonNull(line);
 		if (reader != processorReader)
 			return;
 		
-		reader.terminate();
+		ConnectionInfo info = serverConnections.get(conId);
+		if (info != null && info.writer != null) {
+			info.writer.writeLine(line);
+			distributeEvent(info, Event.Type.SEND, line);
+		}
+	}
+	
+	
+	void terminateConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
+		Objects.requireNonNull(reader);
+		Collection<Thread> threads = new ArrayList<>();
+		synchronized(this) {
+			if (reader != processorReader)
+				return;
+			scheduler.shutdown();
+			processorListener.terminate();
+			reader.terminate();
+			for (ConnectionInfo info : serverConnections.values()) {
+				info.reader.terminate();
+				threads.add(info.reader);
+			}
+		}
+		for (Thread th : threads)
+			th.join();
 		databaseWriter.terminate();
 	}
 	
@@ -177,25 +224,70 @@ public final class MamircConnector {
 	
 	/*---- Callback methods from IrcServerReadWorker ----*/
 	
-	synchronized void connectionOpened(int conId, InetAddress addr, IrcServerReadWorker reader, OutputWriteWorker writer) {
+	synchronized void connectionOpened(int conId, InetAddress addr, OutputWriteWorker writer) {
 		Objects.requireNonNull(addr);
-		Objects.requireNonNull(reader);
 		Objects.requireNonNull(writer);
+		if (conId < 0)
+			throw new IllegalArgumentException();
+		
+		if (!serverConnections.containsKey(conId))
+			throw new IllegalStateException("Connection ID does not exist: " + conId);
+		ConnectionInfo info = serverConnections.get(conId);
+		distributeEvent(info, Event.Type.CONNECTION, ("opened " + addr.getHostAddress()).getBytes(StandardCharsets.UTF_8));
+		info.writer = writer;
 	}
 	
 	
 	synchronized void connectionClosed(int conId) {
+		ConnectionInfo info = serverConnections.remove(conId);
+		if (info != null)
+			distributeEvent(info, Event.Type.CONNECTION, "closed".getBytes(StandardCharsets.UTF_8));
 	}
 	
 	
 	synchronized void messageReceived(int conId, byte[] line) {
 		Objects.requireNonNull(line);
+		ConnectionInfo info = serverConnections.get(conId);
+		if (info != null)
+			distributeEvent(info, Event.Type.RECEIVE, line);
 	}
 	
 	
-	private void handleEvent(Event ev) throws InterruptedException {
-		Objects.requireNonNull(ev);
+	private void distributeEvent(ConnectionInfo info, Event.Type type, byte[] line) {
+		Event ev = new Event(info.connectionId, info.nextSequence++, type, line);
+		if (processorWriter != null) {
+			try {
+				ByteArrayOutputStream bout = new ByteArrayOutputStream(line.length + 40);
+				String s = String.format("%d %d %d %d ", ev.connectionId, ev.sequence, ev.timestamp, ev.type.ordinal());
+				bout.write(s.getBytes(StandardCharsets.UTF_8));
+				bout.write(line);
+				processorWriter.writeLine(bout.toByteArray());
+			} catch (IOException e) {
+				throw new AssertionError(e);
+			}
+		}
 		databaseWriter.writeEvent(ev);
+	}
+	
+	
+	
+	/*---- Helper structure ----*/
+	
+	private static final class ConnectionInfo {
+		
+		public final int connectionId;             // Non-negative
+		public int nextSequence = 0;               // Non-negative
+		public final IrcServerReadWorker reader;   // Non-null
+		public OutputWriteWorker writer = null;    // Non-null after connectionOpened() is called
+		
+		
+		public ConnectionInfo(int conId, IrcServerReadWorker read) {
+			if (conId < 0)
+				throw new IllegalArgumentException("Connection ID must be positive");
+			connectionId = conId;
+			reader = Objects.requireNonNull(read);
+		}
+		
 	}
 	
 }
