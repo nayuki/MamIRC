@@ -84,6 +84,9 @@ final class DatabaseWriteWorker extends Thread {
 				database.setBusyTimeout(60000);
 				database.exec("PRAGMA journal_mode = WAL");
 				database.exec("BEGIN IMMEDIATE");
+				addEvent    = database.prepare("INSERT INTO events VALUES(?,?,?,?,?)");
+				addUnfinCon = database.prepare("INSERT INTO unfinished_connections VALUES(?)");
+				delUnfinCon = database.prepare("DELETE FROM unfinished_connections WHERE connectionId=?");
 				while (handleEvent());
 				
 				database.exec("DELETE FROM unfinished_connections");
