@@ -79,14 +79,14 @@ final class ProcessorReadWorker extends Thread {
 			} finally {
 				writer.terminate();  // This reader is exclusively responsible for terminating the writer
 			}
-		} catch (IOException e) {
+		} catch (IOException|InterruptedException e) {
 		} finally {
 			terminate();
 		}
 	}
 	
 	
-	private void handleLine(byte[] line) {
+	private void handleLine(byte[] line) throws InterruptedException {
 		String lineStr = new String(line, StandardCharsets.UTF_8);
 		String[] parts = lineStr.split(" ", 5);  // At most 5 parts in the current format
 		String cmd = parts[0];

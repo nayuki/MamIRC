@@ -52,6 +52,7 @@ public final class MamircConnector {
 	
 	private final ProcessorListenWorker processorListener;
 	private ProcessorReadWorker processorReader;
+	private OutputWriteWorker processorWriter;
 	
 	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
 	private final DatabaseWriteWorker databaseWriter;
@@ -122,6 +123,11 @@ public final class MamircConnector {
 		Objects.requireNonNull(writer);
 		if (reader != processorReader)
 			return;
+		
+		if (processorReader != null)
+			processorReader.terminate();
+		processorReader = reader;
+		processorWriter = writer;
 	}
 	
 	
@@ -129,6 +135,9 @@ public final class MamircConnector {
 		Objects.requireNonNull(reader);
 		if (reader != processorReader)
 			return;
+		
+		processorReader = null;
+		processorWriter = null;
 	}
 	
 	
@@ -155,10 +164,13 @@ public final class MamircConnector {
 	}
 	
 	
-	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) {
+	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
 		Objects.requireNonNull(reader);
 		if (reader != processorReader)
 			return;
+		
+		reader.terminate();
+		databaseWriter.terminate();
 	}
 	
 	
