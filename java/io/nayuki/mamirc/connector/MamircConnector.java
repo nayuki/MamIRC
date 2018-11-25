@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriteWorker;
 
 
@@ -51,6 +52,7 @@ public final class MamircConnector {
 	private final ProcessorListenWorker processorListener;
 	
 	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
+	private final DatabaseWriteWorker databaseWriter;
 	
 	
 	
@@ -88,6 +90,7 @@ public final class MamircConnector {
 		scheduler = Executors.newSingleThreadScheduledExecutor();
 		try {
 			
+			databaseWriter = new DatabaseWriteWorker(archiveDb);
 			processorListener = new ProcessorListenWorker(this, serverPort, password);
 			
 		} catch (IOException e) {
@@ -148,6 +151,11 @@ public final class MamircConnector {
 	
 	
 	synchronized void messageReceived(int conId, byte[] line) {
+	}
+	
+	
+	private void handleEvent(Event ev) throws InterruptedException {
+		databaseWriter.writeEvent(ev);
 	}
 	
 }

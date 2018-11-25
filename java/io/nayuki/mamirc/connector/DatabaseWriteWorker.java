@@ -1,0 +1,146 @@
+/* 
+ * MamIRC
+ * Copyright (c) Project Nayuki
+ * 
+ * https://www.nayuki.io/page/mamirc-the-headless-irc-client
+ * https://github.com/nayuki/MamIRC
+ */
+
+package io.nayuki.mamirc.connector;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import com.almworks.sqlite4java.SQLiteConnection;
+import com.almworks.sqlite4java.SQLiteException;
+import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.Event;
+
+
+final class DatabaseWriteWorker extends Thread {
+	
+	/*---- Fields ----*/
+	
+	private final File databaseFile;
+	private SQLiteConnection database;
+	private SQLiteStatement addEvent;
+	private SQLiteStatement addUnfinCon;
+	private SQLiteStatement delUnfinCon;
+	
+	private int nextConnectionId;
+	private BlockingQueue<Event> queue = new ArrayBlockingQueue<>(1000);
+	
+	
+	
+	/*---- Constructor ----*/
+	
+	public DatabaseWriteWorker(File file) throws SQLiteException {
+		databaseFile = Objects.requireNonNull(file);
+		database = new SQLiteConnection(file);
+		try {
+			database.open(true);
+			
+			database.exec("CREATE TABLE IF NOT EXISTS events(\n" +
+				"	connectionId INTEGER NOT NULL,\n" +
+				"	sequence INTEGER NOT NULL,\n" +
+				"	timestamp INTEGER NOT NULL,\n" +
+				"	type INTEGER NOT NULL,\n" +
+				"	data BLOB NOT NULL,\n" +
+				"	PRIMARY KEY(connectionId, sequence)\n" +
+				")");
+			
+			database.exec("CREATE TABLE IF NOT EXISTS unfinished_connections(\n" +
+				"	connectionId INTEGER NOT NULL PRIMARY KEY\n" +
+				")");
+			
+			database.exec("DELETE FROM unfinished_connections");
+			
+			SQLiteStatement getNextConId = database.prepare(
+				"SELECT ifnull(max(connectionId)+1,0) FROM events");
+			if (!getNextConId.step())
+				throw new AssertionError();
+			nextConnectionId = getNextConId.columnInt(0);
+			
+		} finally {
+			database.dispose();
+		}
+		start();
+	}
+	
+	
+	public synchronized int getNextConnectionIdAndIncrement() {
+		return nextConnectionId++;
+	}
+	
+	
+	public void run() {
+		database = new SQLiteConnection(databaseFile);
+		try {
+			database.open(false);
+			try {
+				database.setBusyTimeout(60000);
+				database.exec("PRAGMA journal_mode = WAL");
+				database.exec("BEGIN IMMEDIATE");
+				while (handleEvent());
+			} finally {
+				database.dispose();
+			}
+		} catch (SQLiteException|InterruptedException e) {}
+	}
+	
+	
+	private boolean handleEvent() throws SQLiteException, InterruptedException {
+		Event ev = queue.take();
+		if (ev == TERMINATOR) {
+			database.exec("COMMIT TRANSACTION");
+			return false;
+		}
+		
+		addEvent.bind(1, ev.connectionId);
+		addEvent.bind(2, ev.sequence);
+		addEvent.bind(3, ev.timestamp);
+		addEvent.bind(4, ev.type.ordinal());
+		addEvent.bind(5, ev.line);
+		if (addEvent.step())
+			throw new AssertionError();
+		addEvent.reset();
+		
+		if (ev.type == Event.Type.CONNECTION) {
+			if (ev.sequence == 0) {
+				addUnfinCon.bind(1, ev.connectionId);
+				if (addUnfinCon.step())
+					throw new AssertionError();
+				addUnfinCon.reset();
+			} else if (new String(ev.line, StandardCharsets.UTF_8).equals("closed")) {
+				delUnfinCon.bind(1, ev.connectionId);
+				if (delUnfinCon.step())
+					throw new AssertionError();
+				delUnfinCon.reset();
+			}
+		}
+		
+		if (queue.isEmpty()) {
+			database.exec("COMMIT TRANSACTION");
+			database.exec("BEGIN IMMEDIATE");
+		}
+		return true;
+	}
+	
+	
+	public void writeEvent(Event ev) throws InterruptedException {
+		Objects.requireNonNull(ev);
+		queue.put(ev);
+	}
+	
+	
+	public void terminate() throws InterruptedException {
+		queue.put(TERMINATOR);
+	}
+	
+	
+	// A sentinel object that is only compared by reference. Its dereferenced values are never used.
+	private static final Event TERMINATOR = new Event(0, 0, Event.Type.CONNECTION, new byte[0]);
+	
+}
