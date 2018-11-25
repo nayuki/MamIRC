@@ -11,6 +11,7 @@ package io.nayuki.mamirc.connector;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
@@ -50,6 +51,7 @@ public final class MamircConnector {
 	/*---- Instance fields ----*/
 	
 	private final ProcessorListenWorker processorListener;
+	private ProcessorReadWorker processorReader;
 	
 	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
 	private final DatabaseWriteWorker databaseWriter;
@@ -116,26 +118,47 @@ public final class MamircConnector {
 	/*---- Callback methods from ProcessorReadWorker ----*/
 	
 	synchronized void attachProcessor(ProcessorReadWorker reader, OutputWriteWorker writer) {
+		Objects.requireNonNull(reader);
+		Objects.requireNonNull(writer);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
 	synchronized void detachProcessor(ProcessorReadWorker reader) {
+		Objects.requireNonNull(reader);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
 	synchronized void connectServer(ProcessorReadWorker reader, String hostname, int port, boolean useSsl, String metadata) {
+		Objects.requireNonNull(reader);
+		Objects.requireNonNull(hostname);
+		Objects.requireNonNull(metadata);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
 	synchronized void disconnectServer(ProcessorReadWorker reader, int conId) {
+		Objects.requireNonNull(reader);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
 	synchronized void sendMessage(ProcessorReadWorker reader, int conId, byte[] line) {
+		Objects.requireNonNull(reader);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
 	synchronized void terminateConnector(ProcessorReadWorker reader, String reason) {
+		Objects.requireNonNull(reader);
+		if (reader != processorReader)
+			return;
 	}
 	
 	
@@ -143,6 +166,9 @@ public final class MamircConnector {
 	/*---- Callback methods from IrcServerReadWorker ----*/
 	
 	synchronized void connectionOpened(int conId, InetAddress addr, IrcServerReadWorker reader, OutputWriteWorker writer) {
+		Objects.requireNonNull(addr);
+		Objects.requireNonNull(reader);
+		Objects.requireNonNull(writer);
 	}
 	
 	
@@ -151,10 +177,12 @@ public final class MamircConnector {
 	
 	
 	synchronized void messageReceived(int conId, byte[] line) {
+		Objects.requireNonNull(line);
 	}
 	
 	
 	private void handleEvent(Event ev) throws InterruptedException {
+		Objects.requireNonNull(ev);
 		databaseWriter.writeEvent(ev);
 	}
 	
