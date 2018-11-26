@@ -57,12 +57,12 @@ public final class MamircConnector {
 	
 	/*---- Instance fields ----*/
 	
-	private final ProcessorListenWorker processorListener;
-	private ProcessorReadWorker processorReader;
-	private OutputWriteWorker processorWriter;
+	ScheduledExecutorService scheduler = null;  // Shared service usable by any MamircConnector component
+	private DatabaseWriteWorker databaseWriter = null;
+	private ProcessorListenWorker processorListener = null;
 	
-	final ScheduledExecutorService scheduler;  // Shared service usable by any MamircConnector component
-	private final DatabaseWriteWorker databaseWriter;
+	private ProcessorReadWorker processorReader = null;
+	private OutputWriteWorker processorWriter = null;
 	
 	private final Map<Integer,ConnectionInfo> serverConnections = new HashMap<>();
 	
@@ -99,14 +99,18 @@ public final class MamircConnector {
 			dbCon.dispose();
 		}
 		
-		scheduler = Executors.newSingleThreadScheduledExecutor();
 		try {
-			
+			scheduler = Executors.newSingleThreadScheduledExecutor();
 			databaseWriter = new DatabaseWriteWorker(archiveDb);
 			processorListener = new ProcessorListenWorker(this, serverPort, password);
 			
 		} catch (IOException e) {
-			scheduler.shutdown();
+			if (scheduler != null)
+				scheduler.shutdown();
+			if (databaseWriter != null)
+				databaseWriter.terminate();
+			if (processorListener != null)
+				processorListener = null;
 			throw e;
 		}
 	}
@@ -131,6 +135,10 @@ public final class MamircConnector {
 		Objects.requireNonNull(reader);
 		Objects.requireNonNull(writer);
 		
+		if (processorListener == null) {  // If terminateConnector() has been called by another worker
+			reader.terminate();
+			return;
+		}
 		if (processorReader != null)
 			processorReader.terminate();
 		processorReader = reader;
@@ -208,7 +216,9 @@ public final class MamircConnector {
 			if (reader != processorReader)
 				return;
 			scheduler.shutdown();
+			scheduler = null;
 			processorListener.terminate();
+			processorListener = null;
 			reader.terminate();
 			for (ConnectionInfo info : serverConnections.values()) {
 				info.reader.terminate();
@@ -218,6 +228,7 @@ public final class MamircConnector {
 		for (Thread th : threads)
 			th.join();
 		databaseWriter.terminate();
+		databaseWriter = null;
 	}
 	
 	
