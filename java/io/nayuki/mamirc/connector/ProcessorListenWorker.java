@@ -29,6 +29,7 @@ final class ProcessorListenWorker extends Thread {
 	
 	// The server socket is created on the caller's thread, to make the caller deal with an I/O exception immediately.
 	public ProcessorListenWorker(MamircConnector master, int port, byte[] password) throws IOException {
+		super("Processor Listener");
 		this.master   = Objects.requireNonNull(master);
 		this.password = Objects.requireNonNull(password);
 		if (port < 0 || port > 0xFFFF)

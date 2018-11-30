@@ -38,6 +38,7 @@ final class DatabaseWriteWorker extends Thread {
 	/*---- Constructor ----*/
 	
 	public DatabaseWriteWorker(File file) throws SQLiteException {
+		super("Database Writer");
 		databaseFile = Objects.requireNonNull(file);
 		database = new SQLiteConnection(file);
 		try {

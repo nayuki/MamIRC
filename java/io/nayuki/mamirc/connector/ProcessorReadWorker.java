@@ -33,6 +33,7 @@ final class ProcessorReadWorker extends Thread {
 	
 	// This constructor must only be called from ProcessorListenWorker.
 	public ProcessorReadWorker(MamircConnector master, Socket sock, byte[] password) {
+		super("Processor Reader");
 		this.master   = Objects.requireNonNull(master);
 		this.socket   = Objects.requireNonNull(sock);
 		this.password = Objects.requireNonNull(password);
@@ -61,7 +62,8 @@ final class ProcessorReadWorker extends Thread {
 			
 			// Launch writer and register with Connector
 			socket.setTcpNoDelay(true);
-			OutputWriteWorker writer = new OutputWriteWorker(socket.getOutputStream(), new byte[]{'\r','\n'});
+			OutputWriteWorker writer = new OutputWriteWorker("Processor Writer",
+				socket.getOutputStream(), new byte[]{'\r','\n'});
 			try {
 				master.attachProcessor(this, writer);
 				

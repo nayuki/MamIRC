@@ -52,6 +52,7 @@ final class IrcServerReadWorker extends Thread {
 	// Note: This constructor only sets fields, and does not perform I/O.
 	// The actual socket is created when the new worker thread executes run().
 	public IrcServerReadWorker(MamircConnector master, int conId, String hostname, int port, boolean useSsl) {
+		super("IRC Server Reader (conId=" + conId + ")");
 		this.master = Objects.requireNonNull(master);
 		this.connectionId = conId;
 		this.hostname = Objects.requireNonNull(hostname);
@@ -74,7 +75,8 @@ final class IrcServerReadWorker extends Thread {
 				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, hostname, port, true);
 			
 			// Successfully connected; make a writer worker thread
-			OutputWriteWorker writer = new OutputWriteWorker(socket.getOutputStream(), new byte[]{'\r','\n'});  // IRC protocol mandates the use of CR+LF
+			OutputWriteWorker writer = new OutputWriteWorker("IRC Server Writer (conId=" + connectionId + ")",
+				socket.getOutputStream(), new byte[]{'\r','\n'});  // IRC protocol mandates the use of CR+LF
 			try {
 				master.connectionOpened(connectionId, socket.getInetAddress(), writer);
 				
