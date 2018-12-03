@@ -46,14 +46,14 @@ final class ProcessorReadWorker extends WorkerThread {
 	/*---- Methods ----*/
 	
 	protected void runInner() throws IOException, InterruptedException {
-		try {
+		try (Socket sock = socket) {
 			// Read password line with time limit
 			LineReader reader;
 			byte[] passwordLine;
 			Future<?> killer = master.scheduler.schedule(() -> shutdown(),
 				AUTHENTICATION_TIMEOUT, TimeUnit.MILLISECONDS);
 			try {
-				reader = new LineReader(socket.getInputStream(), 1000);
+				reader = new LineReader(sock.getInputStream(), 1000);
 				passwordLine = reader.readLine();
 			} finally {
 				killer.cancel(true);
@@ -62,9 +62,9 @@ final class ProcessorReadWorker extends WorkerThread {
 				return;
 			
 			// Launch writer and register with Connector
-			socket.setTcpNoDelay(true);
+			sock.setTcpNoDelay(true);
 			OutputWriteWorker writer = new OutputWriteWorker("Processor Writer",
-				socket.getOutputStream(), new byte[]{'\r','\n'});
+				sock.getOutputStream(), new byte[]{'\r','\n'});
 			try {
 				master.attachProcessor(this, writer);
 				
@@ -82,8 +82,6 @@ final class ProcessorReadWorker extends WorkerThread {
 			} finally {
 				writer.shutdown();  // This reader is exclusively responsible for shutting down the writer
 			}
-		} finally {
-			shutdown();
 		}
 	}
 	

@@ -102,8 +102,8 @@ final class IrcServerReadWorker extends WorkerThread {
 				writer.shutdown();
 			}
 		} finally {
-			master.connectionClosed(connectionId);
 			shutdown();
+			master.connectionClosed(connectionId);
 		}
 	}
 	
