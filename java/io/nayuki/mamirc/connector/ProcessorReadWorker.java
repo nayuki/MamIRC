@@ -94,7 +94,7 @@ final class ProcessorReadWorker extends Thread {
 		String cmd = parts[0];
 		try {
 			
-			if (cmd.equals("terminate") && parts.length == 1) {
+			if (cmd.equals("shutdown") && parts.length == 1) {
 				master.shutdownConnector(this, "Explicit command received from Processor connection");
 				
 			} else if (cmd.equals("connect") && parts.length == 5) {
