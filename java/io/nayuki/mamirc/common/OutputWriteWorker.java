@@ -43,16 +43,16 @@ public final class OutputWriteWorker extends WorkerThread {
 	/*---- Methods ----*/
 	
 	protected void runInner() throws IOException, InterruptedException {
-			try (OutputStream out = output) {
-				while (true) {
-					byte[] line = queue.take();
-					if (line == TERMINATOR)
-						break;
-					byte[] temp = Arrays.copyOf(line, line.length + newline.length);
-					System.arraycopy(newline, 0, temp, line.length, newline.length);
-					out.write(temp);
-				}
+		try (OutputStream out = output) {
+			while (true) {
+				byte[] line = queue.take();
+				if (line == TERMINATOR)
+					break;
+				byte[] temp = Arrays.copyOf(line, line.length + newline.length);
+				System.arraycopy(newline, 0, temp, line.length, newline.length);
+				out.write(temp);
 			}
+		}
 	}
 	
 	

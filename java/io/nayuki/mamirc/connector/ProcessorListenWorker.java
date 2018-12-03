@@ -48,13 +48,13 @@ final class ProcessorListenWorker extends WorkerThread {
 	/*---- Methods ----*/
 	
 	protected void runInner() throws IOException, InterruptedException {
-			try (ServerSocket servSock = serverSocket) {
-				while (true) {
-					Socket sock = servSock.accept();
-					new ProcessorReadWorker(master, sock, password);
-					Thread.sleep(100);  // Safety delay
-				}
+		try (ServerSocket servSock = serverSocket) {
+			while (true) {
+				Socket sock = servSock.accept();
+				new ProcessorReadWorker(master, sock, password);
+				Thread.sleep(100);  // Safety delay
 			}
+		}
 	}
 	
 	
