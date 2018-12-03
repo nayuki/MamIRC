@@ -37,6 +37,9 @@ final class DatabaseWriteWorker extends Thread {
 	
 	/*---- Constructor ----*/
 	
+	// This performs some initial database operations synchronously.
+	// If an exception is thrown (e.g. cannot write), then the caller can
+	// abort the initialization more easily (with fewer worker threads running).
 	public DatabaseWriteWorker(File file) throws SQLiteException {
 		super("Database Writer");
 		databaseFile = Objects.requireNonNull(file);

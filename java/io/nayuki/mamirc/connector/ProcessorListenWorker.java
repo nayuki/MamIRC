@@ -27,7 +27,8 @@ final class ProcessorListenWorker extends Thread {
 	
 	/*---- Constructor ----*/
 	
-	// The server socket is created on the caller's thread, to make the caller deal with an I/O exception immediately.
+	// This creates the server socket synchronously. If an exception is thrown (e.g. port in use),
+	// then the caller can abort the initialization more easily (with fewer worker threads running).
 	public ProcessorListenWorker(MamircConnector master, int port, byte[] password) throws IOException {
 		super("Processor Listener");
 		this.master   = Objects.requireNonNull(master);
