@@ -47,17 +47,14 @@ final class ProcessorListenWorker extends Thread {
 	
 	public void run() {
 		try {
-			while (true) {
-				Socket sock = serverSocket.accept();
-				new ProcessorReadWorker(master, sock, password);
-				Thread.sleep(100);  // Safety delay
+			try (ServerSocket servSock = serverSocket) {
+				while (true) {
+					Socket sock = servSock.accept();
+					new ProcessorReadWorker(master, sock, password);
+					Thread.sleep(100);  // Safety delay
+				}
 			}
-		} catch (IOException|InterruptedException e) {
-		} finally {
-			try {
-				serverSocket.close();
-			} catch (IOException e) {}
-		}
+		} catch (IOException|InterruptedException e) {}
 	}
 	
 	
