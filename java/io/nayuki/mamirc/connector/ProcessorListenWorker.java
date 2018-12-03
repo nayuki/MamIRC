@@ -13,9 +13,10 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Objects;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
-final class ProcessorListenWorker extends Thread {
+final class ProcessorListenWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -46,8 +47,7 @@ final class ProcessorListenWorker extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
-		try {
+	protected void runInner() throws IOException, InterruptedException {
 			try (ServerSocket servSock = serverSocket) {
 				while (true) {
 					Socket sock = servSock.accept();
@@ -55,7 +55,6 @@ final class ProcessorListenWorker extends Thread {
 					Thread.sleep(100);  // Safety delay
 				}
 			}
-		} catch (IOException|InterruptedException e) {}
 	}
 	
 	

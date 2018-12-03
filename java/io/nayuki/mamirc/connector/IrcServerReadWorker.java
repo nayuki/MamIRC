@@ -22,6 +22,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriteWorker;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
 /* 
@@ -31,7 +32,7 @@ import io.nayuki.mamirc.common.OutputWriteWorker;
  * - Creates and shuts down a writer thread
  * - Handles SSL functionality
  */
-final class IrcServerReadWorker extends Thread {
+final class IrcServerReadWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -71,7 +72,7 @@ final class IrcServerReadWorker extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() throws IOException {
 		try {
 			// Create socket connection
 			socket.connect(new InetSocketAddress(hostname, port), timeout);
@@ -100,7 +101,6 @@ final class IrcServerReadWorker extends Thread {
 			} finally {
 				writer.shutdown();
 			}
-		} catch (IOException e) {
 		} finally {
 			master.connectionClosed(connectionId);
 			shutdown();

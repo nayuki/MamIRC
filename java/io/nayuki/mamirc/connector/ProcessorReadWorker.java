@@ -17,9 +17,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import io.nayuki.mamirc.common.LineReader;
 import io.nayuki.mamirc.common.OutputWriteWorker;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
-final class ProcessorReadWorker extends Thread {
+final class ProcessorReadWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -44,7 +45,7 @@ final class ProcessorReadWorker extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
+	protected void runInner() throws IOException, InterruptedException {
 		try {
 			// Read password line with time limit
 			LineReader reader;
@@ -81,7 +82,6 @@ final class ProcessorReadWorker extends Thread {
 			} finally {
 				writer.shutdown();  // This reader is exclusively responsible for shutting down the writer
 			}
-		} catch (IOException|InterruptedException e) {
 		} finally {
 			shutdown();
 		}

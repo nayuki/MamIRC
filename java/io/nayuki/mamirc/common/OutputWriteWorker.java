@@ -17,7 +17,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 
-public final class OutputWriteWorker extends Thread {
+public final class OutputWriteWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -42,8 +42,7 @@ public final class OutputWriteWorker extends Thread {
 	
 	/*---- Methods ----*/
 	
-	public void run() {
-		try {
+	protected void runInner() throws IOException, InterruptedException {
 			try (OutputStream out = output) {
 				while (true) {
 					byte[] line = queue.take();
@@ -54,7 +53,6 @@ public final class OutputWriteWorker extends Thread {
 					out.write(temp);
 				}
 			}
-		} catch (IOException|InterruptedException e) {}
 	}
 	
 	

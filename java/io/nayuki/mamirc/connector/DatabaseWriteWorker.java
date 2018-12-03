@@ -17,9 +17,10 @@ import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteStatement;
 import io.nayuki.mamirc.common.Event;
+import io.nayuki.mamirc.common.WorkerThread;
 
 
-final class DatabaseWriteWorker extends Thread {
+final class DatabaseWriteWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
@@ -81,9 +82,8 @@ final class DatabaseWriteWorker extends Thread {
 	}
 	
 	
-	public void run() {
+	protected void runInner() throws SQLiteException, InterruptedException {
 		database = new SQLiteConnection(databaseFile);
-		try {
 			database.open(false);
 			try {
 				database.setBusyTimeout(60000);
@@ -102,7 +102,6 @@ final class DatabaseWriteWorker extends Thread {
 			} finally {
 				database.dispose();
 			}
-		} catch (SQLiteException|InterruptedException e) {}
 	}
 	
 	
