@@ -30,11 +30,6 @@ public final class OutputWriteWorker extends Thread {
 	/*---- Constructor ----*/
 	
 	// Can customize the newline sequence as "\n", "\r\n", etc.
-	public OutputWriteWorker(OutputStream out, byte[] newline) {
-		this("Output Writer", out, newline);
-	}
-	
-	
 	public OutputWriteWorker(String threadName, OutputStream out, byte[] newline) {
 		super(threadName);
 		this.output  = Objects.requireNonNull(out);
