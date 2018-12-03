@@ -42,8 +42,10 @@ public final class MamircConnector {
 		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		File config = new File(args[0]);
-		if (!config.isFile())
+		if (!config.isFile()) {
 			System.err.println("Non-existent configuration file: " + args[0]);
+			System.exit(1);
+		}
 		
 		try {
 			new MamircConnector(config);
