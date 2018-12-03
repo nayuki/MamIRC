@@ -98,9 +98,13 @@ final class ProcessorReadWorker extends Thread {
 				master.shutdownConnector(this, "Explicit command received from Processor connection");
 				
 			} else if (cmd.equals("connect") && parts.length == 5) {
-				if (!(parts[3].equals("true") || parts[3].equals("false")))
+				String hostname = parts[1];
+				int port = Integer.parseInt(parts[2]);
+				String useSsl = parts[3];
+				String profileName = parts[4];
+				if (!(useSsl.equals("true") || useSsl.equals("false")))
 					throw new IllegalArgumentException();
-				master.connectServer(this, parts[1], Integer.parseInt(parts[2]), Boolean.parseBoolean(parts[3]), parts[4]);
+				master.connectServer(this, hostname, port, Boolean.parseBoolean(useSsl), profileName);
 				
 			} else if (cmd.equals("disconnect") && parts.length == 2) {
 				master.disconnectServer(this, Integer.parseInt(parts[1]));
