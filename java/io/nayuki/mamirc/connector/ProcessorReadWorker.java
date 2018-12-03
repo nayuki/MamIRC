@@ -124,7 +124,8 @@ final class ProcessorReadWorker extends Thread {
 	}
 	
 	
-	// Thread-safe, and should only be called from MamircConnector or this class itself.
+	// Asynchronously closes the socket; then requests this worker thread to
+	// stop reading lines and stop execution. Can be called from any thread.
 	public void shutdown() {
 		try {
 			socket.close();

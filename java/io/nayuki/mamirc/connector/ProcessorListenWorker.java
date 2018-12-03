@@ -58,6 +58,9 @@ final class ProcessorListenWorker extends Thread {
 	}
 	
 	
+	// Asynchronously closes the server socket; then requests this worker thread to stop
+	// listening for incoming connections, stop waiting, and stop execution. This does not
+	// close any sockets accepted from the server socket. Can be called from any thread.
 	public void shutdown() {
 		try {
 			serverSocket.close();

@@ -76,7 +76,9 @@ public final class OutputWriteWorker extends Thread {
 	}
 	
 	
-	// Can be called safely from any thread.
+	// Asynchronously requests this worker thread to write all previous queued lines,
+	// and stop execution. This does not close the output stream; the reader which
+	// started this writer is responsible for closing it. Can be called from any thread.
 	public void shutdown() {
 		try {
 			queue.put(TERMINATOR);

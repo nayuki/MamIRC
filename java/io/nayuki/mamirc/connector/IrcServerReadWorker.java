@@ -108,8 +108,8 @@ final class IrcServerReadWorker extends Thread {
 	}
 	
 	
-	// Aborts the current read operation (if any), closes the socket immediately, and causes the IrcServerReadWorker
-	// and OutputWriteWorker to shut down cleanly very soon. Can be called from any thread, and is idempotent.
+	// Asynchronously closes the socket; then requests this worker thread to
+	// stop reading lines and stop execution. Can be called from any thread.
 	public void shutdown() {
 		try {
 			socket.close();

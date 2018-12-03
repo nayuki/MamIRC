@@ -166,6 +166,8 @@ final class DatabaseWriteWorker extends Thread {
 	}
 	
 	
+	// Asynchronously requests this worker thread write all previously queued events,
+	// commit to and close the database, and stop execution. Can be called from any thread.
 	public synchronized void shutdown() {
 		writeEvent(TERMINATOR);
 	}
