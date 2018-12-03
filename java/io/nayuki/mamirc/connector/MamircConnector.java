@@ -139,7 +139,7 @@ public final class MamircConnector {
 		Objects.requireNonNull(reader);
 		Objects.requireNonNull(writer);
 		
-		if (processorListener == null) {  // If terminateConnector() has been called by another worker
+		if (processorListener == null) {  // If shutdownConnector() has been called by another worker
 			reader.shutdown();
 			return;
 		}
@@ -213,7 +213,7 @@ public final class MamircConnector {
 	}
 	
 	
-	void terminateConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
+	void shutdownConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
 		Objects.requireNonNull(reader);
 		Collection<Thread> threads = new ArrayList<>();
 		synchronized(this) {
