@@ -112,7 +112,7 @@ public final class MamircConnector {
 			if (scheduler != null)
 				scheduler.shutdown();
 			if (databaseWriter != null)
-				databaseWriter.terminate();
+				databaseWriter.shutdown();
 			if (processorListener != null)
 				processorListener = null;
 			throw e;
@@ -140,11 +140,11 @@ public final class MamircConnector {
 		Objects.requireNonNull(writer);
 		
 		if (processorListener == null) {  // If terminateConnector() has been called by another worker
-			reader.terminate();
+			reader.shutdown();
 			return;
 		}
 		if (processorReader != null)
-			processorReader.terminate();
+			processorReader.shutdown();
 		processorReader = reader;
 		processorWriter = writer;
 		
@@ -194,7 +194,7 @@ public final class MamircConnector {
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info != null) {
 			distributeEvent(info, Event.Type.CONNECTION, "disconnect".getBytes(StandardCharsets.UTF_8));
-			info.reader.terminate();
+			info.reader.shutdown();
 		}
 	}
 	
@@ -221,17 +221,17 @@ public final class MamircConnector {
 				return;
 			scheduler.shutdown();
 			scheduler = null;
-			processorListener.terminate();
+			processorListener.shutdown();
 			processorListener = null;
-			reader.terminate();
+			reader.shutdown();
 			for (ConnectionInfo info : serverConnections.values()) {
-				info.reader.terminate();
+				info.reader.shutdown();
 				threads.add(info.reader);
 			}
 		}
 		for (Thread th : threads)
 			th.join();
-		databaseWriter.terminate();
+		databaseWriter.shutdown();
 		databaseWriter = null;
 	}
 	

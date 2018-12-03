@@ -58,7 +58,7 @@ final class ProcessorListenWorker extends Thread {
 	}
 	
 	
-	public void terminate() {
+	public void shutdown() {
 		try {
 			serverSocket.close();
 			interrupt();

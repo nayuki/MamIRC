@@ -28,7 +28,7 @@ import io.nayuki.mamirc.common.OutputWriteWorker;
  * A worker thread that connects to an IRC server, reads lines, and relays them back to the master.
  * Additional functionality provided:
  * - Creates new socket, relays socket opened/closed events
- * - Creates and terminates a writer thread
+ * - Creates and shuts down a writer thread
  * - Handles SSL functionality
  */
 final class IrcServerReadWorker extends Thread {
@@ -94,19 +94,19 @@ final class IrcServerReadWorker extends Thread {
 				}
 				
 			} finally {
-				writer.terminate();
+				writer.shutdown();
 			}
 		} catch (IOException e) {
 		} finally {
 			master.connectionClosed(connectionId);
-			terminate();
+			shutdown();
 		}
 	}
 	
 	
 	// Aborts the current read operation (if any), closes the socket immediately, and causes the IrcServerReadWorker
-	// and OutputWriteWorker to terminate cleanly very soon. Can be called from any thread, and is idempotent.
-	public void terminate() {
+	// and OutputWriteWorker to shut down cleanly very soon. Can be called from any thread, and is idempotent.
+	public void shutdown() {
 		try {
 			socket.close();
 		} catch (IOException e) {}

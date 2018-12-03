@@ -58,7 +58,7 @@ public final class OutputWriteWorker extends Thread {
 	}
 	
 	
-	// Can be called from any thread. Must not be called after terminate().
+	// Can be called from any thread. Must not be called after shutdown().
 	// Caller must not change the values inside the array after it is passed into this method.
 	public void writeLine(byte[] line) {
 		Objects.requireNonNull(line);
@@ -69,7 +69,7 @@ public final class OutputWriteWorker extends Thread {
 	
 	
 	// 'line' must not contain '\0', '\r', or '\n'. It is converted to bytes in UTF-8.
-	// Can be called safely from any thread. Must not be called after terminate().
+	// Can be called safely from any thread. Must not be called after shutdown().
 	public void writeLine(String line) {
 		Objects.requireNonNull(line);
 		writeLine(line.getBytes(StandardCharsets.UTF_8));
@@ -77,7 +77,7 @@ public final class OutputWriteWorker extends Thread {
 	
 	
 	// Can be called safely from any thread.
-	public void terminate() {
+	public void shutdown() {
 		try {
 			queue.put(TERMINATOR);
 		} catch (InterruptedException e) {}

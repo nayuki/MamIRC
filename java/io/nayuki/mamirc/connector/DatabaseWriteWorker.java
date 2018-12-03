@@ -166,7 +166,7 @@ final class DatabaseWriteWorker extends Thread {
 	}
 	
 	
-	public synchronized void terminate() {
+	public synchronized void shutdown() {
 		writeEvent(TERMINATOR);
 	}
 	

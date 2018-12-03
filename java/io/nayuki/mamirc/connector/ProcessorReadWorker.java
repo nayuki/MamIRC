@@ -49,7 +49,7 @@ final class ProcessorReadWorker extends Thread {
 			// Read password line with time limit
 			LineReader reader;
 			byte[] passwordLine;
-			Future<?> killer = master.scheduler.schedule(() -> terminate(),
+			Future<?> killer = master.scheduler.schedule(() -> shutdown(),
 				AUTHENTICATION_TIMEOUT, TimeUnit.MILLISECONDS);
 			try {
 				reader = new LineReader(socket.getInputStream(), 1000);
@@ -79,11 +79,11 @@ final class ProcessorReadWorker extends Thread {
 					master.detachProcessor(this);
 				}
 			} finally {
-				writer.terminate();  // This reader is exclusively responsible for terminating the writer
+				writer.shutdown();  // This reader is exclusively responsible for shutting down the writer
 			}
 		} catch (IOException|InterruptedException e) {
 		} finally {
-			terminate();
+			shutdown();
 		}
 	}
 	
@@ -120,7 +120,7 @@ final class ProcessorReadWorker extends Thread {
 	
 	
 	// Thread-safe, and should only be called from MamircConnector or this class itself.
-	public void terminate() {
+	public void shutdown() {
 		try {
 			socket.close();
 		} catch (IOException e) {}
