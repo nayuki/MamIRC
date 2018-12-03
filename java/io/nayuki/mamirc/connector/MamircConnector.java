@@ -168,7 +168,7 @@ public final class MamircConnector {
 	}
 	
 	
-	synchronized void connectServer(ProcessorReadWorker reader, String hostname, int port, boolean useSsl, String metadata) {
+	synchronized void connectServer(ProcessorReadWorker reader, String hostname, int port, boolean useSsl, int timeout, String metadata) {
 		Objects.requireNonNull(reader);
 		Objects.requireNonNull(hostname);
 		Objects.requireNonNull(metadata);
@@ -179,7 +179,7 @@ public final class MamircConnector {
 		if (serverConnections.containsKey(conId))
 			throw new AssertionError();
 		ConnectionInfo info = new ConnectionInfo(conId,
-			new IrcServerReadWorker(this, conId, hostname, port, useSsl));
+			new IrcServerReadWorker(this, conId, hostname, port, useSsl, timeout));
 		serverConnections.put(conId, info);
 		String str = "connect " + hostname + " " + port + " " + (useSsl ? "ssl" : "nossl") + " " + metadata;
 		distributeEvent(info, Event.Type.CONNECTION, str.getBytes(StandardCharsets.UTF_8));

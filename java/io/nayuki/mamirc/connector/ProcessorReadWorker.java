@@ -90,21 +90,22 @@ final class ProcessorReadWorker extends Thread {
 	
 	private void handleLine(byte[] line) throws InterruptedException {
 		String lineStr = new String(line, StandardCharsets.UTF_8);
-		String[] parts = lineStr.split(" ", 5);  // At most 5 parts in the current format
+		String[] parts = lineStr.split(" ", 6);  // At most 6 parts in the current format
 		String cmd = parts[0];
 		try {
 			
 			if (cmd.equals("shutdown") && parts.length == 1) {
 				master.shutdownConnector(this, "Explicit command received from Processor connection");
 				
-			} else if (cmd.equals("connect") && parts.length == 5) {
+			} else if (cmd.equals("connect") && parts.length == 6) {
 				String hostname = parts[1];
 				int port = Integer.parseInt(parts[2]);
 				String useSsl = parts[3];
-				String profileName = parts[4];
+				int timeout = Integer.parseInt(parts[4]);
+				String profileName = parts[5];
 				if (!(useSsl.equals("true") || useSsl.equals("false")))
 					throw new IllegalArgumentException();
-				master.connectServer(this, hostname, port, Boolean.parseBoolean(useSsl), profileName);
+				master.connectServer(this, hostname, port, Boolean.parseBoolean(useSsl), timeout, profileName);
 				
 			} else if (cmd.equals("disconnect") && parts.length == 2) {
 				master.disconnectServer(this, Integer.parseInt(parts[1]));

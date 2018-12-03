@@ -42,6 +42,7 @@ final class IrcServerReadWorker extends Thread {
 	private final String hostname;
 	private final int port;
 	private final boolean useSsl;
+	private final int timeout;  // In milliseconds
 	// My state
 	private Socket socket = new Socket();
 	
@@ -51,7 +52,7 @@ final class IrcServerReadWorker extends Thread {
 	
 	// Note: This constructor only sets fields, and does not perform I/O.
 	// The actual socket is created when the new worker thread executes run().
-	public IrcServerReadWorker(MamircConnector master, int conId, String hostname, int port, boolean useSsl) {
+	public IrcServerReadWorker(MamircConnector master, int conId, String hostname, int port, boolean useSsl, int timeout) {
 		super("IRC Server Reader (conId=" + conId + ")");
 		this.master = Objects.requireNonNull(master);
 		this.connectionId = conId;
@@ -60,6 +61,9 @@ final class IrcServerReadWorker extends Thread {
 			throw new IllegalArgumentException("Invalid TCP port number: " + port);
 		this.port = port;
 		this.useSsl = useSsl;
+		if (timeout < 0)
+			throw new IllegalArgumentException("Invalid timeout");
+		this.timeout = timeout;
 		start();
 	}
 	
@@ -70,7 +74,7 @@ final class IrcServerReadWorker extends Thread {
 	public void run() {
 		try {
 			// Create socket connection
-			socket.connect(new InetSocketAddress(hostname, port), CONNECTION_TIMEOUT);
+			socket.connect(new InetSocketAddress(hostname, port), timeout);
 			if (useSsl)
 				socket = SsfHolder.SSL_SOCKET_FACTORY.createSocket(socket, hostname, port, true);
 			
@@ -111,9 +115,6 @@ final class IrcServerReadWorker extends Thread {
 			socket.close();
 		} catch (IOException e) {}
 	}
-	
-	
-	private static final int CONNECTION_TIMEOUT = 30000;  // In milliseconds
 	
 	
 	
