@@ -35,24 +35,26 @@ public final class MamircConnector {
 	/*---- Stub main program ----*/
 	
 	public static void main(String[] args) throws SQLiteException {
-		if (args.length != 1) {
-			System.err.println("Usage: java io/nayuki/mamirc/connector/MamircConnector Configuration.sqlite");
-			System.exit(1);
-		}
+		if (args.length != 1)
+			errorExit("Usage: java io/nayuki/mamirc/connector/MamircConnector Configuration.sqlite");
 		
 		Logger.getLogger("com.almworks.sqlite4java").setLevel(Level.OFF);
 		File config = new File(args[0]);
-		if (!config.isFile()) {
-			System.err.println("Non-existent configuration file: " + args[0]);
-			System.exit(1);
-		}
+		if (!config.isFile())
+			errorExit("Non-existent configuration file: " + args[0]);
 		
 		try {
 			new MamircConnector(config);
 		} catch (Throwable e) {
-			System.err.println(e.getClass().getSimpleName() + ": " + e.getMessage());
-			System.exit(1);
+			errorExit(e.getClass().getSimpleName() + ": " + e.getMessage());
 		}
+	}
+	
+	
+	// Only called by main().
+	private static void errorExit(String msg) {
+		System.err.println(msg);
+		System.exit(1);
 	}
 	
 	
