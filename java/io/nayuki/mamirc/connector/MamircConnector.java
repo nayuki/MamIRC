@@ -23,9 +23,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.almworks.sqlite4java.SQLiteConnection;
 import com.almworks.sqlite4java.SQLiteException;
-import com.almworks.sqlite4java.SQLiteStatement;
+import io.nayuki.mamirc.common.BasicConfigurationDatabase;
 import io.nayuki.mamirc.common.Event;
 import io.nayuki.mamirc.common.OutputWriteWorker;
 
@@ -81,16 +80,12 @@ public final class MamircConnector {
 		byte[] password;
 		
 		// Start reading config DB file
-		SQLiteConnection dbCon = new SQLiteConnection(config);
-		try {
-			dbCon.openReadonly();
-			SQLiteStatement getConfig = dbCon.prepare("SELECT value FROM main WHERE key=?");
-			
+		try (BasicConfigurationDatabase configDb = new BasicConfigurationDatabase(config)) {
 			// Retrieve and parse various fields
-			serverPort = Integer.parseInt(getConfigValue(getConfig, "connector server port"));
-			archiveDb = new File(getConfigValue(getConfig, "archive database file"));
+			serverPort = Integer.parseInt(configDb.getValue("connector server port"));
+			archiveDb = new File(configDb.getValue("archive database file"));
 			
-			String pswd = getConfigValue(getConfig, "connector password");
+			String pswd = configDb.getValue("connector password");
 			password = new byte[pswd.length()];
 			for (int i = 0; i < pswd.length(); i++) {
 				char c = pswd.charAt(i);
@@ -98,9 +93,6 @@ public final class MamircConnector {
 					throw new IllegalArgumentException("Password character outside of range [U+00, U+FF]");
 				password[i] = (byte)c;  // Truncate Unicode code point into byte
 			}
-			
-		} finally {
-			dbCon.dispose();
 		}
 		
 		try {
@@ -116,18 +108,6 @@ public final class MamircConnector {
 			if (processorListener != null)
 				processorListener = null;
 			throw e;
-		}
-	}
-	
-	
-	private String getConfigValue(SQLiteStatement getConfig, String key) throws SQLiteException {
-		try {
-			getConfig.bind(1, key);
-			if (getConfig.step())
-				return getConfig.columnString(0);
-			throw new IllegalArgumentException("Missing configuration key: \"" + key + "\"");
-		} finally {
-			getConfig.reset();
 		}
 	}
 	
