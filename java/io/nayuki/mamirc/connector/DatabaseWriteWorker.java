@@ -24,6 +24,8 @@ final class DatabaseWriteWorker extends WorkerThread {
 	
 	/*---- Fields ----*/
 	
+	private final MamircConnector master;
+	
 	private final File databaseFile;
 	private SQLiteConnection database;
 	private SQLiteStatement addEvent;
@@ -41,8 +43,9 @@ final class DatabaseWriteWorker extends WorkerThread {
 	// This performs some initial database operations synchronously.
 	// If an exception is thrown (e.g. cannot write), then the caller can
 	// abort the initialization more easily (with fewer worker threads running).
-	public DatabaseWriteWorker(File file) throws SQLiteException {
+	public DatabaseWriteWorker(MamircConnector master, File file) throws SQLiteException {
 		super("Database Writer");
+		this.master  = Objects.requireNonNull(master);
 		databaseFile = Objects.requireNonNull(file);
 		database = new SQLiteConnection(file);
 		try {
@@ -99,6 +102,9 @@ final class DatabaseWriteWorker extends WorkerThread {
 				isWriting = false;
 				notifyAll();
 			}
+		} catch (SQLiteException e) {
+			master.shutdown("Database write worker exception");
+			throw e;
 		} finally {
 			database.dispose();
 		}

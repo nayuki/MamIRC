@@ -68,6 +68,7 @@ public final class MamircConnector {
 	private OutputWriteWorker processorWriter = null;
 	
 	private final Map<Integer,ConnectionInfo> serverConnections = new HashMap<>();
+	private boolean isShuttingDown = false;
 	
 	
 	
@@ -97,16 +98,10 @@ public final class MamircConnector {
 		
 		try {
 			scheduler = Executors.newSingleThreadScheduledExecutor();
-			databaseWriter = new DatabaseWriteWorker(archiveDb);
+			databaseWriter = new DatabaseWriteWorker(this, archiveDb);
 			processorListener = new ProcessorListenWorker(this, serverPort, password);
-			
-		} catch (IOException e) {
-			if (scheduler != null)
-				scheduler.shutdown();
-			if (databaseWriter != null)
-				databaseWriter.shutdown();
-			if (processorListener != null)
-				processorListener = null;
+		} catch (SQLiteException|IOException e) {
+			shutdown("Error in initialization");
 			throw e;
 		}
 	}
@@ -119,7 +114,7 @@ public final class MamircConnector {
 		Objects.requireNonNull(reader);
 		Objects.requireNonNull(writer);
 		
-		if (processorListener == null) {  // If shutdownConnector() has been called by another worker
+		if (isShuttingDown) {
 			reader.shutdown();
 			return;
 		}
@@ -193,26 +188,14 @@ public final class MamircConnector {
 	}
 	
 	
-	void shutdownConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
+	synchronized void shutdownConnector(ProcessorReadWorker reader, String reason) throws InterruptedException {
 		Objects.requireNonNull(reader);
-		Collection<Thread> threads = new ArrayList<>();
 		synchronized(this) {
 			if (reader != processorReader)
 				return;
-			scheduler.shutdown();
-			scheduler = null;
-			processorListener.shutdown();
-			processorListener = null;
-			reader.shutdown();
-			for (ConnectionInfo info : serverConnections.values()) {
-				info.reader.shutdown();
-				threads.add(info.reader);
-			}
+			isShuttingDown = true;
 		}
-		for (Thread th : threads)
-			th.join();
-		databaseWriter.shutdown();
-		databaseWriter = null;
+		shutdown(reason);
 	}
 	
 	
@@ -242,6 +225,8 @@ public final class MamircConnector {
 	
 	synchronized void messageReceived(int conId, byte[] line) {
 		Objects.requireNonNull(line);
+		if (isShuttingDown)
+			return;
 		ConnectionInfo info = serverConnections.get(conId);
 		if (info != null)
 			distributeEvent(info, Event.Type.RECEIVE, line);
@@ -262,6 +247,45 @@ public final class MamircConnector {
 			}
 		}
 		databaseWriter.writeEvent(ev);
+	}
+	
+	
+	
+	/*---- Miscellaneous methods ----*/
+	
+	// When calling this method, the thread must not hold the lock for this object.
+	void shutdown(String reason) {
+		Objects.requireNonNull(reason);
+		System.err.println("MamIRC Connector shutting down: " + reason);
+		Collection<Thread> threads = new ArrayList<>();
+		synchronized(this) {
+			isShuttingDown = true;
+			if (scheduler != null) {
+				scheduler.shutdown();
+				scheduler = null;
+			}
+			if (processorListener != null) {
+				processorListener.shutdown();
+				processorListener = null;
+			}
+			if (processorReader != null) {
+				processorReader.shutdown();
+				processorReader = null;
+				processorWriter = null;
+			}
+			for (ConnectionInfo info : serverConnections.values()) {
+				info.reader.shutdown();
+				threads.add(info.reader);
+			}
+		}
+		try {
+			for (Thread th : threads)
+				th.join();
+		} catch (InterruptedException e) {}
+		synchronized(this) {
+			databaseWriter.shutdown();
+			databaseWriter = null;
+		}
 	}
 	
 	

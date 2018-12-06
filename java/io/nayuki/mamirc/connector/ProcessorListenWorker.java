@@ -54,6 +54,9 @@ final class ProcessorListenWorker extends WorkerThread {
 				new ProcessorReadWorker(master, sock, password);
 				Thread.sleep(100);  // Safety delay
 			}
+		} catch (IOException e) {
+			master.shutdown("Processor listen worker exception");
+			throw e;
 		}
 	}
 	
