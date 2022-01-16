@@ -16,7 +16,8 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 
-// Represents the state of an IRC client connected to an IRC server, for the duration of a single connection.
+// Represents the state of an IRC client connected to an IRC server,
+// for the duration of a single connection. Mutable and not thread-safe.
 final class SessionState {
 	
 	/*---- Fields ----*/

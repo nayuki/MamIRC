@@ -20,10 +20,16 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	/*---- Fields ----*/
 	
-	private Map<String,ConnectionAttemptState> attempts;  // Not null
+	// The map, keys, and values are all not null.
+	private Map<String,NetworkProfile> profiles;
 	
-	private boolean isRealtime;  // Initially false
+	// The map, keys, and values are all not null.
+	private Map<String,ConnectionAttemptState> attempts;
 	
+	// Initially false. Changes to true when finishCatchup() is called, and stays true thereafter.
+	private boolean isRealtime;
+	
+	// The object used for upstream requests, such as making connections and sending lines out to IRC servers.
 	private MamircProcessor master;
 	
 	private Timer timer;
@@ -32,6 +38,7 @@ final class LiveEventProcessor extends EventProcessor {
 	
 	/*---- Constructors ----*/
 	
+	// Constructs an event processor with the given message manager and MamIRC Processor.
 	public LiveEventProcessor(MessageManager msgSink, MamircProcessor master) {
 		super(msgSink);
 		if (master == null)

@@ -22,18 +22,20 @@ class EventProcessor {
 	
 	/*---- Fields ----*/
 	
-	protected Map<Integer,SessionState> sessions;  // Not null
+	// Maps connection ID to session state. The map, keys, and values are all not null.
+	protected Map<Integer,SessionState> sessions;
 	
-	protected Map<String,NetworkProfile> profiles;
+	// The downstream object that receives new window messages as events are processed. Not null.
+	protected MessageManager msgSink;
 	
-	protected MessageManager msgSink;  // Not null
-	
-	protected StateUpdateHistory updateMgr;  // Not null
+	// The downstream object that receives state updates as events are processed. Not null.
+	protected StateUpdateHistory updateMgr;
 	
 	
 	
 	/*---- Constructors ----*/
 	
+	// Constructs an event processor with the given message manager and a default no-op state update history.
 	public EventProcessor(MessageManager msgSink) {
 		if (msgSink == null || updateMgr == null)
 			throw new NullPointerException();
