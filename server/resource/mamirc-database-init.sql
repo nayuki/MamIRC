@@ -21,12 +21,12 @@ CREATE TABLE profile_configuration(
 	character_encoding  TEXT    NOT NULL                                             )
 
 CREATE TABLE profile_servers(
-	profile_id          INTEGER NOT NULL  REFERENCES irc_network_profiles   ,
-	ordering            INTEGER NOT NULL                                    ,
-	hostname            TEXT    NOT NULL                                    ,
-	port                INTEGER NOT NULL  CHECK(port between 0 and 65535)   ,
-	tls_mode            INTEGER NOT NULL  CHECK(tls_mode between 0 and 2)   ,
-	PRIMARY KEY(profile_id, ordering)                                       )
+	profile_id          INTEGER NOT NULL  REFERENCES irc_network_profiles,
+	ordering            INTEGER NOT NULL                                 ,
+	hostname            TEXT    NOT NULL                                 ,
+	port                INTEGER NOT NULL  CHECK(port between 0 and 65535),
+	tls_mode            INTEGER NOT NULL  CHECK(tls_mode between 0 and 2),
+	PRIMARY KEY(profile_id, ordering)                                    )
 
 CREATE TABLE profile_nicknames(
 	profile_id          INTEGER NOT NULL  REFERENCES irc_network_profiles,
@@ -62,10 +62,10 @@ CREATE INDEX message_windows_index_0 ON message_windows(
 	canonical_name, window_id)
 
 CREATE TABLE processed_messages(
-	window_id  INTEGER NOT NULL  REFERENCES message_windows,
-	sequence   INTEGER NOT NULL  CHECK(sequence >= 0)      ,
-	data       TEXT    NOT NULL                            ,
+	window_id    INTEGER NOT NULL  REFERENCES message_windows,
+	sequence     INTEGER NOT NULL  CHECK(sequence >= 0)      ,
+	data         TEXT    NOT NULL                            ,
 	marked_read  INTEGER NOT NULL  CHECK(marked_read in(0,1)),
-	PRIMARY KEY(window_id, sequence)                       )
+	PRIMARY KEY(window_id, sequence)                         )
 
 COMMIT TRANSACTION
