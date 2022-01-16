@@ -18,7 +18,7 @@ import java.util.Optional;
 import io.nayuki.mamirc.IrcNetworkProfile.Server;
 
 
-public final class Database implements AutoCloseable {
+final class Database implements AutoCloseable {
 	
 	private Connection connection;
 	private Statement statement;

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public final class IrcNetworkProfile {
+final class IrcNetworkProfile {
 	
 	public int id;
 	public String name;
