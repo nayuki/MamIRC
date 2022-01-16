@@ -10,7 +10,8 @@ CREATE TABLE configuration(
 
 CREATE TABLE irc_network_profiles(
 	profile_id    INTEGER NOT NULL  PRIMARY KEY,
-	profile_name  TEXT    NOT NULL             )
+	profile_name  TEXT    NOT NULL             ,
+	UNIQUE(profile_name)                       )
 
 CREATE TABLE profile_configuration(
 	profile_id          INTEGER NOT NULL  PRIMARY KEY REFERENCES irc_network_profiles,
@@ -23,9 +24,8 @@ CREATE TABLE profile_servers(
 	profile_id          INTEGER NOT NULL  REFERENCES irc_network_profiles   ,
 	ordering            INTEGER NOT NULL                                    ,
 	hostname            TEXT    NOT NULL                                    ,
-	port                INTEGER NOT NULL                                    ,
-	use_tls             INTEGER NOT NULL  check(use_tls in (0,1))           ,
-	verify_certificate  INTEGER NOT NULL  check(verify_certificate in (0,1)),
+	port                INTEGER NOT NULL  check(port between 0 and 65535)   ,
+	tls_mode            INTEGER NOT NULL  check(tls_mode between 0 and 2)   ,
 	PRIMARY KEY(profile_id, ordering)                                       )
 
 CREATE TABLE profile_nicknames(
