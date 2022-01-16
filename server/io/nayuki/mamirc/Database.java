@@ -7,8 +7,12 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Objects;
+import java.util.Optional;
 
 
 public final class Database implements AutoCloseable {
@@ -64,6 +68,28 @@ public final class Database implements AutoCloseable {
 			connection.close();
 		} catch (SQLException e) {
 			throw new IOException(e);
+		}
+	}
+	
+	
+	public Optional<String> getConfigurationValue(String key) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("SELECT value FROM configuration WHERE key=?")) {
+			st.setString(1, Objects.requireNonNull(key));
+			try (ResultSet rs = st.executeQuery()) {
+				if (!rs.next())
+					return Optional.empty();
+				else
+					return Optional.of(rs.getString(1));
+			}
+		}
+	}
+	
+	
+	public void setConfigurationValue(String key, String val) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("INSERT OR REPLACE INTO configuration VALUES (?,?)")) {
+			st.setString(1, Objects.requireNonNull(key));
+			st.setString(2, Objects.requireNonNull(val));
+			st.executeUpdate();
 		}
 	}
 	
