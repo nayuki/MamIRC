@@ -65,6 +65,7 @@ CREATE TABLE processed_messages(
 	window_id  INTEGER NOT NULL  REFERENCES message_windows,
 	sequence   INTEGER NOT NULL  CHECK(sequence >= 0)      ,
 	data       TEXT    NOT NULL                            ,
+	marked_read  INTEGER NOT NULL  CHECK(marked_read in(0,1)),
 	PRIMARY KEY(window_id, sequence)                       )
 
 COMMIT TRANSACTION
