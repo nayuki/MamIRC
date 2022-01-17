@@ -24,7 +24,7 @@ abstract class ConnectionEvent {
 	
 	public static final class Opened extends ConnectionEvent {
 		public InetAddress ipAddress;
-
+		
 		public Opened(InetAddress ipAddress) {
 			this.ipAddress = ipAddress;
 		}
@@ -33,7 +33,7 @@ abstract class ConnectionEvent {
 	
 	public static final class LineReceived extends ConnectionEvent {
 		public byte[] line;
-
+		
 		public LineReceived(byte[] line) {
 			this.line = line;
 		}
@@ -42,7 +42,7 @@ abstract class ConnectionEvent {
 	
 	public static final class LineSent extends ConnectionEvent {
 		public byte[] line;
-
+		
 		public LineSent(byte[] line) {
 			this.line = line;
 		}
@@ -51,7 +51,7 @@ abstract class ConnectionEvent {
 	
 	public static final class ReadException extends ConnectionEvent {
 		public String message;
-
+		
 		public ReadException(String message) {
 			this.message = message;
 		}
@@ -60,7 +60,7 @@ abstract class ConnectionEvent {
 	
 	public static final class WriteException extends ConnectionEvent {
 		public String message;
-
+		
 		public WriteException(String message) {
 			this.message = message;
 		}
