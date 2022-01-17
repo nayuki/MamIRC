@@ -205,4 +205,26 @@ final class Database implements AutoCloseable {
 		}
 	}
 	
+	
+	public long addConnection(int profileId) throws SQLException {
+		statement.executeUpdate("BEGIN IMMEDIATE TRANSACTION");
+		boolean ok = false;
+		try {
+			long result;
+			try (ResultSet rs = statement.executeQuery("SELECT ifnull(max(connection_id)+1,0) FROM connections")) {
+				result = rs.getLong(1);
+			}
+			try (PreparedStatement st = connection.prepareStatement("INSERT INTO connections(connection_id, profile_id) VALUES (?,?)")) {
+				st.setLong(1, result);
+				st.setInt(2, profileId);
+				if (st.executeUpdate() != 1)
+					throw new SQLException();
+			}
+			ok = true;
+			return result;
+		} finally {
+			statement.executeUpdate(ok ? "COMMIT TRANSACTION" : "ROLLBACK TRANSACTION");
+		}
+	}
+	
 }
