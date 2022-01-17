@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Queue;
@@ -17,6 +18,8 @@ final class IrcServerConnection {
 	private final String hostname;
 	private final int port;
 	private final TlsMode tlsMode;
+	private final String characterEncoding;
+	private final Charset charset;
 	
 	private final Core consumer;
 	
@@ -24,11 +27,13 @@ final class IrcServerConnection {
 	private boolean closeRequested = false;
 	
 	
-	public IrcServerConnection(String hostname, int port, TlsMode tlsMode, Core consumer) {
+	public IrcServerConnection(String hostname, int port, TlsMode tlsMode, String characterEncoding, Core consumer) {
 		this.hostname = hostname;
 		this.port = port;
 		this.tlsMode = tlsMode;
 		this.consumer = consumer;
+		this.characterEncoding = characterEncoding;
+		charset = Charset.forName(characterEncoding);
 		new Thread(this::readWorker).start();
 	}
 	
