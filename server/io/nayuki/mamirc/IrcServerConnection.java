@@ -4,22 +4,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
-import io.nayuki.mamirc.IrcNetworkProfile.Server.TlsMode;
 
 
 final class IrcServerConnection {
 	
-	private final String hostname;
-	private final int port;
-	private final TlsMode tlsMode;
-	private final String characterEncoding;
-	private final Charset charset;
+	private final IrcNetworkProfile profile;
 	
 	private final Core consumer;
 	
@@ -27,13 +21,9 @@ final class IrcServerConnection {
 	private boolean closeRequested = false;
 	
 	
-	public IrcServerConnection(String hostname, int port, TlsMode tlsMode, String characterEncoding, Core consumer) {
-		this.hostname = hostname;
-		this.port = port;
-		this.tlsMode = tlsMode;
+	public IrcServerConnection(IrcNetworkProfile profile, Core consumer) {
+		this.profile = profile;
 		this.consumer = consumer;
-		this.characterEncoding = characterEncoding;
-		charset = Charset.forName(characterEncoding);
 		new Thread(this::readWorker).start();
 	}
 	
@@ -61,8 +51,9 @@ final class IrcServerConnection {
 	/*---- Reader members ----*/
 	
 	private void readWorker() {
-		postEvent(new ConnectionEvent.Opening(hostname, port));
-		try (Socket sock = new Socket(hostname, port)) {
+		IrcNetworkProfile.Server serv = profile.servers.get(0);
+		postEvent(new ConnectionEvent.Opening(serv.hostname, serv.port));
+		try (Socket sock = new Socket(serv.hostname, serv.port)) {
 			postEvent(new ConnectionEvent.Opened(sock.getInetAddress()));
 			synchronized(this) {
 				socket = sock;
