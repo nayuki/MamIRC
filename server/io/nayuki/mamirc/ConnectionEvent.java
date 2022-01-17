@@ -3,6 +3,7 @@ package io.nayuki.mamirc;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,11 +12,17 @@ abstract class ConnectionEvent {
 	
 	public long timestampUnixMs = System.currentTimeMillis();
 	
+	public abstract byte[] toBytes();
+	
 	
 	
 	/*---- Subclasses ----*/
 	
 	private static abstract class ConnectionEventStringRepr extends ConnectionEvent {
+		public byte[] toBytes() {
+			return toBytesAsString().getBytes(StandardCharsets.UTF_8);
+		}
+		
 		protected abstract String toBytesAsString();
 	}
 	
@@ -71,6 +78,13 @@ abstract class ConnectionEvent {
 		public LineReceived(byte[] line) {
 			this.line = line;
 		}
+		
+		public byte[] toBytes() {
+			byte[] result = new byte[Math.addExact(line.length, 1)];
+			result[0] = 'R';
+			System.arraycopy(line, 0, result, 1, line.length);
+			return result;
+		}
 	}
 	
 	
@@ -79,6 +93,13 @@ abstract class ConnectionEvent {
 		
 		public LineSent(byte[] line) {
 			this.line = line;
+		}
+		
+		public byte[] toBytes() {
+			byte[] result = new byte[Math.addExact(line.length, 1)];
+			result[0] = 'S';
+			System.arraycopy(line, 0, result, 1, line.length);
+			return result;
 		}
 	}
 	
