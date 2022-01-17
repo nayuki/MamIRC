@@ -30,14 +30,16 @@ abstract class ConnectionEvent {
 	public static final class Opening extends ConnectionEventStringRepr {
 		public String hostname;
 		public int port;
+		public String characterEncoding;
 		
-		public Opening(String hostname, int port) {
+		public Opening(String hostname, int port, String characterEncoding) {
 			this.hostname = hostname;
 			this.port = port;
+			this.characterEncoding = characterEncoding;
 		}
 		
 		protected String toBytesAsString() {
-			return String.format("opening\n%s\n%d", hostname, port);
+			return String.format("opening\n%s\n%d\n%s", hostname, port, characterEncoding);
 		}
 	}
 	

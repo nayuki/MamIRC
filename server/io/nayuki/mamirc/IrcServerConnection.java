@@ -52,7 +52,7 @@ final class IrcServerConnection {
 	
 	private void readWorker() {
 		IrcNetworkProfile.Server serv = profile.servers.get(0);
-		postEvent(new ConnectionEvent.Opening(serv.hostname, serv.port));
+		postEvent(new ConnectionEvent.Opening(serv.hostname, serv.port, profile.characterEncoding));
 		try (Socket sock = new Socket(serv.hostname, serv.port)) {
 			postEvent(new ConnectionEvent.Opened(sock.getInetAddress()));
 			synchronized(this) {
