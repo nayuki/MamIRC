@@ -18,9 +18,12 @@ final class Core {
 	
 	private Map<IrcServerConnection,ConnectionState> connectionToState = new HashMap<>();
 	
+	private Archiver archiver;
+	
 	
 	public Core(File dbFile) {
 		this.databaseFile = dbFile;
+		archiver = new Archiver(dbFile);
 		new Thread(this::worker).start();
 	}
 	
@@ -33,7 +36,9 @@ final class Core {
 				synchronized(this) {
 					if (!connectionToState.containsKey(ace.connection))
 						continue;
-					connectionToState.get(ace.connection).handle(ace.event, ace.connection);
+					ConnectionState state = connectionToState.get(ace.connection);
+					archiver.postEvent(state.connectionId, ace.event);
+					state.handle(ace.event, ace.connection);
 				}
 			}
 		} catch (InterruptedException e) {

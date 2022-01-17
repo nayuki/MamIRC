@@ -227,4 +227,25 @@ final class Database implements AutoCloseable {
 		}
 	}
 	
+	
+	public void beginImmediateTransaction() throws SQLException {
+		statement.executeUpdate("BEGIN IMMEDIATE TRANSACTION");
+	}
+	
+	
+	public void commitTransaction() throws SQLException {
+		statement.executeUpdate("COMMIT TRANSACTION");
+	}
+	
+	
+	public void addConnectionEvent(long connectionId, ConnectionEvent event) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("INSERT INTO connection_events(connection_id, sequence, timestamp_unix_ms, data) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM connection_events WHERE connection_id=?),?,?)")) {
+			st.setLong(1, connectionId);
+			st.setLong(2, connectionId);
+			st.setLong(3, event.timestampUnixMs);
+			st.setBytes(4, event.toBytes());
+			st.executeUpdate();
+		}
+	}
+	
 }
