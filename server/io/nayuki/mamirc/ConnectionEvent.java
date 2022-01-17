@@ -1,6 +1,10 @@
 package io.nayuki.mamirc;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 
 abstract class ConnectionEvent {
@@ -11,7 +15,12 @@ abstract class ConnectionEvent {
 	
 	/*---- Subclasses ----*/
 	
-	public static final class Opening extends ConnectionEvent {
+	private static abstract class ConnectionEventStringRepr extends ConnectionEvent {
+		protected abstract String toBytesAsString();
+	}
+	
+	
+	public static final class Opening extends ConnectionEventStringRepr {
 		public String hostname;
 		public int port;
 		
@@ -19,14 +28,39 @@ abstract class ConnectionEvent {
 			this.hostname = hostname;
 			this.port = port;
 		}
+		
+		protected String toBytesAsString() {
+			return String.format("opening\n%s\n%d", hostname, port);
+		}
 	}
 	
 	
-	public static final class Opened extends ConnectionEvent {
+	public static final class Opened extends ConnectionEventStringRepr {
 		public InetAddress ipAddress;
 		
 		public Opened(InetAddress ipAddress) {
 			this.ipAddress = ipAddress;
+		}
+		
+		protected String toBytesAsString() {
+			String ipStr;
+			byte[] raw = ipAddress.getAddress();
+			List<String> parts = new ArrayList<>();
+			if (ipAddress instanceof Inet4Address) {
+				for (byte b : raw)
+					parts.add(Integer.toString(b & 0xFF));
+				ipStr = String.join(".", parts);
+			} else if (ipAddress instanceof Inet6Address) {
+				for (int i = 0; i < raw.length; i += 2) {
+					int word =
+						(raw[i + 0] & 0xFF) << 8 |
+						(raw[i + 1] & 0xFF) << 0;
+					parts.add(String.format("%04x", word));
+				}
+				ipStr = String.join(":", parts);
+			} else
+				throw new AssertionError();
+			return String.format("opened\n%s", ipStr);
 		}
 	}
 	
@@ -49,27 +83,43 @@ abstract class ConnectionEvent {
 	}
 	
 	
-	public static final class ReadException extends ConnectionEvent {
+	public static final class ReadException extends ConnectionEventStringRepr {
 		public String message;
 		
 		public ReadException(String message) {
 			this.message = message;
 		}
+		
+		protected String toBytesAsString() {
+			return String.format("read exception\n%s", message);
+		}
 	}
 	
 	
-	public static final class WriteException extends ConnectionEvent {
+	public static final class WriteException extends ConnectionEventStringRepr {
 		public String message;
 		
 		public WriteException(String message) {
 			this.message = message;
 		}
+		
+		protected String toBytesAsString() {
+			return String.format("write exception\n%s", message);
+		}
 	}
 	
 	
-	public static final class Closing extends ConnectionEvent {}
+	public static final class Closing extends ConnectionEventStringRepr {
+		protected String toBytesAsString() {
+			return "closing";
+		}
+	}
 	
 	
-	public static final class Closed extends ConnectionEvent {}
+	public static final class Closed extends ConnectionEventStringRepr {
+		protected String toBytesAsString() {
+			return "closed";
+		}
+	}
 	
 }
