@@ -20,7 +20,8 @@ final class IrcServerConnection {
 	
 	private final Core consumer;
 	
-	private Socket socket;
+	private Socket socket = null;
+	private boolean closeRequested = false;
 	
 	
 	public IrcServerConnection(String hostname, int port, TlsMode tlsMode, Core consumer) {
@@ -38,9 +39,16 @@ final class IrcServerConnection {
 	
 	
 	public void close() throws IOException {
+		synchronized(this) {
+			if (socket == null)
+				closeRequested = true;
+			else {
+				postEvent(new ConnectionEvent.Closing());
+				socket.close();
+			}
+		}
 		writeQueue.add(Optional.empty());
 		writeQueueLength.release();
-		socket.close();
 	}
 	
 	
@@ -49,10 +57,18 @@ final class IrcServerConnection {
 	
 	private void readWorker() {
 		postEvent(new ConnectionEvent.Opening(hostname, port));
-		try (Socket sock = socket = new Socket(hostname, port)) {
+		try (Socket sock = new Socket(hostname, port)) {
 			postEvent(new ConnectionEvent.Opened(sock.getInetAddress()));
-			new Thread(this::writeWorker).start();
+			synchronized(this) {
+				socket = sock;
+				if (closeRequested) {
+					postEvent(new ConnectionEvent.Closing());
+					socket.close();
+					return;
+				}
+			}
 			
+			new Thread(this::writeWorker).start();
 			InputStream in = sock.getInputStream();
 			byte[] readBuf = new byte[READ_BUFFER_SIZE];
 			byte prevByte = 0;
