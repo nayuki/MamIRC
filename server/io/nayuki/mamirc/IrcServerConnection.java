@@ -135,7 +135,7 @@ final class IrcServerConnection {
 					lineBuf[lineLen++] = '\r';
 					lineBuf[lineLen++] = '\n';
 					out.write(lineBuf, 0, lineLen);
-					postEvent(new ConnectionEvent.LineSent(Arrays.copyOf(lineBuf, lineLen)));
+					postEvent(new ConnectionEvent.LineSent(Arrays.copyOf(lineBuf, lineLen - 2)));
 				}
 			}
 			

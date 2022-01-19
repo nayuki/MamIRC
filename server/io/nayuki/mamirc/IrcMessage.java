@@ -43,6 +43,8 @@ final class IrcMessage {
 	
 	public static IrcMessage parseLine(String line) {
 		Objects.requireNonNull(line);
+		if (line.contains("\r") || line.contains("\n"))
+			throw new IllegalArgumentException("Syntax error");
 		int start = 0;
 		
 		// Prefix

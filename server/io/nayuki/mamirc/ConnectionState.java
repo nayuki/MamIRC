@@ -78,7 +78,7 @@ final class ConnectionState {
 		}
 		
 		else if (ev instanceof ConnectionEvent.LineSent) {
-			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
+			String line = new String(((ConnectionEvent.LineSent)ev).line, charset);
 			IrcMessage msg;
 			try {
 				msg = IrcMessage.parseLine(line);
