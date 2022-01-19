@@ -61,6 +61,12 @@ final class ConnectionState {
 							if (who.equals(currentNickname.get())) {
 								if (!joinedChannels.containsKey(chan))
 									joinedChannels.put(chan, new IrcChannel());
+							} else {
+								if (joinedChannels.containsKey(chan)) {
+									IrcChannel chanState = joinedChannels.get(chan);
+									if (!chanState.users.containsKey(who))
+										chanState.users.put(who, new IrcUser());
+								}
 							}
 						}
 					}
@@ -78,6 +84,17 @@ final class ConnectionState {
 						if (!(1 <= chans.length && chans.length == users.length))
 							return;
 						
+						for (int i = 0; i < chans.length; i++) {
+							String chan = toCanonicalCase(chans[i]);
+							String user = users[i];
+							if (!user.equals(currentNickname.get())) {
+								if (joinedChannels.containsKey(chan)) {
+									IrcChannel chanState = joinedChannels.get(chan);
+									if (chanState.users.containsKey(user))
+										chanState.users.remove(user);
+								}
+							}
+						}
 						for (int i = 0; i < chans.length; i++) {
 							String chan = toCanonicalCase(chans[i]);
 							String user = users[i];
@@ -100,6 +117,13 @@ final class ConnectionState {
 							if (fromName.equals(currentNickname.get())) {
 								currentNickname = Optional.of(toName);
 							}
+							for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
+								IrcChannel chanState = entry.getValue();
+								IrcUser userState = chanState.users.remove(fromName);
+								if (userState != null) {
+									chanState.users.put(toName, userState);
+								}
+							}
 						}
 					}
 					break;
@@ -113,7 +137,23 @@ final class ConnectionState {
 							if (who.equals(currentNickname.get())) {
 								if (joinedChannels.containsKey(chan))
 									joinedChannels.remove(chan);
+							} else {
+								if (joinedChannels.containsKey(chan)) {
+									IrcChannel chanState = joinedChannels.get(chan);
+									if (chanState.users.containsKey(who))
+										chanState.users.remove(who);
+								}
 							}
+						}
+					}
+					break;
+				}
+				
+				case "QUIT": {
+					if (prefix.isPresent()) {
+						String who = prefix.get().name;
+						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
+							entry.getValue().users.remove(who);
 						}
 					}
 					break;
