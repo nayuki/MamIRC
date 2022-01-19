@@ -1,7 +1,10 @@
 package io.nayuki.mamirc;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -14,6 +17,8 @@ final class ConnectionState {
 	private boolean isRegistrationHandled = false;
 	
 	private Optional<String> currentNickname = Optional.empty();
+	
+	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
 	
 	
@@ -43,6 +48,43 @@ final class ConnectionState {
 			int paramsLen = params.size();
 			
 			switch (msg.command) {
+				case "JOIN": {
+					if (prefix.isPresent() && 0 < paramsLen) {
+						String who = prefix.get().name;
+						for (String chan : params.get(0).split(",", -1)) {
+							chan = toCanonicalCase(chan);
+							if (who.equals(currentNickname.get())) {
+								if (!joinedChannels.containsKey(chan))
+									joinedChannels.put(chan, new IrcChannel());
+							}
+						}
+					}
+					break;
+				}
+				
+				case "KICK": {
+					if (1 < paramsLen) {
+						String[] chans = params.get(0).split(",", -1);
+						String[] users = params.get(1).split(",", -1);
+						if (chans.length == 1 && users.length > 1) {
+							chans = Arrays.copyOf(chans, users.length);
+							Arrays.fill(chans, chans[0]);
+						}
+						if (!(1 <= chans.length && chans.length == users.length))
+							return;
+						
+						for (int i = 0; i < chans.length; i++) {
+							String chan = toCanonicalCase(chans[i]);
+							String user = users[i];
+							if (user.equals(currentNickname.get())) {
+								if (joinedChannels.containsKey(chan))
+									joinedChannels.remove(chan);
+							}
+						}
+					}
+					break;
+				}
+				
 				case "NICK": {
 					if (isRegistrationHandled) {
 						if (prefix.isPresent() && 0 < paramsLen) {
@@ -52,6 +94,20 @@ final class ConnectionState {
 								throw new IllegalStateException();
 							if (fromName.equals(currentNickname.get())) {
 								currentNickname = Optional.of(toName);
+							}
+						}
+					}
+					break;
+				}
+				
+				case "PART": {
+					if (prefix.isPresent() && 0 < paramsLen) {
+						String who = prefix.get().name;
+						for (String chan : params.get(0).split(",", -1)) {
+							chan = toCanonicalCase(chan);
+							if (who.equals(currentNickname.get())) {
+								if (joinedChannels.containsKey(chan))
+									joinedChannels.remove(chan);
 							}
 						}
 					}
@@ -111,6 +167,25 @@ final class ConnectionState {
 	
 	private void send(IrcServerConnection con, IrcMessage msg) {
 		con.postWriteLine(msg.toString().getBytes(charset));
+	}
+	
+	
+	// For channel names and nicknames.
+	private static String toCanonicalCase(String s) {
+		return s.codePoints()
+			.map(c -> {
+				switch (c) {
+					case '{':  return '[';
+					case '}':  return ']';
+					case '|':  return '\\';
+					case '^':  return '~';
+				}
+				if ('A' <= c && c <= 'Z')
+					return c - 'A' + 'a';
+				return c;
+			})
+			.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+			.toString();
 	}
 	
 }
