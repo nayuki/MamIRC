@@ -197,6 +197,40 @@ final class ConnectionState {
 					}
 					break;
 				}
+				
+				case "353": {  // RPL_NAMREPLY
+					if (paramsLen == 4) {
+						String chan = toCanonicalCase(params.get(2));
+						if (joinedChannels.containsKey(chan)) {
+							Map<String,IrcUser> accum = joinedChannels.get(chan).namesAccumulator;
+							for (String nick : params.get(3).split(" ", -1)) {
+								IrcUser userState = new IrcUser();
+								for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
+									if (nick.startsWith(entry.getKey())) {
+										nick = nick.substring(entry.getKey().length());
+										userState.modes.add(entry.getValue());
+										break;
+									}
+								}
+								if (!accum.containsKey(nick))
+									accum.put(nick, userState);
+							}
+						}
+					}
+					break;
+				}
+				
+				case "366": {  // RPL_ENDOFNAMES
+					if (paramsLen == 3) {
+						String chan = toCanonicalCase(params.get(1));
+						if (joinedChannels.containsKey(chan)) {
+							IrcChannel chanState = joinedChannels.get(chan);
+							chanState.users = chanState.namesAccumulator;
+							chanState.namesAccumulator = new HashMap<>();
+						}
+					}
+					break;
+				}
 			}
 		}
 		
