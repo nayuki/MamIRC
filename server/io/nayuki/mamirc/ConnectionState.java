@@ -159,6 +159,44 @@ final class ConnectionState {
 					}
 					break;
 				}
+				
+				case "331": {  // RPL_NOTOPIC
+					if (paramsLen == 2) {
+						String chan = toCanonicalCase(params.get(1));
+						if (joinedChannels.containsKey(chan)) {
+							IrcChannel chanState = joinedChannels.get(chan);
+							chanState.topic = Optional.empty();
+							chanState.topicSetter = Optional.empty();
+							chanState.topicTimestamp = Optional.empty();
+						}
+					}
+					break;
+				}
+				
+				case "332": {  // RPL_TOPIC
+					if (paramsLen == 3) {
+						String chan = toCanonicalCase(params.get(1));
+						if (joinedChannels.containsKey(chan)) {
+							IrcChannel chanState = joinedChannels.get(chan);
+							chanState.topic = Optional.of(params.get(2));
+							chanState.topicSetter = Optional.empty();
+							chanState.topicTimestamp = Optional.empty();
+						}
+					}
+					break;
+				}
+				
+				case "333": {  // Not documented in RFC 2812
+					if (paramsLen == 4) {
+						String chan = toCanonicalCase(params.get(1));
+						if (joinedChannels.containsKey(chan)) {
+							IrcChannel chanState = joinedChannels.get(chan);
+							chanState.topicSetter = Optional.of(params.get(2));
+							chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
+						}
+					}
+					break;
+				}
 			}
 		}
 		
