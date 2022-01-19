@@ -9,6 +9,8 @@ final class ConnectionState {
 	public final IrcNetworkProfile profile;
 	private final Charset charset;
 	
+	private boolean isRegistrationHandled = false;
+	
 	
 	
 	public ConnectionState(long connectionId, IrcNetworkProfile profile) {
@@ -39,13 +41,31 @@ final class ConnectionState {
 						send(con, "PONG", msg.parameters.get(0));
 					break;
 				}
+				
+				case "001":  // RPL_WELCOME
+				case "002":  // RPL_YOURHOST
+				case "003":  // RPL_CREATED
+				case "004":  // RPL_MYINFO
+				case "005":  // RPL_BOUNCE (but instead, servers seem to use it for capability info)
+				{
+					if (!isRegistrationHandled) {
+						for (IrcMessage outMsg : profile.afterRegistrationCommands)
+							send(con, outMsg);
+						isRegistrationHandled = true;
+					}
+					break;
+				}
 			}
 		}
 	}
 	
 	
 	private void send(IrcServerConnection con, String cmd, String... params) {
-		IrcMessage msg = IrcMessage.makeWithoutPrefix(cmd, params);
+		send(con, IrcMessage.makeWithoutPrefix(cmd, params));
+	}
+	
+	
+	private void send(IrcServerConnection con, IrcMessage msg) {
 		con.postWriteLine(msg.toString().getBytes(charset));
 	}
 	

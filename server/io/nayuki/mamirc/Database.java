@@ -133,7 +133,7 @@ final class Database implements AutoCloseable {
 				st3.setInt(1, prof.id);
 				try (ResultSet rs3 = st3.executeQuery()) {
 					while (rs3.next())
-						prof.afterRegistrationCommands.add(rs3.getString(1));
+						prof.afterRegistrationCommands.add(IrcMessage.parseLine(rs3.getString(1)));
 				}
 				
 				result.add(prof);
@@ -194,7 +194,7 @@ final class Database implements AutoCloseable {
 				st5.setInt(1, prof.id);
 				for (int i = 0; i < prof.afterRegistrationCommands.size(); i++) {
 					st5.setInt(2, i);
-					st5.setString(3, prof.afterRegistrationCommands.get(i));
+					st5.setString(3, prof.afterRegistrationCommands.get(i).toString());
 					st5.executeUpdate();
 				}
 			}

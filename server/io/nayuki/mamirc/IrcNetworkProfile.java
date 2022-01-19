@@ -19,7 +19,7 @@ final class IrcNetworkProfile {
 	public String username;
 	public String realName;
 	
-	public List<String> afterRegistrationCommands = new ArrayList<>();
+	public List<IrcMessage> afterRegistrationCommands = new ArrayList<>();
 	
 	
 	
