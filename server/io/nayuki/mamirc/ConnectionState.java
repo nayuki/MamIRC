@@ -1,6 +1,7 @@
 package io.nayuki.mamirc;
 
 import java.nio.charset.Charset;
+import java.util.Optional;
 
 
 final class ConnectionState {
@@ -10,6 +11,8 @@ final class ConnectionState {
 	private final Charset charset;
 	
 	private boolean isRegistrationHandled = false;
+	
+	private Optional<String> currentNickname = Optional.empty();
 	
 	
 	
@@ -34,8 +37,24 @@ final class ConnectionState {
 			} catch (IllegalArgumentException e) {
 				return;
 			}
+			Optional<IrcMessage.Prefix> prefix = msg.prefix;
 			
 			switch (msg.command) {
+				case "NICK": {
+					if (isRegistrationHandled) {
+						if (prefix.isPresent() && 0 < msg.parameters.size()) {
+							String fromName = prefix.get().name;
+							String toName = msg.parameters.get(0);
+							if (currentNickname.isEmpty())
+								throw new IllegalStateException();
+							if (fromName.equals(currentNickname.get())) {
+								currentNickname = Optional.of(toName);
+							}
+						}
+					}
+					break;
+				}
+				
 				case "PING": {
 					if (msg.parameters.size() == 1)
 						send(con, "PONG", msg.parameters.get(0));
@@ -52,6 +71,26 @@ final class ConnectionState {
 						for (IrcMessage outMsg : profile.afterRegistrationCommands)
 							send(con, outMsg);
 						isRegistrationHandled = true;
+					}
+					break;
+				}
+			}
+		}
+		
+		else if (ev instanceof ConnectionEvent.LineSent) {
+			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
+			IrcMessage msg;
+			try {
+				msg = IrcMessage.parseLine(line);
+			} catch (IllegalArgumentException e) {
+				return;
+			}
+			
+			switch (msg.command) {
+				case "NICK": {
+					if (!isRegistrationHandled) {
+						if (0 < msg.parameters.size())
+							currentNickname = Optional.of(msg.parameters.get(0));
 					}
 					break;
 				}
