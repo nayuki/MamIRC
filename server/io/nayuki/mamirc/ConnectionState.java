@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 
 final class ConnectionState {
@@ -17,6 +20,8 @@ final class ConnectionState {
 	private boolean isRegistrationHandled = false;
 	
 	private Optional<String> currentNickname = Optional.empty();
+	
+	private Map<String,String> nicknamePrefixToMode = new HashMap<>();
 	
 	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
@@ -131,6 +136,27 @@ final class ConnectionState {
 							send(con, outMsg);
 						isRegistrationHandled = true;
 					}
+					
+					if (msg.command.equals("005")) {
+						for (String param : params) {
+							Matcher m = MODE_PREFIX_REGEX.matcher(param);
+							if (m.matches()) {
+								int[] modes = m.group(1).codePoints().toArray();
+								int[] prefixes = m.group(2).codePoints().toArray();
+								if (modes.length != prefixes.length ||
+										modes.length != IntStream.of(modes).distinct().count() ||
+										prefixes.length != IntStream.of(prefixes).distinct().count())
+									return;
+								if (!nicknamePrefixToMode.isEmpty())
+									return;
+								for (int i = 0; i < modes.length; i++) {
+									nicknamePrefixToMode.put(
+										new StringBuilder().appendCodePoint(prefixes[i]).toString(),
+										new StringBuilder().appendCodePoint(modes[i]).toString());
+								}
+							}
+						}
+					}
 					break;
 				}
 			}
@@ -158,6 +184,9 @@ final class ConnectionState {
 			}
 		}
 	}
+	
+	
+	private static final Pattern MODE_PREFIX_REGEX = Pattern.compile("PREFIX=\\((.*?)\\)(.*?)");
 	
 	
 	private void send(IrcServerConnection con, String cmd, String... params) {
