@@ -38,6 +38,7 @@ final class Database implements AutoCloseable {
 		connection = DriverManager.getConnection("jdbc:sqlite:" + file);
 		statement = connection.createStatement();
 		statement.executeUpdate("PRAGMA foreign_keys = true");
+		statement.executeUpdate("PRAGMA busy_timeout = 100000");  // In milliseconds
 		
 		if (create)
 			executeInitScript();

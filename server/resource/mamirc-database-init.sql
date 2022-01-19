@@ -59,7 +59,7 @@ CREATE TABLE message_windows(
 	canonical_name  TEXT    NOT NULL                                 )
 
 CREATE INDEX message_windows_index_0 ON message_windows(
-	canonical_name, window_id)
+	profile_id, canonical_name, window_id)
 
 CREATE TABLE processed_messages(
 	window_id    INTEGER NOT NULL  REFERENCES message_windows,
