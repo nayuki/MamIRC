@@ -54,19 +54,21 @@ final class ConnectionState {
 			
 			switch (msg.command) {
 				case "JOIN": {
-					if (prefix.isPresent() && 0 < paramsLen) {
-						String who = prefix.get().name;
-						for (String chan : params.get(0).split(",", -1)) {
-							chan = toCanonicalCase(chan);
-							if (who.equals(currentNickname.get())) {
-								if (!joinedChannels.containsKey(chan))
-									joinedChannels.put(chan, new IrcChannel());
-							} else {
-								if (joinedChannels.containsKey(chan)) {
-									IrcChannel chanState = joinedChannels.get(chan);
-									if (!chanState.users.containsKey(who))
-										chanState.users.put(who, new IrcUser());
-								}
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("JOIN message expects prefix");
+					if (paramsLen != 1 && paramsLen != 2)
+						throw new IrcSyntaxException("JOIN message expects 1 or 2 parameters");
+					String who = prefix.get().name;
+					for (String chan : params.get(0).split(",", -1)) {
+						chan = toCanonicalCase(chan);
+						if (who.equals(currentNickname.get())) {
+							if (!joinedChannels.containsKey(chan))
+								joinedChannels.put(chan, new IrcChannel());
+						} else {
+							if (joinedChannels.containsKey(chan)) {
+								IrcChannel chanState = joinedChannels.get(chan);
+								if (!chanState.users.containsKey(who))
+									chanState.users.put(who, new IrcUser());
 							}
 						}
 					}
@@ -74,34 +76,35 @@ final class ConnectionState {
 				}
 				
 				case "KICK": {
-					if (1 < paramsLen) {
-						String[] chans = params.get(0).split(",", -1);
-						String[] users = params.get(1).split(",", -1);
-						if (chans.length == 1 && users.length > 1) {
-							chans = Arrays.copyOf(chans, users.length);
-							Arrays.fill(chans, chans[0]);
-						}
-						if (!(1 <= chans.length && chans.length == users.length))
-							return;
-						
-						for (int i = 0; i < chans.length; i++) {
-							String chan = toCanonicalCase(chans[i]);
-							String user = users[i];
-							if (!user.equals(currentNickname.get())) {
-								if (joinedChannels.containsKey(chan)) {
-									IrcChannel chanState = joinedChannels.get(chan);
-									if (chanState.users.containsKey(user))
-										chanState.users.remove(user);
-								}
+					if (paramsLen != 2 && paramsLen != 3)
+						throw new IrcSyntaxException("KICK message expects 2 or 3 parameters");
+					
+					String[] chans = params.get(0).split(",", -1);
+					String[] users = params.get(1).split(",", -1);
+					if (chans.length == 1 && users.length > 1) {
+						chans = Arrays.copyOf(chans, users.length);
+						Arrays.fill(chans, chans[0]);
+					}
+					if (chans.length == 0 || chans.length != users.length)
+						throw new IrcSyntaxException("KICK message expects 1 or n channels, and n users");
+					
+					for (int i = 0; i < chans.length; i++) {
+						String chan = toCanonicalCase(chans[i]);
+						String user = users[i];
+						if (!user.equals(currentNickname.get())) {
+							if (joinedChannels.containsKey(chan)) {
+								IrcChannel chanState = joinedChannels.get(chan);
+								if (chanState.users.containsKey(user))
+									chanState.users.remove(user);
 							}
 						}
-						for (int i = 0; i < chans.length; i++) {
-							String chan = toCanonicalCase(chans[i]);
-							String user = users[i];
-							if (user.equals(currentNickname.get())) {
-								if (joinedChannels.containsKey(chan))
-									joinedChannels.remove(chan);
-							}
+					}
+					for (int i = 0; i < chans.length; i++) {
+						String chan = toCanonicalCase(chans[i]);
+						String user = users[i];
+						if (user.equals(currentNickname.get())) {
+							if (joinedChannels.containsKey(chan))
+								joinedChannels.remove(chan);
 						}
 					}
 					break;
@@ -109,20 +112,22 @@ final class ConnectionState {
 				
 				case "NICK": {
 					if (isRegistrationHandled) {
-						if (prefix.isPresent() && 0 < paramsLen) {
-							String fromName = prefix.get().name;
-							String toName = params.get(0);
-							if (currentNickname.isEmpty())
-								throw new IllegalStateException();
-							if (fromName.equals(currentNickname.get())) {
-								currentNickname = Optional.of(toName);
-							}
-							for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
-								IrcChannel chanState = entry.getValue();
-								IrcUser userState = chanState.users.remove(fromName);
-								if (userState != null) {
-									chanState.users.put(toName, userState);
-								}
+						if (prefix.isEmpty())
+							throw new IrcSyntaxException("NICK message expects prefix");
+						if (paramsLen != 1)
+							throw new IrcSyntaxException("NICK message expects 1 parameter");
+						String fromName = prefix.get().name;
+						String toName = params.get(0);
+						if (currentNickname.isEmpty())
+							throw new IllegalStateException();
+						if (fromName.equals(currentNickname.get())) {
+							currentNickname = Optional.of(toName);
+						}
+						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
+							IrcChannel chanState = entry.getValue();
+							IrcUser userState = chanState.users.remove(fromName);
+							if (userState != null) {
+								chanState.users.put(toName, userState);
 							}
 						}
 					}
@@ -130,19 +135,21 @@ final class ConnectionState {
 				}
 				
 				case "PART": {
-					if (prefix.isPresent() && 0 < paramsLen) {
-						String who = prefix.get().name;
-						for (String chan : params.get(0).split(",", -1)) {
-							chan = toCanonicalCase(chan);
-							if (who.equals(currentNickname.get())) {
-								if (joinedChannels.containsKey(chan))
-									joinedChannels.remove(chan);
-							} else {
-								if (joinedChannels.containsKey(chan)) {
-									IrcChannel chanState = joinedChannels.get(chan);
-									if (chanState.users.containsKey(who))
-										chanState.users.remove(who);
-								}
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("PART message expects prefix");
+					if (paramsLen != 1 && paramsLen != 2)
+						throw new IrcSyntaxException("PART message expects 1 or 2 parameters");
+					String who = prefix.get().name;
+					for (String chan : params.get(0).split(",", -1)) {
+						chan = toCanonicalCase(chan);
+						if (who.equals(currentNickname.get())) {
+							if (joinedChannels.containsKey(chan))
+								joinedChannels.remove(chan);
+						} else {
+							if (joinedChannels.containsKey(chan)) {
+								IrcChannel chanState = joinedChannels.get(chan);
+								if (chanState.users.containsKey(who))
+									chanState.users.remove(who);
 							}
 						}
 					}
@@ -150,18 +157,21 @@ final class ConnectionState {
 				}
 				
 				case "QUIT": {
-					if (prefix.isPresent()) {
-						String who = prefix.get().name;
-						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
-							entry.getValue().users.remove(who);
-						}
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("QUIT message expects prefix");
+					if (paramsLen != 0)
+						throw new IrcSyntaxException("QUIT message expects 0 parameters");
+					String who = prefix.get().name;
+					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
+						entry.getValue().users.remove(who);
 					}
 					break;
 				}
 				
 				case "PING": {
-					if (paramsLen == 1)
-						send(con, "PONG", params.get(0));
+					if (paramsLen != 1)
+						throw new IrcSyntaxException("PING message expects 1 parameter");
+					send(con, "PONG", params.get(0));
 					break;
 				}
 				
@@ -201,73 +211,73 @@ final class ConnectionState {
 				}
 				
 				case "331": {  // RPL_NOTOPIC
-					if (paramsLen == 2) {
-						String chan = toCanonicalCase(params.get(1));
-						if (joinedChannels.containsKey(chan)) {
-							IrcChannel chanState = joinedChannels.get(chan);
-							chanState.topic = Optional.empty();
-							chanState.topicSetter = Optional.empty();
-							chanState.topicTimestamp = Optional.empty();
-						}
+					if (paramsLen != 2)
+						throw new IrcSyntaxException("331 message expects 2 parameters");
+					String chan = toCanonicalCase(params.get(1));
+					if (joinedChannels.containsKey(chan)) {
+						IrcChannel chanState = joinedChannels.get(chan);
+						chanState.topic = Optional.empty();
+						chanState.topicSetter = Optional.empty();
+						chanState.topicTimestamp = Optional.empty();
 					}
 					break;
 				}
 				
 				case "332": {  // RPL_TOPIC
-					if (paramsLen == 3) {
-						String chan = toCanonicalCase(params.get(1));
-						if (joinedChannels.containsKey(chan)) {
-							IrcChannel chanState = joinedChannels.get(chan);
-							chanState.topic = Optional.of(params.get(2));
-							chanState.topicSetter = Optional.empty();
-							chanState.topicTimestamp = Optional.empty();
-						}
+					if (paramsLen != 3)
+						throw new IrcSyntaxException("332 message expects 3 parameters");
+					String chan = toCanonicalCase(params.get(1));
+					if (joinedChannels.containsKey(chan)) {
+						IrcChannel chanState = joinedChannels.get(chan);
+						chanState.topic = Optional.of(params.get(2));
+						chanState.topicSetter = Optional.empty();
+						chanState.topicTimestamp = Optional.empty();
 					}
 					break;
 				}
 				
 				case "333": {  // Not documented in RFC 2812
-					if (paramsLen == 4) {
-						String chan = toCanonicalCase(params.get(1));
-						if (joinedChannels.containsKey(chan)) {
-							IrcChannel chanState = joinedChannels.get(chan);
-							chanState.topicSetter = Optional.of(params.get(2));
-							chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
-						}
+					if (paramsLen != 4)
+						throw new IrcSyntaxException("333 message expects 4 parameters");
+					String chan = toCanonicalCase(params.get(1));
+					if (joinedChannels.containsKey(chan)) {
+						IrcChannel chanState = joinedChannels.get(chan);
+						chanState.topicSetter = Optional.of(params.get(2));
+						chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
 					}
 					break;
 				}
 				
 				case "353": {  // RPL_NAMREPLY
-					if (paramsLen == 4) {
-						String chan = toCanonicalCase(params.get(2));
-						if (joinedChannels.containsKey(chan)) {
-							Map<String,IrcUser> accum = joinedChannels.get(chan).namesAccumulator;
-							for (String nick : params.get(3).split(" ", -1)) {
-								IrcUser userState = new IrcUser();
-								for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
-									if (nick.startsWith(entry.getKey())) {
-										nick = nick.substring(entry.getKey().length());
-										userState.modes.add(entry.getValue());
-										break;
-									}
+					if (paramsLen != 4)
+						throw new IrcSyntaxException("353 message expects 4 parameters");
+					String chan = toCanonicalCase(params.get(2));
+					if (joinedChannels.containsKey(chan)) {
+						Map<String,IrcUser> accum = joinedChannels.get(chan).namesAccumulator;
+						for (String nick : params.get(3).split(" ", -1)) {
+							IrcUser userState = new IrcUser();
+							for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
+								if (nick.startsWith(entry.getKey())) {
+									nick = nick.substring(entry.getKey().length());
+									userState.modes.add(entry.getValue());
+									break;
 								}
-								if (!accum.containsKey(nick))
-									accum.put(nick, userState);
 							}
+							if (!accum.containsKey(nick))
+								accum.put(nick, userState);
 						}
 					}
 					break;
 				}
 				
 				case "366": {  // RPL_ENDOFNAMES
-					if (paramsLen == 3) {
-						String chan = toCanonicalCase(params.get(1));
-						if (joinedChannels.containsKey(chan)) {
-							IrcChannel chanState = joinedChannels.get(chan);
-							chanState.users = chanState.namesAccumulator;
-							chanState.namesAccumulator = new HashMap<>();
-						}
+					if (paramsLen != 3)
+						throw new IrcSyntaxException("366 message expects 3 parameters");
+					String chan = toCanonicalCase(params.get(1));
+					if (joinedChannels.containsKey(chan)) {
+						IrcChannel chanState = joinedChannels.get(chan);
+						chanState.users = chanState.namesAccumulator;
+						chanState.namesAccumulator = new HashMap<>();
 					}
 					break;
 				}
@@ -288,8 +298,9 @@ final class ConnectionState {
 			switch (msg.command) {
 				case "NICK": {
 					if (!isRegistrationHandled) {
-						if (0 < paramsLen)
-							currentNickname = Optional.of(params.get(0));
+						if (paramsLen != 1)
+							throw new IrcSyntaxException("NICK message expects 1 parameter");
+						currentNickname = Optional.of(params.get(0));
 					}
 					break;
 				}
