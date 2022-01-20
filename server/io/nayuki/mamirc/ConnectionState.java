@@ -1,7 +1,6 @@
 package io.nayuki.mamirc;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,17 +59,14 @@ final class ConnectionState {
 						throw new IrcSyntaxException("JOIN message expects 1 or 2 parameters");
 					String who = prefix.get().name;
 					for (String chan : params.get(0).split(",", -1)) {
-						chan = toCanonicalCase(chan);
-						if (who.equals(currentNickname.get())) {
-							if (!joinedChannels.containsKey(chan))
-								joinedChannels.put(chan, new IrcChannel());
-						} else {
-							if (joinedChannels.containsKey(chan)) {
-								IrcChannel chanState = joinedChannels.get(chan);
-								if (!chanState.users.containsKey(who))
-									chanState.users.put(who, new IrcChannel.User());
-							}
-						}
+						String canonChan = toCanonicalCase(chan);
+						if (who.equals(currentNickname.get()) && joinedChannels.put(canonChan, new IrcChannel()) != null)
+							throw new IrcStateException("JOIN myself already in " + chan);
+						IrcChannel chanState = joinedChannels.get(canonChan);
+						if (chanState == null)
+							throw new IrcStateException("JOIN " + who + " to " + chan + " which myself is not in");
+						if (chanState.users.put(who, new IrcChannel.User()) != null)
+							throw new IrcStateException("JOIN " + who + " already in " + chan);
 					}
 					break;
 				}
@@ -78,35 +74,18 @@ final class ConnectionState {
 				case "KICK": {
 					if (paramsLen != 2 && paramsLen != 3)
 						throw new IrcSyntaxException("KICK message expects 2 or 3 parameters");
-					
-					String[] chans = params.get(0).split(",", -1);
-					String[] users = params.get(1).split(",", -1);
-					if (chans.length == 1 && users.length > 1) {
-						chans = Arrays.copyOf(chans, users.length);
-						Arrays.fill(chans, chans[0]);
-					}
-					if (chans.length == 0 || chans.length != users.length)
-						throw new IrcSyntaxException("KICK message expects 1 or n channels, and n users");
-					
-					for (int i = 0; i < chans.length; i++) {
-						String chan = toCanonicalCase(chans[i]);
-						String user = users[i];
-						if (!user.equals(currentNickname.get())) {
-							if (joinedChannels.containsKey(chan)) {
-								IrcChannel chanState = joinedChannels.get(chan);
-								if (chanState.users.containsKey(user))
-									chanState.users.remove(user);
-							}
-						}
-					}
-					for (int i = 0; i < chans.length; i++) {
-						String chan = toCanonicalCase(chans[i]);
-						String user = users[i];
-						if (user.equals(currentNickname.get())) {
-							if (joinedChannels.containsKey(chan))
-								joinedChannels.remove(chan);
-						}
-					}
+					String chan = params.get(0);
+					String user = params.get(1);
+					if (chan.contains(",") || user.contains(","))
+						throw new IrcSyntaxException("KICK message expects 1 channel and 1 user");
+					String canonChan = toCanonicalCase(chan);
+					IrcChannel chanState = joinedChannels.get(canonChan);
+					if (chanState == null)
+						throw new IrcStateException("KICK " + user + " from " + chan + " which myself is not in");
+					if (chanState.users.remove(user) == null)
+						throw new IrcStateException("KICK " + user + " not in " + chan);
+					if (user.equals(currentNickname.get()))
+						joinedChannels.remove(canonChan);
 					break;
 				}
 				
@@ -141,17 +120,14 @@ final class ConnectionState {
 						throw new IrcSyntaxException("PART message expects 1 or 2 parameters");
 					String who = prefix.get().name;
 					for (String chan : params.get(0).split(",", -1)) {
-						chan = toCanonicalCase(chan);
-						if (who.equals(currentNickname.get())) {
-							if (joinedChannels.containsKey(chan))
-								joinedChannels.remove(chan);
-						} else {
-							if (joinedChannels.containsKey(chan)) {
-								IrcChannel chanState = joinedChannels.get(chan);
-								if (chanState.users.containsKey(who))
-									chanState.users.remove(who);
-							}
-						}
+						String canonChan = toCanonicalCase(chan);
+						IrcChannel chanState = joinedChannels.get(canonChan);
+						if (chanState == null)
+							throw new IrcStateException("PART " + who + " from " + chan + " which myself is not in");
+						if (chanState.users.remove(who) == null)
+							throw new IrcStateException("PART " + who + " not in " + chan);
+						if (who.equals(currentNickname.get()))
+							joinedChannels.remove(canonChan);
 					}
 					break;
 				}
@@ -213,59 +189,60 @@ final class ConnectionState {
 				case "331": {  // RPL_NOTOPIC
 					if (paramsLen != 2)
 						throw new IrcSyntaxException("331 message expects 2 parameters");
-					String chan = toCanonicalCase(params.get(1));
-					if (joinedChannels.containsKey(chan)) {
-						IrcChannel chanState = joinedChannels.get(chan);
-						chanState.topic = Optional.empty();
-						chanState.topicSetter = Optional.empty();
-						chanState.topicTimestamp = Optional.empty();
-					}
+					String chan = params.get(1);
+					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
+					if (chanState == null)
+						throw new IrcStateException("331 myself not in " + chan);
+					chanState.topic = Optional.empty();
+					chanState.topicSetter = Optional.empty();
+					chanState.topicTimestamp = Optional.empty();
 					break;
 				}
 				
 				case "332": {  // RPL_TOPIC
 					if (paramsLen != 3)
 						throw new IrcSyntaxException("332 message expects 3 parameters");
-					String chan = toCanonicalCase(params.get(1));
-					if (joinedChannels.containsKey(chan)) {
-						IrcChannel chanState = joinedChannels.get(chan);
-						chanState.topic = Optional.of(params.get(2));
-						chanState.topicSetter = Optional.empty();
-						chanState.topicTimestamp = Optional.empty();
-					}
+					String chan = params.get(1);
+					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
+					if (chanState == null)
+						throw new IrcStateException("332 myself not in " + chan);
+					chanState.topic = Optional.of(params.get(2));
+					chanState.topicSetter = Optional.empty();
+					chanState.topicTimestamp = Optional.empty();
 					break;
 				}
 				
 				case "333": {  // Not documented in RFC 2812
 					if (paramsLen != 4)
 						throw new IrcSyntaxException("333 message expects 4 parameters");
-					String chan = toCanonicalCase(params.get(1));
-					if (joinedChannels.containsKey(chan)) {
-						IrcChannel chanState = joinedChannels.get(chan);
-						chanState.topicSetter = Optional.of(params.get(2));
-						chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
-					}
+					String chan = params.get(1);
+					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
+					if (chanState == null)
+						throw new IrcStateException("333 myself not in " + chan);
+					chanState.topicSetter = Optional.of(params.get(2));
+					chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
 					break;
 				}
 				
 				case "353": {  // RPL_NAMREPLY
 					if (paramsLen != 4)
 						throw new IrcSyntaxException("353 message expects 4 parameters");
-					String chan = toCanonicalCase(params.get(2));
-					if (joinedChannels.containsKey(chan)) {
-						Map<String,IrcChannel.User> accum = joinedChannels.get(chan).namesAccumulator;
-						for (String nick : params.get(3).split(" ", -1)) {
-							IrcChannel.User userState = new IrcChannel.User();
-							for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
-								if (nick.startsWith(entry.getKey())) {
-									nick = nick.substring(entry.getKey().length());
-									userState.modes.add(entry.getValue());
-									break;
-								}
+					String chan = params.get(1);
+					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
+					if (chanState == null)
+						throw new IrcStateException("353 myself not in " + chan);
+					Map<String,IrcChannel.User> accum = chanState.namesAccumulator;
+					for (String nick : params.get(3).split(" ", -1)) {
+						IrcChannel.User userState = new IrcChannel.User();
+						for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
+							if (nick.startsWith(entry.getKey())) {
+								nick = nick.substring(entry.getKey().length());
+								userState.modes.add(entry.getValue());
+								break;
 							}
-							if (!accum.containsKey(nick))
-								accum.put(nick, userState);
 						}
+						if (accum.put(nick, userState) != null)
+							throw new IrcStateException("353 " + nick + " already in " + chan);
 					}
 					break;
 				}
@@ -273,12 +250,12 @@ final class ConnectionState {
 				case "366": {  // RPL_ENDOFNAMES
 					if (paramsLen != 3)
 						throw new IrcSyntaxException("366 message expects 3 parameters");
-					String chan = toCanonicalCase(params.get(1));
-					if (joinedChannels.containsKey(chan)) {
-						IrcChannel chanState = joinedChannels.get(chan);
-						chanState.users = chanState.namesAccumulator;
-						chanState.namesAccumulator = new HashMap<>();
-					}
+					String chan = params.get(1);
+					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
+					if (chanState == null)
+						throw new IrcStateException("366 myself not in " + chan);
+					chanState.users = chanState.namesAccumulator;
+					chanState.namesAccumulator = new HashMap<>();
 					break;
 				}
 			}
