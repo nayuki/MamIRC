@@ -68,7 +68,7 @@ final class ConnectionState {
 							if (joinedChannels.containsKey(chan)) {
 								IrcChannel chanState = joinedChannels.get(chan);
 								if (!chanState.users.containsKey(who))
-									chanState.users.put(who, new IrcUser());
+									chanState.users.put(who, new IrcChannel.User());
 							}
 						}
 					}
@@ -125,7 +125,7 @@ final class ConnectionState {
 						}
 						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 							IrcChannel chanState = entry.getValue();
-							IrcUser userState = chanState.users.remove(fromName);
+							IrcChannel.User userState = chanState.users.remove(fromName);
 							if (userState != null) {
 								chanState.users.put(toName, userState);
 							}
@@ -253,9 +253,9 @@ final class ConnectionState {
 						throw new IrcSyntaxException("353 message expects 4 parameters");
 					String chan = toCanonicalCase(params.get(2));
 					if (joinedChannels.containsKey(chan)) {
-						Map<String,IrcUser> accum = joinedChannels.get(chan).namesAccumulator;
+						Map<String,IrcChannel.User> accum = joinedChannels.get(chan).namesAccumulator;
 						for (String nick : params.get(3).split(" ", -1)) {
-							IrcUser userState = new IrcUser();
+							IrcChannel.User userState = new IrcChannel.User();
 							for (Map.Entry<String,String> entry : nicknamePrefixToMode.entrySet()) {
 								if (nick.startsWith(entry.getKey())) {
 									nick = nick.substring(entry.getKey().length());
