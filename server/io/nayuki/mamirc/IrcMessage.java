@@ -24,13 +24,13 @@ final class IrcMessage {
 		
 		command = Objects.requireNonNull(cmd);
 		if (!COMMAND_REGEX.matcher(cmd).matches())
-			throw new IllegalArgumentException("Invalid command");
+			throw new IrcSyntaxException("Invalid command");
 		
 		Objects.requireNonNull(params);
 		for (int i = 0; i < params.size(); i++) {
 			String param = Objects.requireNonNull(params.get(i));
 			if (i < params.size() - 1 && (param.startsWith(":") || param.contains(" ")))
-				throw new IllegalArgumentException("Invalid parameter");
+				throw new IrcSyntaxException("Invalid parameter");
 		}
 		parameters = Collections.unmodifiableList(params);
 	}
@@ -44,7 +44,7 @@ final class IrcMessage {
 	public static IrcMessage parseLine(String line) {
 		Objects.requireNonNull(line);
 		if (line.contains("\r") || line.contains("\n"))
-			throw new IllegalArgumentException("Syntax error");
+			throw new IrcSyntaxException("Syntax error");
 		int start = 0;
 		
 		// Prefix
@@ -52,7 +52,7 @@ final class IrcMessage {
 		if (line.charAt(start) == ':') {
 			int end = line.indexOf(' ', start);
 			if (end == -1)
-				throw new IllegalArgumentException("Syntax error");
+				throw new IrcSyntaxException("Syntax error");
 			prefix = Optional.of(Prefix.parse(line.substring(start + 1, end)));
 			start = end + 1;
 		}
@@ -65,7 +65,7 @@ final class IrcMessage {
 				end = line.length();
 			command = line.substring(start, end);
 			if (!COMMAND_REGEX.matcher(command).matches())
-				throw new IllegalArgumentException("Syntax error");
+				throw new IrcSyntaxException("Syntax error");
 			start = end;
 		}
 		
@@ -76,7 +76,7 @@ final class IrcMessage {
 				throw new AssertionError();
 			start++;
 			if (start >= line.length())
-				throw new IllegalArgumentException("Syntax error");
+				throw new IrcSyntaxException("Syntax error");
 			if (line.charAt(start) == ':') {
 				parameters.add(line.substring(start + 1));
 				break;
@@ -128,7 +128,7 @@ final class IrcMessage {
 			username = Objects.requireNonNull(user);
 			hostname = Objects.requireNonNull(host);
 			if (username.isPresent() && hostname.isEmpty())
-				throw new IllegalArgumentException("Hostname required");
+				throw new IrcSyntaxException("Hostname required");
 		}
 		
 		
@@ -136,7 +136,7 @@ final class IrcMessage {
 			Objects.requireNonNull(prefix);
 			Matcher m = REGEX.matcher(prefix);
 			if (!m.matches())
-				throw new IllegalArgumentException("Syntax error");
+				throw new IrcSyntaxException("Syntax error");
 			String name = m.group(1);
 			
 			Optional<String> username = Optional.empty();
