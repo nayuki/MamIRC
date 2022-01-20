@@ -38,7 +38,11 @@ final class Core {
 						continue;
 					ConnectionState state = connectionToState.get(ace.connection);
 					archiver.postEvent(state.connectionId, ace.event);
-					state.handle(ace.event, ace.connection);
+					try {
+						state.handle(ace.event, ace.connection);
+					} catch (IrcSyntaxException|IrcStateException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 		} catch (InterruptedException e) {
