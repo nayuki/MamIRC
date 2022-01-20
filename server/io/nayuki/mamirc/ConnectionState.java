@@ -135,8 +135,8 @@ final class ConnectionState {
 				case "QUIT": {
 					if (prefix.isEmpty())
 						throw new IrcSyntaxException("QUIT message expects prefix");
-					if (paramsLen != 0)
-						throw new IrcSyntaxException("QUIT message expects 0 parameters");
+					if (paramsLen != 0 && paramsLen != 1)
+						throw new IrcSyntaxException("QUIT message expects 0 or 1 parameters");
 					String who = prefix.get().name;
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						entry.getValue().users.remove(who);
@@ -227,7 +227,7 @@ final class ConnectionState {
 				case "353": {  // RPL_NAMREPLY
 					if (paramsLen != 4)
 						throw new IrcSyntaxException("353 message expects 4 parameters");
-					String chan = params.get(1);
+					String chan = params.get(2);
 					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
 					if (chanState == null)
 						throw new IrcStateException("353 myself not in " + chan);
