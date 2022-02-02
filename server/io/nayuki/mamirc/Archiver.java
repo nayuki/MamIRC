@@ -31,6 +31,9 @@ final class Archiver {
 					if (item instanceof AugmentedConnectionEvent) {
 						AugmentedConnectionEvent ace = (AugmentedConnectionEvent)item;
 						database.addConnectionEvent(ace.connectionId, ace.event);
+					} else if (item instanceof ProcessedMessage) {
+						ProcessedMessage pm = (ProcessedMessage)item;
+						database.addProcessedMessage(pm.profileId, pm.displayName, pm.data);
 					} else
 						throw new AssertionError();
 					
@@ -60,6 +63,21 @@ final class Archiver {
 	}
 	
 	
+	public void postMessage(int profileId, String displayName, String data) {
+		if (profileId < 0)
+			throw new IllegalArgumentException("Negative profile ID");
+		ProcessedMessage pm = new ProcessedMessage();
+		pm.profileId = profileId;
+		pm.displayName = Objects.requireNonNull(displayName);
+		pm.data = Objects.requireNonNull(data);
+		try {
+			queue.put(pm);
+		} catch (InterruptedException e) {
+			throw new AssertionError(e);
+		}
+	}
+	
+	
 	
 	private static abstract class QueueItem {}
 	
@@ -69,6 +87,16 @@ final class Archiver {
 		
 		public long connectionId;
 		public ConnectionEvent event;
+		
+	}
+	
+	
+	
+	private static final class ProcessedMessage extends QueueItem {
+		
+		public int profileId;
+		public String displayName;
+		public String data;
 		
 	}
 	

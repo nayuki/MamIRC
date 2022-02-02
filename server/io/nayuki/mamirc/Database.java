@@ -249,4 +249,38 @@ final class Database implements AutoCloseable {
 		}
 	}
 	
+	
+	public void addProcessedMessage(int profileId, String displayName, String data) throws SQLException {
+		String canonicalName = ConnectionState.toCanonicalCase(displayName);
+		long windowId;
+		while (true) {
+			try (PreparedStatement st = connection.prepareStatement("SELECT window_id FROM message_windows WHERE profile_id=? and canonical_name=?")) {
+				st.setInt(1, profileId);
+				st.setString(2, canonicalName);
+				try (ResultSet rs = st.executeQuery()) {
+					if (rs.next()) {
+						windowId = rs.getLong(1);
+						break;
+					}
+				}
+			}
+			
+			try (PreparedStatement st = connection.prepareStatement("INSERT INTO message_windows(window_id, profile_id, display_name, canonical_name) VALUES ((SELECT ifnull(max(window_id)+1,0) FROM message_windows),?,?,?)")) {
+				st.setInt(1, profileId);
+				st.setString(2, displayName);
+				st.setString(3, canonicalName);
+				if (st.executeUpdate() != 1)
+					throw new SQLException();
+			}
+		}
+		
+		try (PreparedStatement st = connection.prepareStatement("INSERT INTO processed_messages(window_id, sequence, data, marked_read) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM processed_messages WHERE window_id=?),?,0)")) {
+			st.setLong(1, windowId);
+			st.setLong(2, windowId);
+			st.setString(3, data);
+			if (st.executeUpdate() != 1)
+				throw new SQLException();
+		}
+	}
+	
 }

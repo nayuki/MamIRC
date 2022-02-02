@@ -300,7 +300,7 @@ final class ConnectionState {
 	
 	
 	// For channel names and nicknames.
-	private static String toCanonicalCase(String s) {
+	public static String toCanonicalCase(String s) {
 		return s.codePoints()
 			.map(c -> {
 				switch (c) {
