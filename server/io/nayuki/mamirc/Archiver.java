@@ -11,7 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 final class Archiver {
 	
 	private final File databaseFile;
-	private BlockingQueue<AugmentedConnectionEvent> queue = new LinkedBlockingQueue<>();
+	private BlockingQueue<QueueItem> queue = new LinkedBlockingQueue<>();
 	
 	
 	public Archiver(File dbFile) {
@@ -24,15 +24,21 @@ final class Archiver {
 		try (Database database = new Database(databaseFile)) {
 			
 			while (true) {
-				AugmentedConnectionEvent ace = queue.take();
+				QueueItem item = queue.take();
 				database.beginImmediateTransaction();
 				while (true) {
-					database.addConnectionEvent(ace.connectionId, ace.event);
+					
+					if (item instanceof AugmentedConnectionEvent) {
+						AugmentedConnectionEvent ace = (AugmentedConnectionEvent)item;
+						database.addConnectionEvent(ace.connectionId, ace.event);
+					} else
+						throw new AssertionError();
+					
 					if (queue.isEmpty()) {
 						database.commitTransaction();
 						break;
 					}
-					ace = queue.take();
+					item = queue.take();
 				}
 			}
 			
@@ -55,7 +61,11 @@ final class Archiver {
 	
 	
 	
-	private static final class AugmentedConnectionEvent {
+	private static abstract class QueueItem {}
+	
+	
+	
+	private static final class AugmentedConnectionEvent extends QueueItem {
 		
 		public long connectionId;
 		public ConnectionEvent event;
