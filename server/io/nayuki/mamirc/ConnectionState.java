@@ -119,6 +119,7 @@ final class ConnectionState {
 						boolean isMe = fromName.equals(currentNickname.get());
 						if (isMe) {
 							currentNickname = Optional.of(toName);
+							archiver.postMessage(profile.id, "", String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
 						}
 						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 							IrcChannel chanState = entry.getValue();
@@ -176,6 +177,14 @@ final class ConnectionState {
 						throw new IrcSyntaxException("QUIT message expects 0 or 1 parameters");
 					String who = prefix.get().name;
 					boolean isMe = who.equals(currentNickname.get());
+					if (isMe) {
+						if (paramsLen == 0)
+							archiver.postMessage(profile.id, "", String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
+						else if (paramsLen == 1)
+							archiver.postMessage(profile.id, "", String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
+						else
+							throw new AssertionError();
+					}
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						if (entry.getValue().users.remove(who) != null) {
 							if (paramsLen == 0)
