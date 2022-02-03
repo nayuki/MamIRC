@@ -160,6 +160,13 @@ final class ConnectionState {
 					break;
 				}
 				
+				case "PING": {
+					if (paramsLen != 1)
+						throw new IrcSyntaxException("PING message expects 1 parameter");
+					send(con, "PONG", params.get(0));
+					break;
+				}
+				
 				case "PRIVMSG": {
 					if (prefix.isEmpty())
 						throw new IrcSyntaxException("PRIVMSG message expects prefix");
@@ -196,13 +203,6 @@ final class ConnectionState {
 								throw new AssertionError();
 						}
 					}
-					break;
-				}
-				
-				case "PING": {
-					if (paramsLen != 1)
-						throw new IrcSyntaxException("PING message expects 1 parameter");
-					send(con, "PONG", params.get(0));
 					break;
 				}
 				
@@ -375,6 +375,7 @@ final class ConnectionState {
 					String target = params.get(0);
 					String text = params.get(1);
 					archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
+					break;
 				}
 			}
 		}
