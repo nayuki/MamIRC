@@ -109,6 +109,69 @@ final class ConnectionState {
 					break;
 				}
 				
+				case "MODE": {
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("MODE message expects prefix");
+					if (paramsLen < 1)
+						throw new IrcSyntaxException("MODE message expects at least 1 parameter");
+					String target = params.get(0);
+					String canonChan = toCanonicalCase(target);
+					IrcChannel chanState = joinedChannels.get(canonChan);
+					List<String[]> modes = new ArrayList<>();
+					for (int i = 1; i < params.size(); ) {
+						String letters = params.get(i);
+						i++;
+						if (letters.length() < 1)
+							throw new IrcSyntaxException("MODE message expects +/- syntax");
+						String sign = letters.substring(0, 1);
+						if (!sign.equals("+") && !sign.equals("-"))
+							throw new IrcSyntaxException("MODE message expects +/- syntax");
+						for (int j = 1; j < letters.length(); j++) {
+							String mode = letters.substring(j, j + 1);
+							ModeType type = modeTypes.get(mode);
+							if (chanState == null || type == ModeType.NO_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("-"))
+								modes.add(new String[]{sign, mode});
+							else if (type == ModeType.NICKNAME_OR_ADDRESS_PARAMETER || type == ModeType.SETTING_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("+")) {
+								if (i >= params.size())
+									throw new IrcSyntaxException("MODE message expects more parameters");
+								modes.add(new String[]{sign, mode, params.get(i)});
+								i++;
+							} else
+								throw new IrcSyntaxException("MODE message has unknown mode");
+						}
+					}
+					
+					if (chanState != null) {
+						for (String[] mode : modes) {
+							String letter = mode[1];
+							if (modeTypes.get(letter) == ModeType.SETTING_PARAMETER && nicknamePrefixToMode.containsValue(letter) && mode.length == 3) {
+								String sign = mode[0];
+								String nickname = mode[2];
+								IrcChannel.User userState = chanState.users.get(nickname);
+								if (userState == null)
+									throw new IrcStateException("MODE " + nickname + " not in " + target);
+								if (sign.equals("+") && !userState.modes.add(letter))
+									throw new IrcStateException("MODE " + nickname + " already has +" + letter);
+								if (sign.equals("-") && !userState.modes.remove(letter))
+									throw new IrcStateException("MODE " + nickname + " does not have +" + letter);
+							}
+						}
+					}
+					
+					List<String> messageParts = modes
+						.stream()
+						.map(arr -> String.join(" ", arr))
+						.collect(Collectors.toCollection(ArrayList::new));
+					if (chanState != null) {
+						messageParts.add(0, "R_MODE_CHANNEL");
+						archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", messageParts));
+					} else if (target.equals(currentNickname.get())) {
+						messageParts.add(0, "R_MODE_ME");
+						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", messageParts));
+					}
+					break;
+				}
+				
 				case "NICK": {
 					if (isRegistrationHandled) {
 						if (prefix.isEmpty())
