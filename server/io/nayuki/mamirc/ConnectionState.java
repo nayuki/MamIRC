@@ -70,11 +70,14 @@ final class ConnectionState {
 							throw new IrcStateException("JOIN " + who + " to " + chan + " which myself is not in");
 						if (chanState.users.put(who, new IrcChannel.User()) != null)
 							throw new IrcStateException("JOIN " + who + " already in " + chan);
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_JOIN", prefix.get().toString()));
 					}
 					break;
 				}
 				
 				case "KICK": {
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("KICK message expects prefix");
 					if (paramsLen != 2 && paramsLen != 3)
 						throw new IrcSyntaxException("KICK message expects 2 or 3 parameters");
 					String chan = params.get(0);
@@ -87,6 +90,12 @@ final class ConnectionState {
 						throw new IrcStateException("KICK " + user + " from " + chan + " which myself is not in");
 					if (chanState.users.remove(user) == null)
 						throw new IrcStateException("KICK " + user + " not in " + chan);
+					if (paramsLen == 2)
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, prefix.get().toString()));
+					else if (paramsLen == 3)
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, prefix.get().toString(), params.get(2)));
+					else
+						throw new AssertionError();
 					if (user.equals(currentNickname.get()))
 						joinedChannels.remove(canonChan);
 					break;
@@ -129,6 +138,12 @@ final class ConnectionState {
 							throw new IrcStateException("PART " + who + " from " + chan + " which myself is not in");
 						if (chanState.users.remove(who) == null)
 							throw new IrcStateException("PART " + who + " not in " + chan);
+						if (paramsLen == 1)
+							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString()));
+						else if (paramsLen == 2)
+							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), params.get(1)));
+						else
+							throw new AssertionError();
 						if (who.equals(currentNickname.get()))
 							joinedChannels.remove(canonChan);
 					}
@@ -153,7 +168,14 @@ final class ConnectionState {
 						throw new IrcSyntaxException("QUIT message expects 0 or 1 parameters");
 					String who = prefix.get().name;
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
-						entry.getValue().users.remove(who);
+						if (entry.getValue().users.remove(who) != null) {
+							if (paramsLen == 0)
+								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString()));
+							else if (paramsLen == 1)
+								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), params.get(0)));
+							else
+								throw new AssertionError();
+						}
 					}
 					break;
 				}
