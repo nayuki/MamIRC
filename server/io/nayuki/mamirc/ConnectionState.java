@@ -360,11 +360,20 @@ final class ConnectionState {
 			int paramsLen = params.size();
 			
 			switch (msg.command) {
+				case "LIST": {
+					if (paramsLen != 0)
+						throw new IrcSyntaxException("LIST message expects 0 parameters");
+					archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_LIST"));
+					break;
+				}
+				
 				case "NICK": {
 					if (!isRegistrationHandled) {
 						if (paramsLen != 1)
 							throw new IrcSyntaxException("NICK message expects 1 parameter");
-						currentNickname = Optional.of(params.get(0));
+						String toName = params.get(0);
+						currentNickname = Optional.of(toName);
+						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_NICK", toName));
 					}
 					break;
 				}
@@ -375,6 +384,17 @@ final class ConnectionState {
 					String target = params.get(0);
 					String text = params.get(1);
 					archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
+					break;
+				}
+				
+				case "USER": {
+					if (paramsLen != 4)
+						throw new IrcSyntaxException("USER message expects 4 parameters");
+					String username = params.get(0);
+					String mode = params.get(1);
+					String unused = params.get(2);
+					String realName = params.get(3);
+					archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_USER", username, mode, unused, realName));
 					break;
 				}
 			}
