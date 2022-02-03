@@ -57,6 +57,7 @@ final class ConnectionState {
 			List<String> params = msg.parameters;
 			int paramsLen = params.size();
 			
+			boolean isServerReplyHandled = false;
 			switch (msg.command) {
 				case "JOIN": {
 					if (prefix.isEmpty())
@@ -251,6 +252,7 @@ final class ConnectionState {
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
 					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_NONE"));
+					isServerReplyHandled = true;
 					break;
 				}
 				
@@ -266,6 +268,7 @@ final class ConnectionState {
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
 					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SET", topic));
+					isServerReplyHandled = true;
 					break;
 				}
 				
@@ -281,6 +284,7 @@ final class ConnectionState {
 					chanState.topicSetter = Optional.of(setter);
 					chanState.topicTimestamp = Optional.of(timestamp);
 					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SETTER", setter, timestamp.toString()));
+					isServerReplyHandled = true;
 					break;
 				}
 				
@@ -304,6 +308,7 @@ final class ConnectionState {
 						if (accum.put(nick, userState) != null)
 							throw new IrcStateException("353 " + nick + " already in " + chan);
 					}
+					isServerReplyHandled = true;
 					break;
 				}
 				
@@ -328,8 +333,18 @@ final class ConnectionState {
 						messageParts.add(String.join(" ", modeParts));
 					});
 					archiver.postMessage(profile.id, chan, String.join("\n", messageParts));
+					isServerReplyHandled = true;
 					break;
 				}
+			}
+			
+			if (msg.command.matches("[0-9]{3}") && !isServerReplyHandled) {
+				List<String> messageParts = new ArrayList<>();
+				messageParts.add("R_RPL");
+				messageParts.add(msg.command);
+				messageParts.add(prefix.get().toString());
+				messageParts.addAll(params.subList(1, params.size()));
+				archiver.postMessage(profile.id, "", String.join("\n", messageParts));
 			}
 		}
 		
