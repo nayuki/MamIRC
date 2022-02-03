@@ -62,10 +62,11 @@ CREATE INDEX message_windows_index_0 ON message_windows(
 	profile_id, canonical_name, window_id)
 
 CREATE TABLE processed_messages(
-	window_id    INTEGER NOT NULL  REFERENCES message_windows,
-	sequence     INTEGER NOT NULL  CHECK(sequence >= 0)      ,
-	data         TEXT    NOT NULL                            ,
-	marked_read  INTEGER NOT NULL  CHECK(marked_read in(0,1)),
-	PRIMARY KEY(window_id, sequence)                         )
+	window_id          INTEGER NOT NULL  REFERENCES message_windows,
+	sequence           INTEGER NOT NULL  CHECK(sequence >= 0)      ,
+	timestamp_unix_ms  INTEGER NOT NULL                            ,
+	data               TEXT    NOT NULL                            ,
+	marked_read        INTEGER NOT NULL  CHECK(marked_read in(0,1)),
+	PRIMARY KEY(window_id, sequence)                               )
 
 COMMIT TRANSACTION

@@ -250,7 +250,7 @@ final class Database implements AutoCloseable {
 	}
 	
 	
-	public void addProcessedMessage(int profileId, String displayName, String data) throws SQLException {
+	public void addProcessedMessage(int profileId, String displayName, long timestampUnixMs, String data) throws SQLException {
 		String canonicalName = ConnectionState.toCanonicalCase(displayName);
 		long windowId;
 		while (true) {
@@ -274,10 +274,11 @@ final class Database implements AutoCloseable {
 			}
 		}
 		
-		try (PreparedStatement st = connection.prepareStatement("INSERT INTO processed_messages(window_id, sequence, data, marked_read) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM processed_messages WHERE window_id=?),?,0)")) {
+		try (PreparedStatement st = connection.prepareStatement("INSERT INTO processed_messages(window_id, sequence, timestamp_unix_ms, data, marked_read) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM processed_messages WHERE window_id=?),?,?,0)")) {
 			st.setLong(1, windowId);
 			st.setLong(2, windowId);
-			st.setString(3, data);
+			st.setLong(3, timestampUnixMs);
+			st.setString(4, data);
 			if (st.executeUpdate() != 1)
 				throw new SQLException();
 		}

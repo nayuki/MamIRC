@@ -33,7 +33,7 @@ final class Archiver {
 						database.addConnectionEvent(ace.connectionId, ace.event);
 					} else if (item instanceof ProcessedMessage) {
 						ProcessedMessage pm = (ProcessedMessage)item;
-						database.addProcessedMessage(pm.profileId, pm.displayName, pm.data);
+						database.addProcessedMessage(pm.profileId, pm.displayName, pm.timestampUnixMs, pm.data);
 					} else
 						throw new AssertionError();
 					
@@ -63,12 +63,13 @@ final class Archiver {
 	}
 	
 	
-	public void postMessage(int profileId, String displayName, String data) {
+	public void postMessage(int profileId, String displayName, long timestampUnixMs, String data) {
 		if (profileId < 0)
 			throw new IllegalArgumentException("Negative profile ID");
 		ProcessedMessage pm = new ProcessedMessage();
 		pm.profileId = profileId;
 		pm.displayName = Objects.requireNonNull(displayName);
+		pm.timestampUnixMs = timestampUnixMs;
 		pm.data = Objects.requireNonNull(data);
 		try {
 			queue.put(pm);
@@ -96,6 +97,7 @@ final class Archiver {
 		
 		public int profileId;
 		public String displayName;
+		public long timestampUnixMs;
 		public String data;
 		
 	}

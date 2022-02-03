@@ -75,7 +75,7 @@ final class ConnectionState {
 							throw new IrcStateException("JOIN " + who + " to " + chan + " which myself is not in");
 						if (chanState.users.put(who, new IrcChannel.User()) != null)
 							throw new IrcStateException("JOIN " + who + " already in " + chan);
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_JOIN", prefix.get().toString(), (isMe ? "me" : "other")));
+						archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_JOIN", prefix.get().toString(), (isMe ? "me" : "other")));
 					}
 					break;
 				}
@@ -97,9 +97,9 @@ final class ConnectionState {
 						throw new IrcStateException("KICK " + user + " not in " + chan);
 					boolean isMe = user.equals(currentNickname.get());
 					if (paramsLen == 2)
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString()));
+						archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString()));
 					else if (paramsLen == 3)
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2)));
+						archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2)));
 					else
 						throw new AssertionError();
 					if (isMe)
@@ -120,14 +120,14 @@ final class ConnectionState {
 						boolean isMe = fromName.equals(currentNickname.get());
 						if (isMe) {
 							currentNickname = Optional.of(toName);
-							archiver.postMessage(profile.id, "", String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
+							archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
 						}
 						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 							IrcChannel chanState = entry.getValue();
 							IrcChannel.User userState = chanState.users.remove(fromName);
 							if (userState != null) {
 								chanState.users.put(toName, userState);
-								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
+								archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
 							}
 						}
 					}
@@ -149,9 +149,9 @@ final class ConnectionState {
 							throw new IrcStateException("PART " + who + " not in " + chan);
 						boolean isMe = who.equals(currentNickname.get());
 						if (paramsLen == 1)
-							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other")));
+							archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other")));
 						else if (paramsLen == 2)
-							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1)));
+							archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1)));
 						else
 							throw new AssertionError();
 						if (isMe)
@@ -167,7 +167,7 @@ final class ConnectionState {
 						throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
 					String target = params.get(0);
 					String text = params.get(1);
-					archiver.postMessage(profile.id, target, String.join("\n", "R_PRIVMSG", prefix.get().toString(), text));
+					archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "R_PRIVMSG", prefix.get().toString(), text));
 					break;
 				}
 				
@@ -180,18 +180,18 @@ final class ConnectionState {
 					boolean isMe = who.equals(currentNickname.get());
 					if (isMe) {
 						if (paramsLen == 0)
-							archiver.postMessage(profile.id, "", String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
+							archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
 						else if (paramsLen == 1)
-							archiver.postMessage(profile.id, "", String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
+							archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
 						else
 							throw new AssertionError();
 					}
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						if (entry.getValue().users.remove(who) != null) {
 							if (paramsLen == 0)
-								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
+								archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
 							else if (paramsLen == 1)
-								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
+								archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
 							else
 								throw new AssertionError();
 						}
@@ -251,7 +251,7 @@ final class ConnectionState {
 					chanState.topic = Optional.empty();
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
-					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_NONE"));
+					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_NONE"));
 					isServerReplyHandled = true;
 					break;
 				}
@@ -267,7 +267,7 @@ final class ConnectionState {
 					chanState.topic = Optional.of(topic);
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
-					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SET", topic));
+					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_SET", topic));
 					isServerReplyHandled = true;
 					break;
 				}
@@ -283,7 +283,7 @@ final class ConnectionState {
 						throw new IrcStateException("333 myself not in " + chan);
 					chanState.topicSetter = Optional.of(setter);
 					chanState.topicTimestamp = Optional.of(timestamp);
-					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SETTER", setter, timestamp.toString()));
+					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_SETTER", setter, timestamp.toString()));
 					isServerReplyHandled = true;
 					break;
 				}
@@ -332,7 +332,7 @@ final class ConnectionState {
 							.collect(Collectors.toList());
 						messageParts.add(String.join(" ", modeParts));
 					});
-					archiver.postMessage(profile.id, chan, String.join("\n", messageParts));
+					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", messageParts));
 					isServerReplyHandled = true;
 					break;
 				}
@@ -344,7 +344,7 @@ final class ConnectionState {
 				messageParts.add(msg.command);
 				messageParts.add(prefix.get().toString());
 				messageParts.addAll(params.subList(1, params.size()));
-				archiver.postMessage(profile.id, "", String.join("\n", messageParts));
+				archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", messageParts));
 			}
 		}
 		
@@ -374,7 +374,7 @@ final class ConnectionState {
 						throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
 					String target = params.get(0);
 					String text = params.get(1);
-					archiver.postMessage(profile.id, target, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
+					archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
 				}
 			}
 		}
