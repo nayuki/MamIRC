@@ -4,6 +4,7 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,12 +25,14 @@ final class ConnectionState {
 	
 	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
+	private Archiver archiver;
 	
 	
-	public ConnectionState(long connectionId, IrcNetworkProfile profile) {
+	public ConnectionState(long connectionId, IrcNetworkProfile profile, Archiver archiver) {
 		this.connectionId = connectionId;
 		this.profile = profile;
 		charset = Charset.forName(profile.characterEncoding);
+		this.archiver = Objects.requireNonNull(archiver);
 	}
 	
 	
@@ -129,6 +132,17 @@ final class ConnectionState {
 						if (who.equals(currentNickname.get()))
 							joinedChannels.remove(canonChan);
 					}
+					break;
+				}
+				
+				case "PRIVMSG": {
+					if (prefix.isEmpty())
+						throw new IrcSyntaxException("PRIVMSG message expects prefix");
+					if (paramsLen != 2)
+						throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
+					String target = params.get(0);
+					String text = params.get(1);
+					archiver.postMessage(profile.id, target, String.join("\n", "R_PRIVMSG", prefix.get().toString(), text));
 					break;
 				}
 				
@@ -280,6 +294,14 @@ final class ConnectionState {
 						currentNickname = Optional.of(params.get(0));
 					}
 					break;
+				}
+				
+				case "PRIVMSG": {
+					if (paramsLen != 2)
+						throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
+					String target = params.get(0);
+					String text = params.get(1);
+					archiver.postMessage(profile.id, target, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
 				}
 			}
 		}
