@@ -26,6 +26,8 @@ final class ConnectionState {
 	
 	private Map<String,String> nicknamePrefixToMode = new HashMap<>();
 	
+	private Map<String,ModeType> modeTypes = new HashMap<>();
+	
 	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
 	private Archiver archiver;
@@ -231,9 +233,25 @@ final class ConnectionState {
 								if (!nicknamePrefixToMode.isEmpty())
 									return;
 								for (int i = 0; i < modes.length; i++) {
+									String mode = new StringBuilder().appendCodePoint(modes[i]).toString();
 									nicknamePrefixToMode.put(
 										new StringBuilder().appendCodePoint(prefixes[i]).toString(),
-										new StringBuilder().appendCodePoint(modes[i]).toString());
+										mode);
+									modeTypes.put(mode, ModeType.SETTING_PARAMETER);
+								}
+							}
+							
+							{
+								m = Pattern.compile("CHANMODES=([A-Za-z]*),([A-Za-z]*),([A-Za-z]*),([A-Za-z]*)").matcher(param);
+								if (m.matches()) {
+									int i = 1;
+									for (ModeType type : ModeType.values()) {
+										m.group(i).codePoints().forEach(c ->
+											modeTypes.put(
+												new StringBuilder().appendCodePoint(c).toString(),
+												type));
+										i++;
+									}
 								}
 							}
 						}
@@ -431,6 +449,15 @@ final class ConnectionState {
 			})
 			.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
 			.toString();
+	}
+	
+	
+	
+	private enum ModeType {
+		NICKNAME_OR_ADDRESS_PARAMETER,
+		SETTING_PARAMETER,
+		PARAMETER_WHEN_SET,
+		NO_PARAMETER,
 	}
 	
 }
