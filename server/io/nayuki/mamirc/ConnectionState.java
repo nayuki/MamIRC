@@ -1,13 +1,16 @@
 package io.nayuki.mamirc;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
@@ -113,7 +116,8 @@ final class ConnectionState {
 						String toName = params.get(0);
 						if (currentNickname.isEmpty())
 							throw new IllegalStateException();
-						if (fromName.equals(currentNickname.get())) {
+						boolean isMe = fromName.equals(currentNickname.get());
+						if (isMe) {
 							currentNickname = Optional.of(toName);
 						}
 						for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
@@ -121,6 +125,7 @@ final class ConnectionState {
 							IrcChannel.User userState = chanState.users.remove(fromName);
 							if (userState != null) {
 								chanState.users.put(toName, userState);
+								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
 							}
 						}
 					}
@@ -236,6 +241,7 @@ final class ConnectionState {
 					chanState.topic = Optional.empty();
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
+					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_NONE"));
 					break;
 				}
 				
@@ -246,9 +252,11 @@ final class ConnectionState {
 					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
 					if (chanState == null)
 						throw new IrcStateException("332 myself not in " + chan);
-					chanState.topic = Optional.of(params.get(2));
+					String topic = params.get(2);
+					chanState.topic = Optional.of(topic);
 					chanState.topicSetter = Optional.empty();
 					chanState.topicTimestamp = Optional.empty();
+					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SET", topic));
 					break;
 				}
 				
@@ -256,11 +264,14 @@ final class ConnectionState {
 					if (paramsLen != 4)
 						throw new IrcSyntaxException("333 message expects 4 parameters");
 					String chan = params.get(1);
+					String setter = params.get(2);
+					Long timestamp = Long.valueOf(params.get(3));
 					IrcChannel chanState = joinedChannels.get(toCanonicalCase(chan));
 					if (chanState == null)
 						throw new IrcStateException("333 myself not in " + chan);
-					chanState.topicSetter = Optional.of(params.get(2));
-					chanState.topicTimestamp = Optional.of(Long.parseLong(params.get(3)));
+					chanState.topicSetter = Optional.of(setter);
+					chanState.topicTimestamp = Optional.of(timestamp);
+					archiver.postMessage(profile.id, chan, String.join("\n", "R_TOPIC_SETTER", setter, timestamp.toString()));
 					break;
 				}
 				
@@ -296,6 +307,18 @@ final class ConnectionState {
 						throw new IrcStateException("366 myself not in " + chan);
 					chanState.users = chanState.namesAccumulator;
 					chanState.namesAccumulator = new HashMap<>();
+					List<String> messageParts = new ArrayList<>();
+					messageParts.add("R_NAMES");
+					new TreeMap<>(chanState.users).forEach((nick, userState) -> {
+						messageParts.add(nick);
+						List<String> modeParts = userState.modes
+							.stream()
+							.sorted()
+							.map(s -> "+" + s)
+							.collect(Collectors.toList());
+						messageParts.add(String.join(" ", modeParts));
+					});
+					archiver.postMessage(profile.id, chan, String.join("\n", messageParts));
 					break;
 				}
 			}
