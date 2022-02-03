@@ -61,16 +61,17 @@ final class ConnectionState {
 					if (paramsLen != 1 && paramsLen != 2)
 						throw new IrcSyntaxException("JOIN message expects 1 or 2 parameters");
 					String who = prefix.get().name;
+					boolean isMe = who.equals(currentNickname.get());
 					for (String chan : params.get(0).split(",", -1)) {
 						String canonChan = toCanonicalCase(chan);
-						if (who.equals(currentNickname.get()) && joinedChannels.put(canonChan, new IrcChannel()) != null)
+						if (isMe && joinedChannels.put(canonChan, new IrcChannel()) != null)
 							throw new IrcStateException("JOIN myself already in " + chan);
 						IrcChannel chanState = joinedChannels.get(canonChan);
 						if (chanState == null)
 							throw new IrcStateException("JOIN " + who + " to " + chan + " which myself is not in");
 						if (chanState.users.put(who, new IrcChannel.User()) != null)
 							throw new IrcStateException("JOIN " + who + " already in " + chan);
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_JOIN", prefix.get().toString()));
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_JOIN", prefix.get().toString(), (isMe ? "me" : "other")));
 					}
 					break;
 				}
@@ -90,13 +91,14 @@ final class ConnectionState {
 						throw new IrcStateException("KICK " + user + " from " + chan + " which myself is not in");
 					if (chanState.users.remove(user) == null)
 						throw new IrcStateException("KICK " + user + " not in " + chan);
+					boolean isMe = user.equals(currentNickname.get());
 					if (paramsLen == 2)
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, prefix.get().toString()));
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString()));
 					else if (paramsLen == 3)
-						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, prefix.get().toString(), params.get(2)));
+						archiver.postMessage(profile.id, chan, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2)));
 					else
 						throw new AssertionError();
-					if (user.equals(currentNickname.get()))
+					if (isMe)
 						joinedChannels.remove(canonChan);
 					break;
 				}
@@ -138,13 +140,14 @@ final class ConnectionState {
 							throw new IrcStateException("PART " + who + " from " + chan + " which myself is not in");
 						if (chanState.users.remove(who) == null)
 							throw new IrcStateException("PART " + who + " not in " + chan);
+						boolean isMe = who.equals(currentNickname.get());
 						if (paramsLen == 1)
-							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString()));
+							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other")));
 						else if (paramsLen == 2)
-							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), params.get(1)));
+							archiver.postMessage(profile.id, chan, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1)));
 						else
 							throw new AssertionError();
-						if (who.equals(currentNickname.get()))
+						if (isMe)
 							joinedChannels.remove(canonChan);
 					}
 					break;
@@ -167,12 +170,13 @@ final class ConnectionState {
 					if (paramsLen != 0 && paramsLen != 1)
 						throw new IrcSyntaxException("QUIT message expects 0 or 1 parameters");
 					String who = prefix.get().name;
+					boolean isMe = who.equals(currentNickname.get());
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						if (entry.getValue().users.remove(who) != null) {
 							if (paramsLen == 0)
-								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString()));
+								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
 							else if (paramsLen == 1)
-								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), params.get(0)));
+								archiver.postMessage(profile.id, entry.getKey(), String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
 							else
 								throw new AssertionError();
 						}
