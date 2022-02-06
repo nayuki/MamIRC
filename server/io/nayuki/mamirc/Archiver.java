@@ -13,9 +13,12 @@ final class Archiver {
 	private final File databaseFile;
 	private BlockingQueue<QueueItem> queue = new LinkedBlockingQueue<>();
 	
+	private final Thread coreWorker;
 	
-	public Archiver(File dbFile) {
+	
+	public Archiver(File dbFile, Thread core) {
 		databaseFile = dbFile;
+		coreWorker = core;
 		new Thread(this::worker).start();
 	}
 	
@@ -46,6 +49,7 @@ final class Archiver {
 			}
 			
 		} catch (IOException|SQLException|InterruptedException e) {
+			coreWorker.interrupt();
 			throw new RuntimeException(e);
 		}
 	}

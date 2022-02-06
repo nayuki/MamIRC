@@ -23,8 +23,9 @@ final class Core {
 	
 	public Core(File dbFile) {
 		this.databaseFile = dbFile;
-		archiver = new Archiver(dbFile);
-		new Thread(this::worker).start();
+		Thread worker = new Thread(this::worker);
+		archiver = new Archiver(dbFile, worker);
+		worker.start();
 	}
 	
 	
@@ -46,7 +47,13 @@ final class Core {
 				}
 			}
 		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
+			for (IrcServerConnection con : connectionToState.keySet()) {
+				try {
+					con.close();
+				} catch (IOException ee) {
+					ee.printStackTrace();
+				}
+			}
 		}
 	}
 	
