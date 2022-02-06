@@ -167,7 +167,7 @@ final class ConnectionState {
 						archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", messageParts));
 					} else if (target.equals(currentNickname.get())) {
 						messageParts.add(0, "R_MODE_ME");
-						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", messageParts));
+						archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", messageParts));
 					}
 					break;
 				}
@@ -444,7 +444,7 @@ final class ConnectionState {
 				case "LIST": {
 					if (paramsLen != 0)
 						throw new IrcSyntaxException("LIST message expects 0 parameters");
-					archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_LIST"));
+					archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_LIST"));
 					break;
 				}
 				
@@ -454,7 +454,7 @@ final class ConnectionState {
 							throw new IrcSyntaxException("NICK message expects 1 parameter");
 						String toName = params.get(0);
 						currentNickname = Optional.of(toName);
-						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_NICK", toName));
+						archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_NICK", toName));
 					}
 					break;
 				}
@@ -475,7 +475,7 @@ final class ConnectionState {
 					String mode = params.get(1);
 					String unused = params.get(2);
 					String realName = params.get(3);
-					archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "S_USER", username, mode, unused, realName));
+					archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_USER", username, mode, unused, realName));
 					break;
 				}
 			}
@@ -513,6 +513,9 @@ final class ConnectionState {
 			.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
 			.toString();
 	}
+	
+	
+	private static final String SERVER_WINDOW_NAME = "";  // Special value, do not modify
 	
 	
 	
