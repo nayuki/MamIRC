@@ -206,6 +206,17 @@ final class ConnectionState {
 				break;
 			}
 			
+			case "NOTICE": {
+				if (paramsLen != 2)
+					throw new IrcSyntaxException("NOTICE message expects 2 parameters");
+				String from = params.get(0);
+				if (currentNickname.isPresent() && currentNickname.get().equals(from) && prefix.isPresent())
+					from = prefix.get().name;
+				String text = params.get(1);
+				addMessage(from, ev, "R_NOTICE", from, text);
+				break;
+			}
+			
 			case "PART": {
 				if (prefix.isEmpty())
 					throw new IrcSyntaxException("PART message expects prefix");
