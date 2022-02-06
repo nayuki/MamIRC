@@ -278,48 +278,48 @@ final class ConnectionState {
 				case "001":  // RPL_WELCOME
 				case "002":  // RPL_YOURHOST
 				case "003":  // RPL_CREATED
-				case "004":  // RPL_MYINFO
-				case "005":  // RPL_BOUNCE (but instead, servers seem to use it for capability info)
-				{
+				case "004": {  // RPL_MYINFO
 					if (!isRegistrationHandled) {
 						for (IrcMessage outMsg : profile.afterRegistrationCommands)
 							send(con, outMsg);
 						isRegistrationHandled = true;
 						rejectedNicknames.clear();
 					}
-					
-					if (msg.command.equals("005")) {
-						for (String param : params) {
-							Matcher m = MODE_PREFIX_REGEX.matcher(param);
-							if (m.matches()) {
-								int[] modes = m.group(1).codePoints().toArray();
-								int[] prefixes = m.group(2).codePoints().toArray();
-								if (modes.length != prefixes.length ||
-										modes.length != IntStream.of(modes).distinct().count() ||
-										prefixes.length != IntStream.of(prefixes).distinct().count())
-									return;
-								if (!nicknamePrefixToMode.isEmpty())
-									return;
-								for (int i = 0; i < modes.length; i++) {
-									String mode = new StringBuilder().appendCodePoint(modes[i]).toString();
-									nicknamePrefixToMode.put(
-										new StringBuilder().appendCodePoint(prefixes[i]).toString(),
-										mode);
-									modeTypes.put(mode, ModeType.SETTING_PARAMETER);
-								}
+					break;
+				}
+				
+				case "005":  // RPL_ISUPPORT
+				{
+					for (String param : params) {
+						Matcher m = MODE_PREFIX_REGEX.matcher(param);
+						if (m.matches()) {
+							int[] modes = m.group(1).codePoints().toArray();
+							int[] prefixes = m.group(2).codePoints().toArray();
+							if (modes.length != prefixes.length ||
+									modes.length != IntStream.of(modes).distinct().count() ||
+									prefixes.length != IntStream.of(prefixes).distinct().count())
+								return;
+							if (!nicknamePrefixToMode.isEmpty())
+								return;
+							for (int i = 0; i < modes.length; i++) {
+								String mode = new StringBuilder().appendCodePoint(modes[i]).toString();
+								nicknamePrefixToMode.put(
+									new StringBuilder().appendCodePoint(prefixes[i]).toString(),
+									mode);
+								modeTypes.put(mode, ModeType.SETTING_PARAMETER);
 							}
-							
-							{
-								m = Pattern.compile("CHANMODES=([A-Za-z]*),([A-Za-z]*),([A-Za-z]*),([A-Za-z]*)").matcher(param);
-								if (m.matches()) {
-									int i = 1;
-									for (ModeType type : ModeType.values()) {
-										m.group(i).codePoints().forEach(c ->
-											modeTypes.put(
-												new StringBuilder().appendCodePoint(c).toString(),
-												type));
-										i++;
-									}
+						}
+						
+						{
+							m = Pattern.compile("CHANMODES=([A-Za-z]*),([A-Za-z]*),([A-Za-z]*),([A-Za-z]*)").matcher(param);
+							if (m.matches()) {
+								int i = 1;
+								for (ModeType type : ModeType.values()) {
+									m.group(i).codePoints().forEach(c ->
+										modeTypes.put(
+											new StringBuilder().appendCodePoint(c).toString(),
+											type));
+									i++;
 								}
 							}
 						}
