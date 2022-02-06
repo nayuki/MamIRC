@@ -1,12 +1,15 @@
 package io.nayuki.mamirc;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +24,7 @@ final class ConnectionState {
 	private final Charset charset;
 	
 	private boolean isRegistrationHandled = false;
+	private Set<String> rejectedNicknames = new HashSet<>();
 	
 	private Optional<String> currentNickname = Optional.empty();
 	
@@ -281,6 +285,7 @@ final class ConnectionState {
 						for (IrcMessage outMsg : profile.afterRegistrationCommands)
 							send(con, outMsg);
 						isRegistrationHandled = true;
+						rejectedNicknames.clear();
 					}
 					
 					if (msg.command.equals("005")) {
@@ -415,6 +420,24 @@ final class ConnectionState {
 					});
 					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", messageParts));
 					isServerReplyHandled = true;
+					break;
+				}
+				
+				case "432":  // ERR_ERRONEUSNICKNAME
+				case "433": {  // ERR_NICKNAMEINUSE
+					if (!isRegistrationHandled) {
+						if (currentNickname.isEmpty())
+							throw new IrcStateException("ERR_NICKNAMEINUSE/ERR_ERRONEUSNICKNAME without current nickname");
+						rejectedNicknames.add(currentNickname.get());
+						Optional<String> nextNick = profile.nicknames.stream()
+							.filter(s -> !rejectedNicknames.contains(s)).findFirst();
+						if (nextNick.isEmpty()) {
+							try {
+								con.close();
+							} catch (IOException e) {}
+						}
+						send(con, "NICK", nextNick.get());
+					}
 					break;
 				}
 			}
