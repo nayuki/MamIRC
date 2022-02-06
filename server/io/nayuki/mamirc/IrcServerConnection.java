@@ -64,33 +64,37 @@ final class IrcServerConnection {
 				}
 			}
 			
-			new Thread(this::writeWorker).start();
-			InputStream in = sock.getInputStream();
-			byte[] readBuf = new byte[READ_BUFFER_SIZE];
-			byte prevByte = 0;
-			byte[] lineBuf = new byte[Math.addExact(MAX_LINE_SIZE, 1)];
-			int lineLen = 0;
-			
-			while (true) {
-				int readLen = in.read(readBuf);
-				if (readLen == -1)
-					break;
+			Thread writer = new Thread(this::writeWorker);
+			writer.start();
+			try {
+				InputStream in = sock.getInputStream();
+				byte[] readBuf = new byte[READ_BUFFER_SIZE];
+				byte prevByte = 0;
+				byte[] lineBuf = new byte[Math.addExact(MAX_LINE_SIZE, 1)];
+				int lineLen = 0;
 				
-				for (int i = 0; i < readLen; i++) {
-					byte b = readBuf[i];
-					if (b == '\n' && prevByte == '\r');  // Ignore
-					else if (b == '\r' || b == '\n') {
-						if (lineLen <= MAX_LINE_SIZE)
-							postEvent(new ConnectionEvent.LineReceived(Arrays.copyOf(lineBuf, lineLen)));
-						lineLen = 0;
-					} else if (lineLen < lineBuf.length) {
-						lineBuf[lineLen] = b;
-						lineLen++;
+				while (true) {
+					int readLen = in.read(readBuf);
+					if (readLen == -1)
+						break;
+					
+					for (int i = 0; i < readLen; i++) {
+						byte b = readBuf[i];
+						if (b == '\n' && prevByte == '\r');  // Ignore
+						else if (b == '\r' || b == '\n') {
+							if (lineLen <= MAX_LINE_SIZE)
+								postEvent(new ConnectionEvent.LineReceived(Arrays.copyOf(lineBuf, lineLen)));
+							lineLen = 0;
+						} else if (lineLen < lineBuf.length) {
+							lineBuf[lineLen] = b;
+							lineLen++;
+						}
+						prevByte = b;
 					}
-					prevByte = b;
 				}
+			} finally {
+				writer.interrupt();
 			}
-			
 		} catch (IOException e) {
 			postEvent(new ConnectionEvent.ReadException(e.getMessage()));
 		} finally {
