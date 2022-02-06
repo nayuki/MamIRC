@@ -296,7 +296,7 @@ final class ConnectionState {
 			case "005":  // RPL_ISUPPORT
 			{
 				for (String param : params) {
-					Matcher m = MODE_PREFIX_REGEX.matcher(param);
+					Matcher m = Pattern.compile("PREFIX=\\((.*?)\\)(.*?)").matcher(param);
 					if (m.matches()) {
 						int[] modes = m.group(1).codePoints().toArray();
 						int[] prefixes = m.group(2).codePoints().toArray();
@@ -502,9 +502,6 @@ final class ConnectionState {
 			}
 		}
 	}
-	
-	
-	private static final Pattern MODE_PREFIX_REGEX = Pattern.compile("PREFIX=\\((.*?)\\)(.*?)");
 	
 	
 	private void send(IrcServerConnection con, String cmd, String... params) {
