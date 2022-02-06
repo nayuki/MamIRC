@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -104,12 +105,11 @@ final class ConnectionState {
 				if (chanState.users.remove(user) == null)
 					throw new IrcStateException("KICK " + user + " not in " + chan);
 				boolean isMe = user.equals(currentNickname.get());
-				if (paramsLen == 2)
-					addMessage(chan, ev, "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString());
-				else if (paramsLen == 3)
-					addMessage(chan, ev, "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2));
-				else
-					throw new AssertionError();
+				List<String> dataParts = new ArrayList<>();
+				Collections.addAll(dataParts, "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString());
+				if (paramsLen == 3)
+					dataParts.add(params.get(2));
+				addMessage(chan, ev, dataParts);
 				if (isMe)
 					joinedChannels.remove(canonChan);
 				break;
@@ -189,16 +189,17 @@ final class ConnectionState {
 					if (currentNickname.isEmpty())
 						throw new IllegalStateException();
 					boolean isMe = fromName.equals(currentNickname.get());
+					String[] dataParts = {"R_NICK", fromName, toName, (isMe ? "me" : "other")};
 					if (isMe) {
 						currentNickname = Optional.of(toName);
-						addMessage(SERVER_WINDOW_NAME, ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
+						addMessage(SERVER_WINDOW_NAME, ev, dataParts);
 					}
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						IrcChannel chanState = entry.getValue();
 						IrcChannel.User userState = chanState.users.remove(fromName);
 						if (userState != null) {
 							chanState.users.put(toName, userState);
-							addMessage(entry.getKey(), ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
+							addMessage(entry.getKey(), ev, dataParts);
 						}
 					}
 				}
@@ -219,12 +220,11 @@ final class ConnectionState {
 					if (chanState.users.remove(who) == null)
 						throw new IrcStateException("PART " + who + " not in " + chan);
 					boolean isMe = who.equals(currentNickname.get());
-					if (paramsLen == 1)
-						addMessage(chan, ev, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"));
-					else if (paramsLen == 2)
-						addMessage(chan, ev, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1));
-					else
-						throw new AssertionError();
+					List<String> dataParts = new ArrayList<>();
+					Collections.addAll(dataParts, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"));
+					if (paramsLen == 2)
+						dataParts.add(params.get(1));
+					addMessage(chan, ev, dataParts);
 					if (isMe)
 						joinedChannels.remove(canonChan);
 				}
@@ -256,23 +256,15 @@ final class ConnectionState {
 					throw new IrcSyntaxException("QUIT message expects 0 or 1 parameters");
 				String who = prefix.get().name;
 				boolean isMe = who.equals(currentNickname.get());
-				if (isMe) {
-					if (paramsLen == 0)
-						addMessage(SERVER_WINDOW_NAME, ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
-					else if (paramsLen == 1)
-						addMessage(SERVER_WINDOW_NAME, ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
-					else
-						throw new AssertionError();
-				}
+				List<String> dataParts = new ArrayList<>();
+				Collections.addAll(dataParts, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
+				if (paramsLen == 1)
+					dataParts.add(params.get(0));
+				if (isMe)
+					addMessage(SERVER_WINDOW_NAME, ev, dataParts);
 				for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
-					if (entry.getValue().users.remove(who) != null) {
-						if (paramsLen == 0)
-							addMessage(entry.getKey(), ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
-						else if (paramsLen == 1)
-							addMessage(entry.getKey(), ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
-						else
-							throw new AssertionError();
-					}
+					if (entry.getValue().users.remove(who) != null)
+						addMessage(entry.getKey(), ev, dataParts);
 				}
 				break;
 			}
