@@ -212,6 +212,7 @@ final class ConnectionState {
 				if (paramsLen != 1 && paramsLen != 2)
 					throw new IrcSyntaxException("PART message expects 1 or 2 parameters");
 				String who = prefix.get().name;
+				boolean isMe = who.equals(currentNickname.get());
 				for (String chan : params.get(0).split(",", -1)) {
 					String canonChan = toCanonicalCase(chan);
 					IrcChannel chanState = joinedChannels.get(canonChan);
@@ -219,7 +220,6 @@ final class ConnectionState {
 						throw new IrcStateException("PART " + who + " from " + chan + " which myself is not in");
 					if (chanState.users.remove(who) == null)
 						throw new IrcStateException("PART " + who + " not in " + chan);
-					boolean isMe = who.equals(currentNickname.get());
 					List<String> dataParts = new ArrayList<>();
 					Collections.addAll(dataParts, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"));
 					if (paramsLen == 2)
