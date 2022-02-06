@@ -3,6 +3,7 @@ package io.nayuki.mamirc;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +83,7 @@ final class ConnectionState {
 						throw new IrcStateException("JOIN " + who + " to " + chan + " which myself is not in");
 					if (chanState.users.put(who, new IrcChannel.User()) != null)
 						throw new IrcStateException("JOIN " + who + " already in " + chan);
-					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_JOIN", prefix.get().toString(), (isMe ? "me" : "other")));
+					addMessage(chan, ev, "R_JOIN", prefix.get().toString(), (isMe ? "me" : "other"));
 				}
 				break;
 			}
@@ -104,9 +105,9 @@ final class ConnectionState {
 					throw new IrcStateException("KICK " + user + " not in " + chan);
 				boolean isMe = user.equals(currentNickname.get());
 				if (paramsLen == 2)
-					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString()));
+					addMessage(chan, ev, "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString());
 				else if (paramsLen == 3)
-					archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2)));
+					addMessage(chan, ev, "R_KICK", user, (isMe ? "me" : "other"), prefix.get().toString(), params.get(2));
 				else
 					throw new AssertionError();
 				if (isMe)
@@ -169,10 +170,10 @@ final class ConnectionState {
 					.collect(Collectors.toCollection(ArrayList::new));
 				if (chanState != null) {
 					messageParts.add(0, "R_MODE_CHANNEL");
-					archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", messageParts));
+					addMessage(target, ev, messageParts);
 				} else if (target.equals(currentNickname.get())) {
 					messageParts.add(0, "R_MODE_ME");
-					archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", messageParts));
+					addMessage(SERVER_WINDOW_NAME, ev, messageParts);
 				}
 				break;
 			}
@@ -190,14 +191,14 @@ final class ConnectionState {
 					boolean isMe = fromName.equals(currentNickname.get());
 					if (isMe) {
 						currentNickname = Optional.of(toName);
-						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
+						addMessage("", ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
 					}
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						IrcChannel chanState = entry.getValue();
 						IrcChannel.User userState = chanState.users.remove(fromName);
 						if (userState != null) {
 							chanState.users.put(toName, userState);
-							archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_NICK", fromName, toName, (isMe ? "me" : "other")));
+							addMessage(entry.getKey(), ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
 						}
 					}
 				}
@@ -219,9 +220,9 @@ final class ConnectionState {
 						throw new IrcStateException("PART " + who + " not in " + chan);
 					boolean isMe = who.equals(currentNickname.get());
 					if (paramsLen == 1)
-						archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other")));
+						addMessage(chan, ev, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"));
 					else if (paramsLen == 2)
-						archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1)));
+						addMessage(chan, ev, "R_PART", prefix.get().toString(), (isMe ? "me" : "other"), params.get(1));
 					else
 						throw new AssertionError();
 					if (isMe)
@@ -244,7 +245,7 @@ final class ConnectionState {
 					throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
 				String target = params.get(0);
 				String text = params.get(1);
-				archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "R_PRIVMSG", prefix.get().toString(), text));
+				addMessage(target, ev, "R_PRIVMSG", prefix.get().toString(), text);
 				break;
 			}
 			
@@ -257,18 +258,18 @@ final class ConnectionState {
 				boolean isMe = who.equals(currentNickname.get());
 				if (isMe) {
 					if (paramsLen == 0)
-						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
+						addMessage("", ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
 					else if (paramsLen == 1)
-						archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
+						addMessage("", ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
 					else
 						throw new AssertionError();
 				}
 				for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 					if (entry.getValue().users.remove(who) != null) {
 						if (paramsLen == 0)
-							archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other")));
+							addMessage(entry.getKey(), ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
 						else if (paramsLen == 1)
-							archiver.postMessage(profile.id, entry.getKey(), ev.timestampUnixMs, String.join("\n", "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0)));
+							addMessage(entry.getKey(), ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
 						else
 							throw new AssertionError();
 					}
@@ -338,7 +339,7 @@ final class ConnectionState {
 				chanState.topic = Optional.empty();
 				chanState.topicSetter = Optional.empty();
 				chanState.topicTimestamp = Optional.empty();
-				archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_NONE"));
+				addMessage(chan, ev, "R_TOPIC_NONE");
 				suppressServerReplyDefaultMessage = true;
 				break;
 			}
@@ -354,7 +355,7 @@ final class ConnectionState {
 				chanState.topic = Optional.of(topic);
 				chanState.topicSetter = Optional.empty();
 				chanState.topicTimestamp = Optional.empty();
-				archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_SET", topic));
+				addMessage(chan, ev, "R_TOPIC_SET", topic);
 				suppressServerReplyDefaultMessage = true;
 				break;
 			}
@@ -370,7 +371,7 @@ final class ConnectionState {
 					throw new IrcStateException("333 myself not in " + chan);
 				chanState.topicSetter = Optional.of(setter);
 				chanState.topicTimestamp = Optional.of(timestamp);
-				archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", "R_TOPIC_SETTER", setter, timestamp.toString()));
+				addMessage(chan, ev, "R_TOPIC_SETTER", setter, timestamp.toString());
 				suppressServerReplyDefaultMessage = true;
 				break;
 			}
@@ -419,7 +420,7 @@ final class ConnectionState {
 						.collect(Collectors.toList());
 					messageParts.add(String.join(" ", modeParts));
 				});
-				archiver.postMessage(profile.id, chan, ev.timestampUnixMs, String.join("\n", messageParts));
+				addMessage(chan, ev, messageParts);
 				suppressServerReplyDefaultMessage = true;
 				break;
 			}
@@ -449,7 +450,7 @@ final class ConnectionState {
 			messageParts.add(msg.command);
 			messageParts.add(prefix.get().toString());
 			messageParts.addAll(params.subList(1, params.size()));
-			archiver.postMessage(profile.id, "", ev.timestampUnixMs, String.join("\n", messageParts));
+			addMessage("", ev, messageParts);
 		}
 	}
 	
@@ -462,7 +463,7 @@ final class ConnectionState {
 			case "LIST": {
 				if (paramsLen != 0)
 					throw new IrcSyntaxException("LIST message expects 0 parameters");
-				archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_LIST"));
+				addMessage(SERVER_WINDOW_NAME, ev, "S_LIST");
 				break;
 			}
 			
@@ -472,7 +473,7 @@ final class ConnectionState {
 						throw new IrcSyntaxException("NICK message expects 1 parameter");
 					String toName = params.get(0);
 					currentNickname = Optional.of(toName);
-					archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_NICK", toName));
+					addMessage(SERVER_WINDOW_NAME, ev, "S_NICK", toName);
 				}
 				break;
 			}
@@ -482,7 +483,7 @@ final class ConnectionState {
 					throw new IrcSyntaxException("PRIVMSG message expects 2 parameters");
 				String target = params.get(0);
 				String text = params.get(1);
-				archiver.postMessage(profile.id, target, ev.timestampUnixMs, String.join("\n", "S_PRIVMSG", currentNickname.get(), text));
+				addMessage(target, ev, "S_PRIVMSG", currentNickname.get(), text);
 				break;
 			}
 			
@@ -493,7 +494,7 @@ final class ConnectionState {
 				String mode = params.get(1);
 				String unused = params.get(2);
 				String realName = params.get(3);
-				archiver.postMessage(profile.id, SERVER_WINDOW_NAME, ev.timestampUnixMs, String.join("\n", "S_USER", username, mode, unused, realName));
+				addMessage(SERVER_WINDOW_NAME, ev, "S_USER", username, mode, unused, realName);
 				break;
 			}
 		}
@@ -510,6 +511,22 @@ final class ConnectionState {
 	
 	private void send(IrcServerConnection con, IrcMessage msg) {
 		con.postWriteLine(msg.toString().getBytes(charset));
+	}
+	
+	
+	private void addMessage(String windowDisplayName, ConnectionEvent ev, String... dataParts) {
+		addMessage(windowDisplayName, ev, Arrays.asList(dataParts));
+	}
+		
+		
+	private void addMessage(String windowDisplayName, ConnectionEvent ev, List<String> dataParts) {
+		if (Objects.requireNonNull(dataParts).size() == 0)
+			throw new IllegalArgumentException("Empty data parts");
+		archiver.postMessage(
+			profile.id,
+			Objects.requireNonNull(windowDisplayName),
+			Objects.requireNonNull(ev).timestampUnixMs,
+			String.join("\n", dataParts));
 	}
 	
 	
