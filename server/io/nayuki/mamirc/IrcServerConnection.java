@@ -142,6 +142,9 @@ final class IrcServerConnection {
 		} catch (IOException e) {
 			postEvent(new ConnectionEvent.WriteException(e.getMessage()));
 		} catch (InterruptedException e) {}
+		try {
+			socket.close();
+		} catch (IOException e) {}
 	}
 	
 }
