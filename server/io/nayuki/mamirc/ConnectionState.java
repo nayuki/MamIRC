@@ -49,14 +49,10 @@ final class ConnectionState {
 		if (ev instanceof ConnectionEvent.Opened) {
 			send(con, "NICK", profile.nicknames.get(0));
 			send(con, "USER", profile.username, "0", "*", profile.realName);
-		}
-		
-		else if (ev instanceof ConnectionEvent.LineReceived) {
+		} else if (ev instanceof ConnectionEvent.LineReceived) {
 			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
 			handleLineReceived(IrcMessage.parseLine(line), ev, con);
-		}
-		
-		else if (ev instanceof ConnectionEvent.LineSent) {
+		} else if (ev instanceof ConnectionEvent.LineSent) {
 			String line = new String(((ConnectionEvent.LineSent)ev).line, charset);
 			handleLineSent(IrcMessage.parseLine(line), ev, con);
 		}
