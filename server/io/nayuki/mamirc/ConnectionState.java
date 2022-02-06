@@ -164,16 +164,16 @@ final class ConnectionState {
 					}
 				}
 				
-				List<String> messageParts = modes
+				List<String> dataParts = modes
 					.stream()
 					.map(arr -> String.join(" ", arr))
 					.collect(Collectors.toCollection(ArrayList::new));
 				if (chanState != null) {
-					messageParts.add(0, "R_MODE_CHANNEL");
-					addMessage(target, ev, messageParts);
+					dataParts.add(0, "R_MODE_CHANNEL");
+					addMessage(target, ev, dataParts);
 				} else if (target.equals(currentNickname.get())) {
-					messageParts.add(0, "R_MODE_ME");
-					addMessage(SERVER_WINDOW_NAME, ev, messageParts);
+					dataParts.add(0, "R_MODE_ME");
+					addMessage(SERVER_WINDOW_NAME, ev, dataParts);
 				}
 				break;
 			}
@@ -409,18 +409,18 @@ final class ConnectionState {
 					throw new IrcStateException("366 myself not in " + chan);
 				chanState.users = chanState.namesAccumulator;
 				chanState.namesAccumulator = new HashMap<>();
-				List<String> messageParts = new ArrayList<>();
-				messageParts.add("R_NAMES");
+				List<String> dataParts = new ArrayList<>();
+				dataParts.add("R_NAMES");
 				new TreeMap<>(chanState.users).forEach((nick, userState) -> {
-					messageParts.add(nick);
+					dataParts.add(nick);
 					List<String> modeParts = userState.modes
 						.stream()
 						.sorted()
 						.map(s -> "+" + s)
 						.collect(Collectors.toList());
-					messageParts.add(String.join(" ", modeParts));
+					dataParts.add(String.join(" ", modeParts));
 				});
-				addMessage(chan, ev, messageParts);
+				addMessage(chan, ev, dataParts);
 				suppressServerReplyDefaultMessage = true;
 				break;
 			}
@@ -445,12 +445,12 @@ final class ConnectionState {
 		}
 		
 		if (msg.command.matches("[0-9]{3}") && !suppressServerReplyDefaultMessage) {
-			List<String> messageParts = new ArrayList<>();
-			messageParts.add("R_RPL");
-			messageParts.add(msg.command);
-			messageParts.add(prefix.get().toString());
-			messageParts.addAll(params.subList(1, params.size()));
-			addMessage(SERVER_WINDOW_NAME, ev, messageParts);
+			List<String> dataParts = new ArrayList<>();
+			dataParts.add("R_RPL");
+			dataParts.add(msg.command);
+			dataParts.add(prefix.get().toString());
+			dataParts.addAll(params.subList(1, params.size()));
+			addMessage(SERVER_WINDOW_NAME, ev, dataParts);
 		}
 	}
 	
