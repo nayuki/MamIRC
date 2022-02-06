@@ -53,24 +53,12 @@ final class ConnectionState {
 		
 		else if (ev instanceof ConnectionEvent.LineReceived) {
 			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
-			IrcMessage msg;
-			try {
-				msg = IrcMessage.parseLine(line);
-			} catch (IllegalArgumentException e) {
-				return;
-			}
-			handleLineReceived(msg, ev, con);
+			handleLineReceived(IrcMessage.parseLine(line), ev, con);
 		}
 		
 		else if (ev instanceof ConnectionEvent.LineSent) {
 			String line = new String(((ConnectionEvent.LineSent)ev).line, charset);
-			IrcMessage msg;
-			try {
-				msg = IrcMessage.parseLine(line);
-			} catch (IllegalArgumentException e) {
-				return;
-			}
-			handleLineSent(msg, ev, con);
+			handleLineSent(IrcMessage.parseLine(line), ev, con);
 		}
 	}
 	
