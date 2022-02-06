@@ -191,7 +191,7 @@ final class ConnectionState {
 					boolean isMe = fromName.equals(currentNickname.get());
 					if (isMe) {
 						currentNickname = Optional.of(toName);
-						addMessage("", ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
+						addMessage(SERVER_WINDOW_NAME, ev, "R_NICK", fromName, toName, (isMe ? "me" : "other"));
 					}
 					for (Map.Entry<String,IrcChannel> entry : joinedChannels.entrySet()) {
 						IrcChannel chanState = entry.getValue();
@@ -258,9 +258,9 @@ final class ConnectionState {
 				boolean isMe = who.equals(currentNickname.get());
 				if (isMe) {
 					if (paramsLen == 0)
-						addMessage("", ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
+						addMessage(SERVER_WINDOW_NAME, ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"));
 					else if (paramsLen == 1)
-						addMessage("", ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
+						addMessage(SERVER_WINDOW_NAME, ev, "R_QUIT", prefix.get().toString(), (isMe ? "me" : "other"), params.get(0));
 					else
 						throw new AssertionError();
 				}
@@ -450,7 +450,7 @@ final class ConnectionState {
 			messageParts.add(msg.command);
 			messageParts.add(prefix.get().toString());
 			messageParts.addAll(params.subList(1, params.size()));
-			addMessage("", ev, messageParts);
+			addMessage(SERVER_WINDOW_NAME, ev, messageParts);
 		}
 	}
 	
