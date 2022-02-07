@@ -24,7 +24,7 @@ final class ConnectionState {
 	
 	public final long connectionId;
 	public final int profileId;
-	private final Charset charset;
+	private Optional<Charset> charset = Optional.empty();
 	
 	private Core core;
 	
@@ -42,19 +42,18 @@ final class ConnectionState {
 	private Archiver archiver;
 	
 	
-	public ConnectionState(long connectionId, int profileId, Core core, Archiver archiver) throws IOException, SQLException {
+	public ConnectionState(long connectionId, int profileId, Core core, Archiver archiver) {
 		this.connectionId = connectionId;
 		this.profileId = profileId;
 		this.core = Objects.requireNonNull(core);
-		try (Database db = new Database(core.getDatabaseFile())) {
-			charset = Charset.forName(db.getProfileCharacterEncoding(profileId));
-		}
 		this.archiver = Objects.requireNonNull(archiver);
 	}
 	
 	
 	public void handle(ConnectionEvent ev, IrcServerConnection con) {
-		if (ev instanceof ConnectionEvent.Opened) {
+		if (ev instanceof ConnectionEvent.Opening) {
+			charset = Optional.of(Charset.forName(((ConnectionEvent.Opening)ev).characterEncoding));
+		} else if (ev instanceof ConnectionEvent.Opened) {
 			try (Database db = new Database(core.getDatabaseFile())) {
 				send(con, "NICK", db.getProfileNicknames(profileId).get(0));
 				send(con, "USER", db.getProfileUsername(profileId), "0", "*", db.getProfileRealName(profileId));
@@ -63,10 +62,10 @@ final class ConnectionState {
 				con.close();
 			}
 		} else if (ev instanceof ConnectionEvent.LineReceived) {
-			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
+			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset.get());
 			handleLineReceived(IrcMessage.parseLine(line), ev, con);
 		} else if (ev instanceof ConnectionEvent.LineSent) {
-			String line = new String(((ConnectionEvent.LineSent)ev).line, charset);
+			String line = new String(((ConnectionEvent.LineSent)ev).line, charset.get());
 			handleLineSent(IrcMessage.parseLine(line), ev, con);
 		}
 	}
@@ -530,7 +529,7 @@ final class ConnectionState {
 	
 	
 	private void send(IrcServerConnection con, IrcMessage msg) {
-		con.postWriteLine(msg.toString().getBytes(charset));
+		con.postWriteLine(msg.toString().getBytes(charset.get()));
 	}
 	
 	
