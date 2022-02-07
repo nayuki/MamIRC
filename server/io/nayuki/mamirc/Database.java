@@ -234,7 +234,8 @@ final class Database implements AutoCloseable {
 	
 	
 	public void addConnectionEvent(long connectionId, ConnectionEvent event) throws SQLException {
-		try (PreparedStatement st = connection.prepareStatement("INSERT INTO connection_events(connection_id, sequence, timestamp_unix_ms, data) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM connection_events WHERE connection_id=?),?,?)")) {
+		try (PreparedStatement st = connection.prepareStatement("INSERT INTO connection_events(connection_id, sequence, timestamp_unix_ms, data) "
+				+ "VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM connection_events WHERE connection_id=?),?,?)")) {
 			st.setLong(1, connectionId);
 			st.setLong(2, connectionId);
 			st.setLong(3, event.timestampUnixMs);
@@ -259,7 +260,8 @@ final class Database implements AutoCloseable {
 				}
 			}
 			
-			try (PreparedStatement st = connection.prepareStatement("INSERT INTO message_windows(window_id, profile_id, display_name, canonical_name) VALUES ((SELECT ifnull(max(window_id)+1,0) FROM message_windows),?,?,?)")) {
+			try (PreparedStatement st = connection.prepareStatement("INSERT INTO message_windows(window_id, profile_id, display_name, canonical_name) "
+					+ "VALUES ((SELECT ifnull(max(window_id)+1,0) FROM message_windows),?,?,?)")) {
 				st.setInt(1, profileId);
 				st.setString(2, displayName);
 				st.setString(3, canonicalName);
@@ -268,7 +270,8 @@ final class Database implements AutoCloseable {
 			}
 		}
 		
-		try (PreparedStatement st = connection.prepareStatement("INSERT INTO processed_messages(window_id, sequence, timestamp_unix_ms, data, marked_read) VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM processed_messages WHERE window_id=?),?,?,0)")) {
+		try (PreparedStatement st = connection.prepareStatement("INSERT INTO processed_messages(window_id, sequence, timestamp_unix_ms, data, marked_read) "
+				+ "VALUES (?,(SELECT ifnull(max(sequence)+1,0) FROM processed_messages WHERE window_id=?),?,?,0)")) {
 			st.setLong(1, windowId);
 			st.setLong(2, windowId);
 			st.setLong(3, timestampUnixMs);
@@ -314,7 +317,8 @@ final class Database implements AutoCloseable {
 	
 	public List<Map<String,Object>> getMessages(long windowId, long sequenceStart, long sequenceEnd) throws SQLException {
 		List<Map<String,Object>> result = new ArrayList<>();
-		try (PreparedStatement st = connection.prepareStatement("SELECT sequence, timestamp_unix_ms, data, marked_read FROM processed_messages WHERE window_id=? and ?<=sequence and sequence<?")) {
+		try (PreparedStatement st = connection.prepareStatement("SELECT sequence, timestamp_unix_ms, data, marked_read "
+				+ "FROM processed_messages 	WHERE window_id=? and ?<=sequence and sequence<?")) {
 			st.setLong(1, windowId);
 			st.setLong(2, sequenceStart);
 			st.setLong(3, sequenceEnd);
