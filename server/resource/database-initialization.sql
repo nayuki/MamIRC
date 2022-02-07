@@ -4,6 +4,8 @@ PRAGMA journal_mode = WAL;
 
 BEGIN TRANSACTION;
 
+PRAGMA user_version = 0;
+
 CREATE TABLE configuration(
 	key    TEXT NOT NULL  PRIMARY KEY,
 	value  TEXT NOT NULL             );
