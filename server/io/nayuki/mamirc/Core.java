@@ -54,6 +54,8 @@ final class Core {
 					ee.printStackTrace();
 				}
 			}
+		} finally {
+			archiver.postTermination();
 		}
 	}
 	

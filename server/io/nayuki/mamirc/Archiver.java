@@ -26,6 +26,7 @@ final class Archiver {
 	private void worker() {
 		try (Database database = new Database(databaseFile)) {
 			
+			outer:
 			while (true) {
 				QueueItem item = queue.take();
 				database.beginImmediateTransaction();
@@ -37,6 +38,9 @@ final class Archiver {
 					} else if (item instanceof ProcessedMessage) {
 						ProcessedMessage pm = (ProcessedMessage)item;
 						database.addProcessedMessage(pm.profileId, pm.displayName, pm.timestampUnixMs, pm.data);
+					} else if (item instanceof Termination) {
+						database.commitTransaction();
+						break outer;
 					} else
 						throw new AssertionError();
 					
@@ -83,6 +87,15 @@ final class Archiver {
 	}
 	
 	
+	public void postTermination() {
+		try {
+			queue.put(new Termination());
+		} catch (InterruptedException e) {
+			throw new AssertionError(e);
+		}
+	}
+	
+	
 	
 	private static abstract class QueueItem {}
 	
@@ -105,5 +118,9 @@ final class Archiver {
 		public String data;
 		
 	}
+	
+	
+	
+	private static final class Termination extends QueueItem {}
 	
 }
