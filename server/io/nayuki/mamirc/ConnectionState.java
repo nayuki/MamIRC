@@ -436,11 +436,8 @@ final class ConnectionState {
 					rejectedNicknames.add(currentNickname.get());
 					Optional<String> nextNick = profile.nicknames.stream()
 						.filter(s -> !rejectedNicknames.contains(s)).findFirst();
-					if (nextNick.isEmpty()) {
-						try {
-							con.close();
-						} catch (IOException e) {}
-					}
+					if (nextNick.isEmpty())
+						con.close();
 					send(con, "NICK", nextNick.get());
 				}
 				break;

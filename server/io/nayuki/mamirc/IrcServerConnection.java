@@ -33,13 +33,17 @@ final class IrcServerConnection {
 	}
 	
 	
-	public void close() throws IOException {
+	public void close() {
 		synchronized(this) {
 			if (socket == null)
 				closeRequested = true;
 			else {
 				postEvent(new ConnectionEvent.Closing());
-				socket.close();
+				try {
+					socket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		writeQueue.add(Optional.empty());

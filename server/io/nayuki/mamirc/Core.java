@@ -47,13 +47,8 @@ final class Core {
 				}
 			}
 		} catch (InterruptedException e) {
-			for (IrcServerConnection con : connectionToState.keySet()) {
-				try {
-					con.close();
-				} catch (IOException ee) {
-					ee.printStackTrace();
-				}
-			}
+			for (IrcServerConnection con : connectionToState.keySet())
+				con.close();
 		} finally {
 			archiver.postTermination();
 		}
