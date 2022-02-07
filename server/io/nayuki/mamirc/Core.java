@@ -58,7 +58,7 @@ final class Core {
 	public synchronized void setProfiles(Collection<IrcNetworkProfile> profiles) throws IOException, SQLException {
 		Map<Integer,IrcServerConnection> toDisconnect = new HashMap<>();
 		for (Map.Entry<IrcServerConnection,ConnectionState> entry : connectionToState.entrySet())
-			toDisconnect.put(entry.getValue().profile.id, entry.getKey());
+			toDisconnect.put(entry.getValue().profileId, entry.getKey());
 		
 		for (IrcNetworkProfile prof : profiles) {
 			if (prof.doConnect && toDisconnect.remove(prof.id) == null && !prof.servers.isEmpty()) {
@@ -67,12 +67,17 @@ final class Core {
 					conId = db.addConnection(prof.id);
 				}
 				IrcServerConnection con = new IrcServerConnection(prof, this);
-				connectionToState.put(con, new ConnectionState(conId, prof, archiver));
+				connectionToState.put(con, new ConnectionState(conId, prof.id, this, archiver));
 			}
 		}
 		
 		for (IrcServerConnection con : toDisconnect.values())
 			con.close();
+	}
+	
+	
+	public File getDatabaseFile() {
+		return databaseFile;
 	}
 	
 	

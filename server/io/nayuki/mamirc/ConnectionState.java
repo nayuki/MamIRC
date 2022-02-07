@@ -2,6 +2,7 @@ package io.nayuki.mamirc;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,8 +23,10 @@ import java.util.stream.IntStream;
 final class ConnectionState {
 	
 	public final long connectionId;
-	public final IrcNetworkProfile profile;
+	public final int profileId;
 	private final Charset charset;
+	
+	private Core core;
 	
 	private boolean isRegistrationHandled = false;
 	private Set<String> rejectedNicknames = new HashSet<>();
@@ -39,18 +42,26 @@ final class ConnectionState {
 	private Archiver archiver;
 	
 	
-	public ConnectionState(long connectionId, IrcNetworkProfile profile, Archiver archiver) {
+	public ConnectionState(long connectionId, int profileId, Core core, Archiver archiver) throws IOException, SQLException {
 		this.connectionId = connectionId;
-		this.profile = profile;
-		charset = Charset.forName(profile.characterEncoding);
+		this.profileId = profileId;
+		this.core = Objects.requireNonNull(core);
+		try (Database db = new Database(core.getDatabaseFile())) {
+			charset = Charset.forName(db.getProfileCharacterEncoding(profileId));
+		}
 		this.archiver = Objects.requireNonNull(archiver);
 	}
 	
 	
 	public void handle(ConnectionEvent ev, IrcServerConnection con) {
 		if (ev instanceof ConnectionEvent.Opened) {
-			send(con, "NICK", profile.nicknames.get(0));
-			send(con, "USER", profile.username, "0", "*", profile.realName);
+			try (Database db = new Database(core.getDatabaseFile())) {
+				send(con, "NICK", db.getProfileNicknames(profileId).get(0));
+				send(con, "USER", db.getProfileUsername(profileId), "0", "*", db.getProfileRealName(profileId));
+			} catch (IOException|SQLException e) {
+				e.printStackTrace();
+				con.close();
+			}
 		} else if (ev instanceof ConnectionEvent.LineReceived) {
 			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset);
 			handleLineReceived(IrcMessage.parseLine(line), ev, con);
@@ -285,8 +296,12 @@ final class ConnectionState {
 			case "003":  // RPL_CREATED
 			case "004": {  // RPL_MYINFO
 				if (!isRegistrationHandled) {
-					for (IrcMessage outMsg : profile.afterRegistrationCommands)
-						send(con, outMsg);
+					try (Database db = new Database(core.getDatabaseFile())) {
+						for (String cmd : db.getProfileAfterRegistrationCommands(profileId))
+							send(con, IrcMessage.parseLine(cmd));
+					} catch (IOException|SQLException e) {
+						e.printStackTrace();
+					}
 					isRegistrationHandled = true;
 					rejectedNicknames.clear();
 				}
@@ -434,7 +449,15 @@ final class ConnectionState {
 					if (currentNickname.isEmpty())
 						throw new IrcStateException("ERR_NICKNAMEINUSE/ERR_ERRONEUSNICKNAME without current nickname");
 					rejectedNicknames.add(currentNickname.get());
-					Optional<String> nextNick = profile.nicknames.stream()
+					List<String> nicknames;
+					try (Database db = new Database(core.getDatabaseFile())) {
+						nicknames = db.getProfileNicknames(profileId);
+					} catch (IOException|SQLException e) {
+						e.printStackTrace();
+						con.close();
+						return;
+					}
+					Optional<String> nextNick = nicknames.stream()
 						.filter(s -> !rejectedNicknames.contains(s)).findFirst();
 					if (nextNick.isEmpty())
 						con.close();
@@ -520,7 +543,7 @@ final class ConnectionState {
 		if (Objects.requireNonNull(dataParts).size() == 0)
 			throw new IllegalArgumentException("Empty data parts");
 		archiver.postMessage(
-			profile.id,
+			profileId,
 			Objects.requireNonNull(windowDisplayName),
 			Objects.requireNonNull(ev).timestampUnixMs,
 			String.join("\n", dataParts));

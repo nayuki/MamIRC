@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import io.nayuki.mamirc.IrcNetworkProfile.Server;
@@ -138,6 +139,68 @@ final class Database implements AutoCloseable {
 				}
 				
 				result.add(prof);
+			}
+		}
+		return result;
+	}
+	
+	
+	public String getProfileCharacterEncoding(int profileId) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("SELECT character_encoding FROM profile_configuration WHERE profile_id=?")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				if (rs.next())
+					return rs.getString(1);
+			}
+		}
+		throw new IllegalStateException("Profile missing from database");
+	}
+	
+	
+	public List<String> getProfileNicknames(int profileId) throws SQLException {
+		List<String> result = new ArrayList<>();
+		try (PreparedStatement st = connection.prepareStatement("SELECT nickname FROM profile_nicknames WHERE profile_id=? ORDER BY ordering ASC")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				while (rs.next())
+					result.add(rs.getString(1));
+			}
+		}
+		return result;
+	}
+	
+	
+	public String getProfileUsername(int profileId) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("SELECT username FROM profile_configuration WHERE profile_id=?")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				if (rs.next())
+					return rs.getString(1);
+			}
+		}
+		throw new IllegalStateException("Profile missing from database");
+	}
+	
+	
+	public String getProfileRealName(int profileId) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("SELECT real_name FROM profile_configuration WHERE profile_id=?")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				if (rs.next())
+					return rs.getString(1);
+			}
+		}
+		throw new IllegalStateException("Profile missing from database");
+	}
+	
+	
+	public List<String> getProfileAfterRegistrationCommands(int profileId) throws SQLException {
+		List<String> result = new ArrayList<>();
+		try (PreparedStatement st = connection.prepareStatement("SELECT command FROM profile_after_registration_commands WHERE profile_id=? ORDER BY ordering ASC")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				while (rs.next())
+					result.add(rs.getString(1));
 			}
 		}
 		return result;
