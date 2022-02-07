@@ -47,7 +47,7 @@ final class Database implements AutoCloseable {
 	
 	private void executeInitScript() throws IOException, SQLException {
 		try (BufferedReader in = new BufferedReader(new InputStreamReader(
-				getClass().getClassLoader().getResourceAsStream("resource/mamirc-database-init.sql"),
+				getClass().getClassLoader().getResourceAsStream("resource/database-initialization.sql"),
 				StandardCharsets.UTF_8))) {
 			
 			StringBuilder sb = new StringBuilder();
