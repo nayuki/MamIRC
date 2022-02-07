@@ -66,7 +66,7 @@ final class Core {
 				try (Database db = new Database(databaseFile)) {
 					conId = db.addConnection(prof.id);
 				}
-				IrcServerConnection con = new IrcServerConnection(prof, this);
+				IrcServerConnection con = new IrcServerConnection(prof.servers.get(0), prof.characterEncoding, this);
 				connectionToState.put(con, new ConnectionState(conId, prof.id, this, archiver));
 			}
 		}

@@ -13,7 +13,8 @@ import java.util.concurrent.Semaphore;
 
 final class IrcServerConnection {
 	
-	private final IrcNetworkProfile profile;
+	private final IrcNetworkProfile.Server server;
+	private final String characterEncoding;
 	
 	private final Core consumer;
 	
@@ -21,8 +22,9 @@ final class IrcServerConnection {
 	private boolean closeRequested = false;
 	
 	
-	public IrcServerConnection(IrcNetworkProfile profile, Core consumer) {
-		this.profile = profile;
+	public IrcServerConnection(IrcNetworkProfile.Server server, String encoding, Core consumer) {
+		this.server = server;
+		this.characterEncoding = encoding;
 		this.consumer = consumer;
 		new Thread(this::readWorker).start();
 	}
@@ -55,9 +57,8 @@ final class IrcServerConnection {
 	/*---- Reader members ----*/
 	
 	private void readWorker() {
-		IrcNetworkProfile.Server serv = profile.servers.get(0);
-		postEvent(new ConnectionEvent.Opening(serv.hostname, serv.port, profile.characterEncoding));
-		try (Socket sock = new Socket(serv.hostname, serv.port)) {
+		postEvent(new ConnectionEvent.Opening(server.hostname, server.port, characterEncoding));
+		try (Socket sock = new Socket(server.hostname, server.port)) {
 			postEvent(new ConnectionEvent.Opened(sock.getInetAddress()));
 			synchronized(this) {
 				socket = sock;
