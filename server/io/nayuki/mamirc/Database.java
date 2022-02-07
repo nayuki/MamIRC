@@ -311,4 +311,25 @@ final class Database implements AutoCloseable {
 		return result;
 	}
 	
+	
+	public List<Map<String,Object>> getMessages(long windowId, long sequenceStart, long sequenceEnd) throws SQLException {
+		List<Map<String,Object>> result = new ArrayList<>();
+		try (PreparedStatement st = connection.prepareStatement("SELECT sequence, timestamp_unix_ms, data, marked_read FROM processed_messages WHERE window_id=? and ?<=sequence and sequence<?")) {
+			st.setLong(1, windowId);
+			st.setLong(2, sequenceStart);
+			st.setLong(3, sequenceEnd);
+			try (ResultSet rs = st.executeQuery()) {
+				while (rs.next()) {
+					Map<String,Object> msg = new HashMap<>();
+					msg.put("sequence", rs.getLong(1));
+					msg.put("timestampUnixMs", rs.getLong(2));
+					msg.put("data", rs.getString(3));
+					msg.put("markedRead", rs.getBoolean(4));
+					result.add(msg);
+				}
+			}
+		}
+		return result;
+	}
+	
 }

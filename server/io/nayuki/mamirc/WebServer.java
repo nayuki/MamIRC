@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +34,7 @@ final class WebServer {
 		server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
 		
 		server.createContext("/message-windows.json", this::getMessageWindows);
+		server.createContext("/messages.json", this::getMessages);
 		
 		executor = Executors.newFixedThreadPool(30);
 		server.setExecutor(executor);
@@ -57,6 +60,36 @@ final class WebServer {
 			he.getResponseBody().write(json.getBytes(StandardCharsets.UTF_8));
 			
 		} catch (SQLException e) {
+			e.printStackTrace();
+			he.sendResponseHeaders(HTTP_INTERNAL_SERVER_ERROR, ZERO_LENGTH);
+		} finally {
+			he.close();
+		}
+	}
+	
+	
+	private void getMessages(HttpExchange he) throws IOException {
+		try {
+			if (!he.getRequestMethod().equals("GET")) {
+				he.sendResponseHeaders(HTTP_METHOD_NOT_ALLOWED, ZERO_LENGTH);
+				return;
+			}
+			Map<String,Long> values = new HashMap<>();
+			for (String part : he.getRequestURI().getQuery().split("&", -1)) {
+				String[] kv = part.split("=", 2);
+				values.put(kv[0], Long.parseLong(kv[1]));
+			}
+			
+			Object result;
+			try (Database db = new Database(core.getDatabaseFile())) {
+				result = db.getMessages(values.get("windowId"), values.get("sequenceStart"), values.get("sequenceEnd"));
+			}
+			he.getResponseHeaders().add("Content-Type", "application/json");
+			he.sendResponseHeaders(HTTP_OK, UNKNOWN_LENGTH);
+			String json = Json.serialize(result);
+			he.getResponseBody().write(json.getBytes(StandardCharsets.UTF_8));
+			
+		} catch (NullPointerException|NumberFormatException|SQLException e) {
 			e.printStackTrace();
 			he.sendResponseHeaders(HTTP_INTERNAL_SERVER_ERROR, ZERO_LENGTH);
 		} finally {
