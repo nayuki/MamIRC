@@ -63,7 +63,7 @@ final class Core {
 		try (Database db = new Database(databaseFile)) {
 			for (int profId : db.getProfileIds()) {
 				if (db.getProfileDoConnect(profId) && toDisconnect.remove(profId) == null) {
-					List<IrcNetworkProfile.Server> servers = db.getProfileServers(profId);
+					List<IrcServer> servers = db.getProfileServers(profId);
 					if (!servers.isEmpty()) {
 						long conId = db.addConnection(profId);
 						IrcServerConnection con = new IrcServerConnection(servers.get(0), db.getProfileCharacterEncoding(profId), this);

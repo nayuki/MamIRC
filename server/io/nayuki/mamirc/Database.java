@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import io.nayuki.mamirc.IrcNetworkProfile.Server;
 
 
 final class Database implements AutoCloseable {
@@ -120,16 +119,16 @@ final class Database implements AutoCloseable {
 	}
 	
 	
-	public List<IrcNetworkProfile.Server> getProfileServers(int profileId) throws SQLException {
-		List<IrcNetworkProfile.Server> result = new ArrayList<>();
+	public List<IrcServer> getProfileServers(int profileId) throws SQLException {
+		List<IrcServer> result = new ArrayList<>();
 		try (PreparedStatement st = connection.prepareStatement("SELECT hostname, port, tls_mode FROM profile_servers WHERE profile_id=? ORDER BY ordering ASC")) {
 			st.setInt(1, profileId);
 			try (ResultSet rs = st.executeQuery()) {
 				while (rs.next()) {
-					Server serv = new IrcNetworkProfile.Server();
+					IrcServer serv = new IrcServer();
 					serv.hostname = rs.getString(1);
 					serv.port = rs.getInt(2);
-					serv.tlsMode = IrcNetworkProfile.Server.TlsMode.values()[rs.getInt(3)];
+					serv.tlsMode = IrcServer.TlsMode.values()[rs.getInt(3)];
 					result.add(serv);
 				}
 			}

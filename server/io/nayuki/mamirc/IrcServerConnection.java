@@ -13,7 +13,7 @@ import java.util.concurrent.Semaphore;
 
 final class IrcServerConnection {
 	
-	private final IrcNetworkProfile.Server server;
+	private final IrcServer server;
 	private final String characterEncoding;
 	
 	private final Core consumer;
@@ -22,7 +22,7 @@ final class IrcServerConnection {
 	private boolean closeRequested = false;
 	
 	
-	public IrcServerConnection(IrcNetworkProfile.Server server, String encoding, Core consumer) {
+	public IrcServerConnection(IrcServer server, String encoding, Core consumer) {
 		this.server = server;
 		this.characterEncoding = encoding;
 		this.consumer = consumer;
