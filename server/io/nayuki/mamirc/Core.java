@@ -3,8 +3,8 @@ package io.nayuki.mamirc;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -55,19 +55,21 @@ final class Core {
 	}
 	
 	
-	public synchronized void setProfiles(Collection<IrcNetworkProfile> profiles) throws IOException, SQLException {
+	public synchronized void reloadProfiles() throws IOException, SQLException {
 		Map<Integer,IrcServerConnection> toDisconnect = new HashMap<>();
 		for (Map.Entry<IrcServerConnection,ConnectionState> entry : connectionToState.entrySet())
 			toDisconnect.put(entry.getValue().profileId, entry.getKey());
 		
-		for (IrcNetworkProfile prof : profiles) {
-			if (prof.doConnect && toDisconnect.remove(prof.id) == null && !prof.servers.isEmpty()) {
-				long conId;
-				try (Database db = new Database(databaseFile)) {
-					conId = db.addConnection(prof.id);
+		try (Database db = new Database(databaseFile)) {
+			for (int profId : db.getProfileIds()) {
+				if (db.getProfileDoConnect(profId) && toDisconnect.remove(profId) == null) {
+					List<IrcNetworkProfile.Server> servers = db.getProfileServers(profId);
+					if (!servers.isEmpty()) {
+						long conId = db.addConnection(profId);
+						IrcServerConnection con = new IrcServerConnection(servers.get(0), db.getProfileCharacterEncoding(profId), this);
+						connectionToState.put(con, new ConnectionState(conId, profId, this, archiver));
+					}
 				}
-				IrcServerConnection con = new IrcServerConnection(prof.servers.get(0), prof.characterEncoding, this);
-				connectionToState.put(con, new ConnectionState(conId, prof.id, this, archiver));
 			}
 		}
 		

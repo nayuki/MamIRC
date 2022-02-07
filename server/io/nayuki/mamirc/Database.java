@@ -99,46 +99,40 @@ final class Database implements AutoCloseable {
 	}
 	
 	
-	public Collection<IrcNetworkProfile> getIrcNetworkProfiles() throws SQLException {
-		Collection<IrcNetworkProfile> result = new ArrayList<>();
-		try (ResultSet rs0 = statement.executeQuery("SELECT irc_network_profiles.profile_id, profile_name, do_connect, username, real_name, character_encoding FROM irc_network_profiles JOIN profile_configuration USING (profile_id) ORDER BY profile_id ASC");
-				PreparedStatement st1 = connection.prepareStatement("SELECT hostname, port, tls_mode FROM profile_servers WHERE profile_id=? ORDER BY ordering ASC");
-				PreparedStatement st2 = connection.prepareStatement("SELECT nickname FROM profile_nicknames WHERE profile_id=? ORDER BY ordering ASC");
-				PreparedStatement st3 = connection.prepareStatement("SELECT command FROM profile_after_registration_commands WHERE profile_id=? ORDER BY ordering ASC")) {
-			
-			while (rs0.next()) {
-				IrcNetworkProfile prof = new IrcNetworkProfile();
-				prof.id = rs0.getInt(1);
-				prof.name = rs0.getString(2);
-				prof.doConnect = rs0.getBoolean(3);
-				prof.username = rs0.getString(4);
-				prof.realName = rs0.getString(5);
-				prof.characterEncoding = rs0.getString(6);
-				
-				st1.setInt(1, prof.id);
-				try (ResultSet rs1 = st1.executeQuery()) {
-					while (rs1.next()) {
-						Server serv = new IrcNetworkProfile.Server();
-						serv.hostname = rs1.getString(1);
-						serv.port = rs1.getInt(2);
-						serv.tlsMode = IrcNetworkProfile.Server.TlsMode.values()[rs1.getInt(3)];
-						prof.servers.add(serv);
-					}
+	public List<Integer> getProfileIds() throws SQLException {
+		List<Integer> result = new ArrayList<>();
+		try (ResultSet rs = statement.executeQuery("SELECT profile_id FROM irc_network_profiles ORDER BY profile_id ASC")) {
+			while (rs.next())
+				result.add(rs.getInt(1));
+		}
+		return result;
+	}
+	
+	
+	public boolean getProfileDoConnect(int profileId) throws SQLException {
+		try (PreparedStatement st = connection.prepareStatement("SELECT do_connect FROM profile_configuration WHERE profile_id=?")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				if (rs.next())
+					return rs.getBoolean(1);
+			}
+		}
+		throw new IllegalStateException("Profile missing from database");
+	}
+	
+	
+	public List<IrcNetworkProfile.Server> getProfileServers(int profileId) throws SQLException {
+		List<IrcNetworkProfile.Server> result = new ArrayList<>();
+		try (PreparedStatement st = connection.prepareStatement("SELECT hostname, port, tls_mode FROM profile_servers WHERE profile_id=? ORDER BY ordering ASC")) {
+			st.setInt(1, profileId);
+			try (ResultSet rs = st.executeQuery()) {
+				while (rs.next()) {
+					Server serv = new IrcNetworkProfile.Server();
+					serv.hostname = rs.getString(1);
+					serv.port = rs.getInt(2);
+					serv.tlsMode = IrcNetworkProfile.Server.TlsMode.values()[rs.getInt(3)];
+					result.add(serv);
 				}
-				
-				st2.setInt(1, prof.id);
-				try (ResultSet rs2 = st2.executeQuery()) {
-					while (rs2.next())
-						prof.nicknames.add(rs2.getString(1));
-				}
-				
-				st3.setInt(1, prof.id);
-				try (ResultSet rs3 = st3.executeQuery()) {
-					while (rs3.next())
-						prof.afterRegistrationCommands.add(IrcMessage.parseLine(rs3.getString(1)));
-				}
-				
-				result.add(prof);
 			}
 		}
 		return result;

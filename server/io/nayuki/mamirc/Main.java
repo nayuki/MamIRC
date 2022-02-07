@@ -22,7 +22,7 @@ public final class Main {
 		
 		try (Database db = new Database(dbFile)) {
 			Core core = new Core(dbFile);
-			core.setProfiles(db.getIrcNetworkProfiles());
+			core.reloadProfiles();
 		}
 	}
 	
