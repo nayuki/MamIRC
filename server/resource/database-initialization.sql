@@ -10,6 +10,8 @@ CREATE TABLE configuration(
 	key    TEXT NOT NULL  PRIMARY KEY,
 	value  TEXT NOT NULL             );
 
+INSERT INTO configuration(key, value) VALUES ('HTTP server port','6264');
+
 CREATE TABLE irc_network_profiles(
 	profile_id    INTEGER NOT NULL  PRIMARY KEY,
 	profile_name  TEXT    NOT NULL             ,

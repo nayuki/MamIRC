@@ -18,11 +18,14 @@ final class Core {
 	
 	private Set<IrcServerConnection> connections = new HashSet<>();
 	
+	private WebServer server;
+	
 	private Archiver archiver;
 	
 	
-	public Core(File dbFile) {
+	public Core(File dbFile) throws IOException, SQLException {
 		this.databaseFile = dbFile;
+		server = new WebServer(this);
 		Thread worker = new Thread(this::worker);
 		archiver = new Archiver(dbFile, worker);
 		worker.start();
@@ -49,6 +52,7 @@ final class Core {
 				con.close();
 		} finally {
 			archiver.postTermination();
+			server.terminate();
 		}
 	}
 	

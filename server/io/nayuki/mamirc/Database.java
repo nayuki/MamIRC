@@ -12,7 +12,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -274,6 +276,39 @@ final class Database implements AutoCloseable {
 			if (st.executeUpdate() != 1)
 				throw new SQLException();
 		}
+	}
+	
+	
+	public Map<String,Object> listProfilesAndMessageWindows() throws SQLException {
+		statement.executeUpdate("BEGIN TRANSACTION");
+		Map<String,Object> result = new HashMap<>();
+		{
+			List<Map<String,Object>> profiles = new ArrayList<>();
+			try (ResultSet rs = statement.executeQuery("SELECT profile_id, profile_name FROM irc_network_profiles ORDER BY profile_id ASC")) {
+				while (rs.next()) {
+					Map<String,Object> prof = new HashMap<>();
+					prof.put("id", rs.getInt(1));
+					prof.put("name", rs.getString(2));
+					profiles.add(prof);
+				}
+			}
+			result.put("ircNetworkProfiles", profiles);
+		}
+		{
+			List<Map<String,Object>> windows = new ArrayList<>();
+			try (ResultSet rs = statement.executeQuery("SELECT window_id, profile_id, display_name FROM message_windows")) {
+				while (rs.next()) {
+					Map<String,Object> win = new HashMap<>();
+					win.put("id", rs.getLong(1));
+					win.put("profileId", rs.getInt(2));
+					win.put("name", rs.getString(3));
+					windows.add(win);
+				}
+			}
+			result.put("messageWindows", windows);
+		}
+		statement.executeUpdate("ROLLBACK TRANSACTION");
+		return result;
 	}
 	
 }
