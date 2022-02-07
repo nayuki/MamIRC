@@ -8,10 +8,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.BlockingQueue;
 
 
 final class Core {
@@ -34,8 +32,7 @@ final class Core {
 	private void worker() {
 		try {
 			while (true) {
-				eventQueueLength.acquire();
-				AugmentedConnectionEvent ace = eventQueue.remove();
+				AugmentedConnectionEvent ace = eventQueue.take();
 				synchronized(this) {
 					if (!connections.contains(ace.connection))
 						continue;
@@ -84,16 +81,18 @@ final class Core {
 	}
 	
 	
-	private Queue<AugmentedConnectionEvent> eventQueue = new ConcurrentLinkedQueue<>();
-	private Semaphore eventQueueLength = new Semaphore(0);
+	private BlockingQueue<AugmentedConnectionEvent> eventQueue = new FastQueue<>();
 	
 	
 	public void postEvent(IrcServerConnection con, ConnectionEvent ev) {
 		AugmentedConnectionEvent ace = new AugmentedConnectionEvent();
 		ace.connection = Objects.requireNonNull(con);
 		ace.event = Objects.requireNonNull(ev);
-		eventQueue.add(ace);
-		eventQueueLength.release();
+		try {
+			eventQueue.put(ace);
+		} catch (InterruptedException e) {
+			throw new AssertionError(e);
+		}
 	}
 	
 	

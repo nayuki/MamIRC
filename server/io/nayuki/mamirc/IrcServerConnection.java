@@ -6,9 +6,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.BlockingQueue;
 
 
 final class IrcServerConnection extends ConnectionState {
@@ -52,7 +50,6 @@ final class IrcServerConnection extends ConnectionState {
 			}
 		}
 		writeQueue.add(Optional.empty());
-		writeQueueLength.release();
 	}
 	
 	
@@ -118,13 +115,15 @@ final class IrcServerConnection extends ConnectionState {
 	
 	/*---- Writer members ----*/
 	
-	private Queue<Optional<byte[]>> writeQueue = new ConcurrentLinkedQueue<>();
-	private Semaphore writeQueueLength = new Semaphore(0);
+	private BlockingQueue<Optional<byte[]>> writeQueue = new FastQueue<>();
 	
 	
 	public void postWriteLine(byte[] line) {
-		writeQueue.add(Optional.of(line));
-		writeQueueLength.release();
+		try {
+			writeQueue.put(Optional.of(line));
+		} catch (InterruptedException e) {
+			throw new AssertionError(e);
+		}
 	}
 	
 	
@@ -135,8 +134,7 @@ final class IrcServerConnection extends ConnectionState {
 			byte[] lineBuf = new byte[Math.addExact(MAX_LINE_SIZE, 2)];
 			
 			while (true) {
-				writeQueueLength.acquire();
-				Optional<byte[]> item = writeQueue.remove();
+				Optional<byte[]> item = writeQueue.take();
 				if (item.isEmpty())
 					break;
 				
