@@ -32,7 +32,7 @@ final class ConnectionState {
 	
 	private Map<String,String> nicknamePrefixToMode = new HashMap<>();
 	
-	private Map<String,ModeType> channelModeTypes = new HashMap<>();
+	private Map<String,ChannelModeType> channelModeTypes = new HashMap<>();
 	
 	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
@@ -134,10 +134,10 @@ final class ConnectionState {
 						throw new IrcSyntaxException("MODE message expects +/- syntax");
 					for (int j = 1; j < letters.length(); j++) {
 						String mode = letters.substring(j, j + 1);
-						ModeType type = channelModeTypes.get(mode);
-						if (chanState == null || type == ModeType.NO_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("-"))
+						ChannelModeType type = channelModeTypes.get(mode);
+						if (chanState == null || type == ChannelModeType.NO_PARAMETER || type == ChannelModeType.PARAMETER_WHEN_SET && sign.equals("-"))
 							modes.add(new String[]{sign, mode});
-						else if (type == ModeType.NICKNAME_OR_ADDRESS_PARAMETER || type == ModeType.SETTING_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("+")) {
+						else if (type == ChannelModeType.NICKNAME_OR_ADDRESS_PARAMETER || type == ChannelModeType.SETTING_PARAMETER || type == ChannelModeType.PARAMETER_WHEN_SET && sign.equals("+")) {
 							if (i >= params.size())
 								throw new IrcSyntaxException("MODE message expects more parameters");
 							modes.add(new String[]{sign, mode, params.get(i)});
@@ -150,7 +150,7 @@ final class ConnectionState {
 				if (chanState != null) {
 					for (String[] mode : modes) {
 						String letter = mode[1];
-						if (channelModeTypes.get(letter) == ModeType.SETTING_PARAMETER && nicknamePrefixToMode.containsValue(letter) && mode.length == 3) {
+						if (channelModeTypes.get(letter) == ChannelModeType.SETTING_PARAMETER && nicknamePrefixToMode.containsValue(letter) && mode.length == 3) {
 							String sign = mode[0];
 							String nickname = mode[2];
 							IrcChannel.User userState = chanState.users.get(nickname);
@@ -311,7 +311,7 @@ final class ConnectionState {
 							nicknamePrefixToMode.put(
 								new StringBuilder().appendCodePoint(prefixes[i]).toString(),
 								mode);
-							channelModeTypes.put(mode, ModeType.SETTING_PARAMETER);
+							channelModeTypes.put(mode, ChannelModeType.SETTING_PARAMETER);
 						}
 					}
 					
@@ -319,7 +319,7 @@ final class ConnectionState {
 						m = Pattern.compile("CHANMODES=([A-Za-z]*),([A-Za-z]*),([A-Za-z]*),([A-Za-z]*)").matcher(param);
 						if (m.matches()) {
 							int i = 1;
-							for (ModeType type : ModeType.values()) {
+							for (ChannelModeType type : ChannelModeType.values()) {
 								m.group(i).codePoints().forEach(c ->
 									channelModeTypes.put(
 										new StringBuilder().appendCodePoint(c).toString(),
@@ -553,7 +553,7 @@ final class ConnectionState {
 	
 	
 	
-	private enum ModeType {
+	private enum ChannelModeType {
 		NICKNAME_OR_ADDRESS_PARAMETER,
 		SETTING_PARAMETER,
 		PARAMETER_WHEN_SET,
