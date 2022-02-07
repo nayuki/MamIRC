@@ -303,9 +303,9 @@ final class ConnectionState {
 						if (modes.length != prefixes.length ||
 								modes.length != IntStream.of(modes).distinct().count() ||
 								prefixes.length != IntStream.of(prefixes).distinct().count())
-							return;
+							throw new IrcSyntaxException("Invalid prefix-mode-mapping string");
 						if (!nicknamePrefixToMode.isEmpty())
-							return;
+							throw new IrcStateException("Duplicate prefix-mode-mapping string");
 						for (int i = 0; i < modes.length; i++) {
 							String mode = new StringBuilder().appendCodePoint(modes[i]).toString();
 							nicknamePrefixToMode.put(
