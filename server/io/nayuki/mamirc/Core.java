@@ -4,10 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
@@ -16,7 +18,7 @@ final class Core {
 	
 	private File databaseFile;
 	
-	private Map<IrcServerConnection,ConnectionState> connectionToState = new HashMap<>();
+	private Set<IrcServerConnection> connections = new HashSet<>();
 	
 	private Archiver archiver;
 	
@@ -35,19 +37,18 @@ final class Core {
 				eventQueueLength.acquire();
 				AugmentedConnectionEvent ace = eventQueue.remove();
 				synchronized(this) {
-					if (!connectionToState.containsKey(ace.connection))
+					if (!connections.contains(ace.connection))
 						continue;
-					ConnectionState state = connectionToState.get(ace.connection);
-					archiver.postEvent(state.connectionId, ace.event);
+					archiver.postEvent(ace.connection.connectionId, ace.event);
 					try {
-						state.handle(ace.event, ace.connection);
+						ace.connection.handle(ace.event);
 					} catch (IrcSyntaxException|IrcStateException e) {
 						e.printStackTrace();
 					}
 				}
 			}
 		} catch (InterruptedException e) {
-			for (IrcServerConnection con : connectionToState.keySet())
+			for (IrcServerConnection con : connections)
 				con.close();
 		} finally {
 			archiver.postTermination();
@@ -57,8 +58,8 @@ final class Core {
 	
 	public synchronized void reloadProfiles() throws IOException, SQLException {
 		Map<Integer,IrcServerConnection> toDisconnect = new HashMap<>();
-		for (Map.Entry<IrcServerConnection,ConnectionState> entry : connectionToState.entrySet())
-			toDisconnect.put(entry.getValue().profileId, entry.getKey());
+		for (IrcServerConnection con : connections)
+			toDisconnect.put(con.profileId, con);
 		
 		try (Database db = new Database(databaseFile)) {
 			for (int profId : db.getProfileIds()) {
@@ -66,8 +67,8 @@ final class Core {
 					List<IrcServer> servers = db.getProfileServers(profId);
 					if (!servers.isEmpty()) {
 						long conId = db.addConnection(profId);
-						IrcServerConnection con = new IrcServerConnection(servers.get(0), db.getProfileCharacterEncoding(profId), this);
-						connectionToState.put(con, new ConnectionState(conId, profId, this, archiver));
+						IrcServerConnection con = new IrcServerConnection(conId, profId, this, archiver, servers.get(0), db.getProfileCharacterEncoding(profId));
+						connections.add(con);
 					}
 				}
 			}

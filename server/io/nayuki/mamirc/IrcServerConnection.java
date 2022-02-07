@@ -11,31 +11,34 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
 
-final class IrcServerConnection {
+final class IrcServerConnection extends ConnectionState {
 	
 	private final IrcServer server;
 	private final String characterEncoding;
-	
-	private final Core consumer;
 	
 	private Socket socket = null;
 	private boolean closeRequested = false;
 	
 	
-	public IrcServerConnection(IrcServer server, String encoding, Core consumer) {
+	public IrcServerConnection(long conId, int profId, Core core, Archiver archiver, IrcServer server, String encoding) {
+		super(conId, profId, core, archiver);
 		this.server = server;
 		this.characterEncoding = encoding;
-		this.consumer = consumer;
 		new Thread(this::readWorker).start();
 	}
 	
 	
 	private void postEvent(ConnectionEvent ev) {
-		consumer.postEvent(this, ev);
+		core.postEvent(this, ev);
 	}
 	
 	
-	public void close() {
+	@Override protected void send(byte[] line) {
+		postWriteLine(line);
+	}
+	
+	
+	@Override public void close() {
 		synchronized(this) {
 			if (socket == null)
 				closeRequested = true;

@@ -20,13 +20,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
-final class ConnectionState {
+class ConnectionState {
 	
 	public final long connectionId;
 	public final int profileId;
 	private Optional<Charset> charset = Optional.empty();
 	
-	private Core core;
+	protected Core core;
 	
 	private boolean isRegistrationHandled = false;
 	private Set<String> rejectedNicknames = new HashSet<>();
@@ -50,28 +50,28 @@ final class ConnectionState {
 	}
 	
 	
-	public void handle(ConnectionEvent ev, IrcServerConnection con) {
+	public void handle(ConnectionEvent ev) {
 		if (ev instanceof ConnectionEvent.Opening) {
 			charset = Optional.of(Charset.forName(((ConnectionEvent.Opening)ev).characterEncoding));
 		} else if (ev instanceof ConnectionEvent.Opened) {
 			try (Database db = new Database(core.getDatabaseFile())) {
-				send(con, "NICK", db.getProfileNicknames(profileId).get(0));
-				send(con, "USER", db.getProfileUsername(profileId), "0", "*", db.getProfileRealName(profileId));
+				send("NICK", db.getProfileNicknames(profileId).get(0));
+				send("USER", db.getProfileUsername(profileId), "0", "*", db.getProfileRealName(profileId));
 			} catch (IOException|SQLException e) {
 				e.printStackTrace();
-				con.close();
+				close();
 			}
 		} else if (ev instanceof ConnectionEvent.LineReceived) {
 			String line = new String(((ConnectionEvent.LineReceived)ev).line, charset.get());
-			handleLineReceived(IrcMessage.parseLine(line), ev, con);
+			handleLineReceived(IrcMessage.parseLine(line), ev);
 		} else if (ev instanceof ConnectionEvent.LineSent) {
 			String line = new String(((ConnectionEvent.LineSent)ev).line, charset.get());
-			handleLineSent(IrcMessage.parseLine(line), ev, con);
+			handleLineSent(IrcMessage.parseLine(line), ev);
 		}
 	}
 	
 	
-	private void handleLineReceived(IrcMessage msg, ConnectionEvent ev, IrcServerConnection con) {
+	private void handleLineReceived(IrcMessage msg, ConnectionEvent ev) {
 		Optional<IrcMessage.Prefix> prefix = msg.prefix;
 		List<String> params = msg.parameters;
 		int paramsLen = params.size();
@@ -255,7 +255,7 @@ final class ConnectionState {
 			case "PING": {
 				if (paramsLen != 1)
 					throw new IrcSyntaxException("PING message expects 1 parameter");
-				send(con, "PONG", params.get(0));
+				send("PONG", params.get(0));
 				break;
 			}
 			
@@ -297,7 +297,7 @@ final class ConnectionState {
 				if (!isRegistrationHandled) {
 					try (Database db = new Database(core.getDatabaseFile())) {
 						for (String cmd : db.getProfileAfterRegistrationCommands(profileId))
-							send(con, IrcMessage.parseLine(cmd));
+							send(IrcMessage.parseLine(cmd));
 					} catch (IOException|SQLException e) {
 						e.printStackTrace();
 					}
@@ -453,14 +453,14 @@ final class ConnectionState {
 						nicknames = db.getProfileNicknames(profileId);
 					} catch (IOException|SQLException e) {
 						e.printStackTrace();
-						con.close();
+						close();
 						return;
 					}
 					Optional<String> nextNick = nicknames.stream()
 						.filter(s -> !rejectedNicknames.contains(s)).findFirst();
 					if (nextNick.isEmpty())
-						con.close();
-					send(con, "NICK", nextNick.get());
+						close();
+					send("NICK", nextNick.get());
 				}
 				break;
 			}
@@ -477,7 +477,7 @@ final class ConnectionState {
 	}
 	
 	
-	private void handleLineSent(IrcMessage msg, ConnectionEvent ev, IrcServerConnection con) {
+	private void handleLineSent(IrcMessage msg, ConnectionEvent ev) {
 		List<String> params = msg.parameters;
 		int paramsLen = params.size();
 		
@@ -523,14 +523,20 @@ final class ConnectionState {
 	}
 	
 	
-	private void send(IrcServerConnection con, String cmd, String... params) {
-		send(con, IrcMessage.makeWithoutPrefix(cmd, params));
+	private void send(String cmd, String... params) {
+		send(IrcMessage.makeWithoutPrefix(cmd, params));
 	}
 	
 	
-	private void send(IrcServerConnection con, IrcMessage msg) {
-		con.postWriteLine(msg.toString().getBytes(charset.get()));
+	private void send(IrcMessage msg) {
+		send(msg.toString().getBytes(charset.get()));
 	}
+	
+	
+	protected void send(byte[] line) {}
+	
+	
+	protected void close() {}
 	
 	
 	private void addMessage(String windowDisplayName, ConnectionEvent ev, String... dataParts) {
