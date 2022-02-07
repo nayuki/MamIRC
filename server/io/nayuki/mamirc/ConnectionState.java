@@ -32,7 +32,7 @@ final class ConnectionState {
 	
 	private Map<String,String> nicknamePrefixToMode = new HashMap<>();
 	
-	private Map<String,ModeType> modeTypes = new HashMap<>();
+	private Map<String,ModeType> channelModeTypes = new HashMap<>();
 	
 	private Map<String,IrcChannel> joinedChannels = new HashMap<>();
 	
@@ -134,7 +134,7 @@ final class ConnectionState {
 						throw new IrcSyntaxException("MODE message expects +/- syntax");
 					for (int j = 1; j < letters.length(); j++) {
 						String mode = letters.substring(j, j + 1);
-						ModeType type = modeTypes.get(mode);
+						ModeType type = channelModeTypes.get(mode);
 						if (chanState == null || type == ModeType.NO_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("-"))
 							modes.add(new String[]{sign, mode});
 						else if (type == ModeType.NICKNAME_OR_ADDRESS_PARAMETER || type == ModeType.SETTING_PARAMETER || type == ModeType.PARAMETER_WHEN_SET && sign.equals("+")) {
@@ -150,7 +150,7 @@ final class ConnectionState {
 				if (chanState != null) {
 					for (String[] mode : modes) {
 						String letter = mode[1];
-						if (modeTypes.get(letter) == ModeType.SETTING_PARAMETER && nicknamePrefixToMode.containsValue(letter) && mode.length == 3) {
+						if (channelModeTypes.get(letter) == ModeType.SETTING_PARAMETER && nicknamePrefixToMode.containsValue(letter) && mode.length == 3) {
 							String sign = mode[0];
 							String nickname = mode[2];
 							IrcChannel.User userState = chanState.users.get(nickname);
@@ -311,7 +311,7 @@ final class ConnectionState {
 							nicknamePrefixToMode.put(
 								new StringBuilder().appendCodePoint(prefixes[i]).toString(),
 								mode);
-							modeTypes.put(mode, ModeType.SETTING_PARAMETER);
+							channelModeTypes.put(mode, ModeType.SETTING_PARAMETER);
 						}
 					}
 					
@@ -321,7 +321,7 @@ final class ConnectionState {
 							int i = 1;
 							for (ModeType type : ModeType.values()) {
 								m.group(i).codePoints().forEach(c ->
-									modeTypes.put(
+									channelModeTypes.put(
 										new StringBuilder().appendCodePoint(c).toString(),
 										type));
 								i++;
