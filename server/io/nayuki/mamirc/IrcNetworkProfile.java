@@ -1,27 +1,7 @@
 package io.nayuki.mamirc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 
 final class IrcNetworkProfile {
-	
-	public int id;
-	public String name;
-	
-	public boolean doConnect;
-	
-	public List<Server> servers = new ArrayList<>();
-	
-	public String characterEncoding;
-	
-	public List<String> nicknames = new ArrayList<>();
-	public String username;
-	public String realName;
-	
-	public List<IrcMessage> afterRegistrationCommands = new ArrayList<>();
-	
-	
 	
 	public static final class Server {
 		

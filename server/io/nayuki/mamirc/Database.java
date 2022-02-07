@@ -12,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -198,69 +197,6 @@ final class Database implements AutoCloseable {
 			}
 		}
 		return result;
-	}
-	
-	
-	public void setIrcNetworkProfiles(Collection<IrcNetworkProfile> profiles) throws SQLException {
-		statement.executeUpdate("BEGIN IMMEDIATE TRANSACTION");
-		boolean ok = false;
-		try (PreparedStatement st0 = connection.prepareStatement("UPDATE irc_network_profiles SET profile_name=? WHERE profile_id=?");
-				PreparedStatement st1 = connection.prepareStatement("INSERT OR IGNORE INTO irc_network_profiles(profile_id, profile_name) VALUES (?,?)");
-				PreparedStatement st2 = connection.prepareStatement("INSERT INTO profile_configuration(profile_id, do_connect, username, real_name, character_encoding) VALUES (?,?,?,?,?)");
-				PreparedStatement st3 = connection.prepareStatement("INSERT INTO profile_servers(profile_id, ordering, hostname, port, tls_mode) VALUES (?,?,?,?,?)");
-				PreparedStatement st4 = connection.prepareStatement("INSERT INTO profile_nicknames(profile_id, ordering, nickname) VALUES (?,?,?)");
-				PreparedStatement st5 = connection.prepareStatement("INSERT INTO profile_after_registration_commands(profile_id, ordering, command) VALUES (?,?,?)")) {
-			
-			statement.executeUpdate("DELETE FROM profile_configuration");
-			statement.executeUpdate("DELETE FROM profile_servers");
-			statement.executeUpdate("DELETE FROM profile_nicknames");
-			statement.executeUpdate("DELETE FROM profile_after_registration_commands");
-			
-			for (IrcNetworkProfile prof : profiles) {
-				st0.setString(1, prof.name);
-				st0.setInt(2, prof.id);
-				st0.executeUpdate();
-				
-				st1.setInt(1, prof.id);
-				st1.setString(2, prof.name);
-				st1.executeUpdate();
-				
-				st2.setInt(1, prof.id);
-				st2.setBoolean(2, prof.doConnect);
-				st2.setString(3, prof.username);
-				st2.setString(4, prof.realName);
-				st2.setString(5, prof.characterEncoding);
-				st2.executeUpdate();
-				
-				st3.setInt(1, prof.id);
-				for (int i = 0; i < prof.servers.size(); i++) {
-					st3.setInt(2, i);
-					Server serv = prof.servers.get(i);
-					st3.setString(3, serv.hostname);
-					st3.setInt(4, serv.port);
-					st3.setInt(5, serv.tlsMode.ordinal());
-					st3.executeUpdate();
-				}
-				
-				st4.setInt(1, prof.id);
-				for (int i = 0; i < prof.nicknames.size(); i++) {
-					st4.setInt(2, i);
-					st4.setString(3, prof.nicknames.get(i));
-					st4.executeUpdate();
-				}
-				
-				st5.setInt(1, prof.id);
-				for (int i = 0; i < prof.afterRegistrationCommands.size(); i++) {
-					st5.setInt(2, i);
-					st5.setString(3, prof.afterRegistrationCommands.get(i).toString());
-					st5.executeUpdate();
-				}
-			}
-			
-			ok = true;
-		} finally {
-			statement.executeUpdate(ok ? "COMMIT TRANSACTION" : "ROLLBACK TRANSACTION");
-		}
 	}
 	
 	
